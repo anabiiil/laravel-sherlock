@@ -14,6 +14,9 @@ use DateTimeImmutable;
  */
 final readonly class StoredTrace
 {
+    /**
+     * @param  array<string, mixed>  $details  redacted extras: uri, route, failed, tags, metadata, verdict, http_calls, logs, findings
+     */
     public function __construct(
         public string $id,
         public EntryType $type,
@@ -34,5 +37,6 @@ final readonly class StoredTrace
         public RecordReason $recordReason,
         public int|string|null $userId,
         public DateTimeImmutable $createdAt,
+        public array $details = [],
     ) {}
 }

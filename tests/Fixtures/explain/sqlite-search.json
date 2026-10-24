@@ -1,0 +1,6 @@
+{
+    "sql": "select * from \"orders\" where \"orders\".\"user_id\" = ?",
+    "plan": [
+        {"id": 3, "parent": 0, "detail": "SEARCH orders USING INDEX orders_user_id_index (user_id=?)"}
+    ]
+}

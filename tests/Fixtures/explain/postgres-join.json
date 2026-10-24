@@ -1,0 +1,73 @@
+{
+    "sql": "select \"users\".\"country\", count(*) from \"orders\" as \"o\" inner join \"users\" on \"users\".\"id\" = \"o\".\"user_id\" where \"o\".\"total\" > ? group by \"users\".\"country\"",
+    "plan": [
+        {
+            "Plan": {
+                "Node Type": "Aggregate",
+                "Strategy": "Hashed",
+                "Partial Mode": "Simple",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 2391.5,
+                "Total Cost": 2391.52,
+                "Plan Rows": 2,
+                "Plan Width": 11,
+                "Group Key": ["users.country"],
+                "Plans": [
+                    {
+                        "Node Type": "Hash Join",
+                        "Parent Relationship": "Outer",
+                        "Parallel Aware": false,
+                        "Async Capable": false,
+                        "Join Type": "Inner",
+                        "Startup Cost": 15.25,
+                        "Total Cost": 2366.5,
+                        "Plan Rows": 4998,
+                        "Plan Width": 3,
+                        "Inner Unique": true,
+                        "Hash Cond": "(o.user_id = users.id)",
+                        "Plans": [
+                            {
+                                "Node Type": "Seq Scan",
+                                "Parent Relationship": "Outer",
+                                "Parallel Aware": false,
+                                "Async Capable": false,
+                                "Relation Name": "orders",
+                                "Alias": "o",
+                                "Startup Cost": 0.0,
+                                "Total Cost": 2338.0,
+                                "Plan Rows": 4998,
+                                "Plan Width": 4,
+                                "Filter": "(total > 100)"
+                            },
+                            {
+                                "Node Type": "Hash",
+                                "Parent Relationship": "Inner",
+                                "Parallel Aware": false,
+                                "Async Capable": false,
+                                "Startup Cost": 9.0,
+                                "Total Cost": 9.0,
+                                "Plan Rows": 500,
+                                "Plan Width": 11,
+                                "Plans": [
+                                    {
+                                        "Node Type": "Seq Scan",
+                                        "Parent Relationship": "Outer",
+                                        "Parallel Aware": false,
+                                        "Async Capable": false,
+                                        "Relation Name": "users",
+                                        "Alias": "users",
+                                        "Startup Cost": 0.0,
+                                        "Total Cost": 9.0,
+                                        "Plan Rows": 500,
+                                        "Plan Width": 11
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

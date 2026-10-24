@@ -55,7 +55,7 @@ return [
         // Source location (backtrace) capture: only for the first occurrence of a query
         // fingerprint per trace and for slow queries, with DEBUG_BACKTRACE_IGNORE_ARGS.
         'source_location' => true,
-        'backtrace_limit' => 30,
+        'backtrace_limit' => 50,
 
         // Hard caps per trace; extra records are counted but not kept.
         'max_queries' => 1000,
@@ -124,6 +124,15 @@ return [
             'warning_rows' => 1000,
             'critical_rows' => 100000,
         ],
+
+        // Severity of captured log records per PSR-3 level (exceptions are always critical).
+        // Levels not listed here never raise a log_error finding.
+        'log_levels' => [
+            'error' => 'warning',
+            'critical' => 'critical',
+            'alert' => 'critical',
+            'emergency' => 'critical',
+        ],
     ],
 
     /*
@@ -188,6 +197,11 @@ return [
         // Cache store for the "already explained" markers; null = default store.
         'cache_store' => null,
         'max_per_trace' => 3,
+        // Statement timeout for EXPLAIN where the driver supports it (MySQL hint,
+        // MariaDB max_statement_time, PostgreSQL statement_timeout).
+        'timeout_ms' => 1000,
+        // Environments where EXPLAIN may run (array or comma separated); null = all.
+        'environments' => env('TRACING_EXPLAIN_ENVIRONMENTS'),
     ],
 
     /*
@@ -205,6 +219,9 @@ return [
         'cache_key' => 'tracing:watch',
         'default_minutes' => 30,
         'max_minutes' => 1440,
+        // Seconds a worker process (Octane / queue / long commands) reuses the last cache
+        // read before looking again. Keeps the check at one cache "get" per few seconds.
+        'memo_seconds' => 5,
     ],
 
     /*
@@ -291,6 +308,8 @@ return [
 
     'storage' => [
         'connection' => env('TRACING_DB_CONNECTION'),
+        // Prefix for the package tables (tracing_traces, tracing_issues, ...).
+        'table_prefix' => env('TRACING_TABLE_PREFIX', 'tracing_'),
         'persistence' => env('TRACING_PERSISTENCE', 'after_response'),
         // Max query rows stored per trace (the slowest / most relevant first).
         'max_queries_per_trace' => 200,

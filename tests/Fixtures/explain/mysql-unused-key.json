@@ -1,0 +1,35 @@
+{
+    "sql": "select * from `orders` where `orders`.`status` != 'x' or `orders`.`total` > 1",
+    "plan": {
+        "query_block": {
+            "select_id": 1,
+            "cost_info": {
+                "query_cost": "504.00"
+            },
+            "table": {
+                "table_name": "orders",
+                "access_type": "ALL",
+                "possible_keys": [
+                    "orders_status_index"
+                ],
+                "rows_examined_per_scan": 5000,
+                "rows_produced_per_join": 4666,
+                "filtered": "93.33",
+                "cost_info": {
+                    "read_cost": "37.34",
+                    "eval_cost": "466.66",
+                    "prefix_cost": "504.00",
+                    "data_read_per_join": "473K"
+                },
+                "used_columns": [
+                    "id",
+                    "user_id",
+                    "status",
+                    "total",
+                    "created_at"
+                ],
+                "attached_condition": "((`tracing_test_3`.`orders`.`status` <> 'x') or (`tracing_test_3`.`orders`.`total` > 1))"
+            }
+        }
+    }
+}

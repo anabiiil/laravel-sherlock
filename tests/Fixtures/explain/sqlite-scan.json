@@ -1,0 +1,7 @@
+{
+    "sql": "select * from \"orders\" where \"orders\".\"user_id\" = ? order by \"created_at\" desc",
+    "plan": [
+        {"id": 3, "parent": 0, "detail": "SCAN orders"},
+        {"id": 18, "parent": 0, "detail": "USE TEMP B-TREE FOR ORDER BY"}
+    ]
+}

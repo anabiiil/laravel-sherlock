@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static void extendAi(string $driver, \Closure $factory)
  * @method static \Anabil\Tracing\Data\WatchState watch(int $minutes, ?string $routePattern = null, int|string|null $userId = null)
  * @method static void stopWatching()
+ * @method static \Anabil\Tracing\Data\WatchState|null watching()
+ * @method static mixed pause(\Closure $callback)
  *
  * @see \Anabil\Tracing\Tracing
  */

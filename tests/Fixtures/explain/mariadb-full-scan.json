@@ -1,0 +1,18 @@
+{
+    "sql": "select * from `orders` where `orders`.`user_id` = ? order by `created_at` desc",
+    "plan": {
+        "query_block": {
+            "select_id": 1,
+            "filesort": {
+                "sort_key": "orders.created_at desc",
+                "table": {
+                    "table_name": "orders",
+                    "access_type": "ALL",
+                    "rows": 150000,
+                    "filtered": 100,
+                    "attached_condition": "orders.user_id = 5"
+                }
+            }
+        }
+    }
+}

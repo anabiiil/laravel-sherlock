@@ -55,9 +55,13 @@ final class NullTraceContext implements TraceContext
 
     public function cacheWrite(): void {}
 
+    public function addCacheTime(float $ms): void {}
+
     public function setName(string $name): void {}
 
     public function setRoute(?string $route): void {}
+
+    public function setRequest(string $method, ?string $uri): void {}
 
     public function setStatusCode(?int $statusCode): void {}
 
@@ -68,6 +72,8 @@ final class NullTraceContext implements TraceContext
     public function setBootstrapMs(float $ms): void {}
 
     public function addRecordReason(RecordReason $reason): void {}
+
+    public function removeRecordReason(RecordReason $reason): void {}
 
     public function tag(string $key, string|int|float|bool|null $value): void {}
 

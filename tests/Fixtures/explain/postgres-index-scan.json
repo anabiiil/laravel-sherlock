@@ -1,0 +1,21 @@
+{
+    "sql": "select * from \"orders\" where \"orders\".\"user_id\" = ?",
+    "plan": [
+        {
+            "Plan": {
+                "Node Type": "Index Scan",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Scan Direction": "Forward",
+                "Index Name": "orders_user_id_index",
+                "Relation Name": "orders",
+                "Alias": "orders",
+                "Startup Cost": 0.29,
+                "Total Cost": 8.31,
+                "Plan Rows": 10,
+                "Plan Width": 44,
+                "Index Cond": "(user_id = 5)"
+            }
+        }
+    ]
+}

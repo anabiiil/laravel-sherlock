@@ -9,6 +9,7 @@ use Anabil\Tracing\Contracts\TraceContext;
 use Anabil\Tracing\Data\RecordingDecision;
 use Anabil\Tracing\Data\TraceData;
 use Anabil\Tracing\Enums\EntryType;
+use Closure;
 
 final class NullContextManager implements ContextManager
 {
@@ -40,4 +41,9 @@ final class NullContextManager implements ContextManager
     }
 
     public function reset(): void {}
+
+    public function pause(Closure $callback): mixed
+    {
+        return $callback();
+    }
 }

@@ -7,6 +7,7 @@ namespace Anabil\Tracing\Contracts;
 use Anabil\Tracing\Data\RecordingDecision;
 use Anabil\Tracing\Data\TraceData;
 use Anabil\Tracing\Enums\EntryType;
+use Closure;
 
 /**
  * Owns the current TraceContext. Octane / worker safe: every unit starts a fresh
@@ -31,4 +32,15 @@ interface ContextManager
 
     /** Drop the current context without producing a trace. */
     public function reset(): void;
+
+    /**
+     * Run $callback with capture suspended (current() is a NullTraceContext meanwhile).
+     * Used for the package's own work (persisting, cache lookups) so it is never recorded.
+     *
+     * @template T
+     *
+     * @param  Closure(): T  $callback
+     * @return T
+     */
+    public function pause(Closure $callback): mixed;
 }

@@ -43,9 +43,15 @@ interface TraceContext
 
     public function cacheWrite(): void;
 
+    /** Time spent in cache operations (lookups / writes), in ms. */
+    public function addCacheTime(float $ms): void;
+
     public function setName(string $name): void;
 
     public function setRoute(?string $route): void;
+
+    /** HTTP method and redacted URI path (requests only; never a query string with values). */
+    public function setRequest(string $method, ?string $uri): void;
 
     public function setStatusCode(?int $statusCode): void;
 
@@ -56,6 +62,9 @@ interface TraceContext
     public function setBootstrapMs(float $ms): void;
 
     public function addRecordReason(RecordReason $reason): void;
+
+    /** E.g. a watch window whose user filter turned out not to match at terminate. */
+    public function removeRecordReason(RecordReason $reason): void;
 
     public function tag(string $key, string|int|float|bool|null $value): void;
 

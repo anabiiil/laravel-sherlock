@@ -13,6 +13,7 @@ final readonly class StoredQuery
 {
     /**
      * @param  array<int|string, scalar|null>|null  $bindings  redacted; null when not stored (production)
+     * @param  float  $offsetMs  start time relative to the trace start (timeline)
      */
     public function __construct(
         public int|string $id,
@@ -25,5 +26,6 @@ final readonly class StoredQuery
         public ?string $file,
         public ?int $line,
         public DateTimeImmutable $createdAt,
+        public float $offsetMs = 0.0,
     ) {}
 }
