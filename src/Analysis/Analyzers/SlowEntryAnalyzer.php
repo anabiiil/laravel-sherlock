@@ -59,6 +59,7 @@ final class SlowEntryAnalyzer implements Analyzer
 
         return [new Finding(
             type: $type,
+            impactMs: round(max(0.0, $trace->durationMs - $threshold['warning_ms']), 3),
             severity: $trace->durationMs >= $threshold['critical_ms'] ? Severity::Critical : Severity::Warning,
             title: 'Slow '.$kind.' '.$entry.' ('.Describe::duration($trace->durationMs).')',
             description: sprintf(

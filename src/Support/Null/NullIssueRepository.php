@@ -29,7 +29,7 @@ final class NullIssueRepository implements IssueRepository
         return null;
     }
 
-    public function recordOccurrence(Finding $finding, array $context, DateTimeImmutable $seenAt, ?string $traceId = null, ?AiStatus $aiStatus = AiStatus::Pending): IssueOutcome
+    public function recordOccurrence(Finding $finding, array $context, DateTimeImmutable $seenAt, ?string $traceId = null, ?AiStatus $aiStatus = AiStatus::Pending, ?string $release = null): IssueOutcome
     {
         return new IssueOutcome(0, $finding->fingerprint, $finding->type, $finding->severity, OccurrenceType::New, 1, $traceId);
     }
@@ -74,6 +74,26 @@ final class NullIssueRepository implements IssueRepository
     }
 
     public function mostFrequent(DateTimeImmutable $since, int $limit = 10): array
+    {
+        return [];
+    }
+
+    public function topByImpact(DateTimeImmutable $since, int $limit = 10): array
+    {
+        return [];
+    }
+
+    public function firstSeenInRelease(string $release, int $limit = 50): array
+    {
+        return [];
+    }
+
+    public function regressedInRelease(string $release, int $limit = 50): array
+    {
+        return [];
+    }
+
+    public function lastSeenInRelease(string $release, int $limit = 50): array
     {
         return [];
     }

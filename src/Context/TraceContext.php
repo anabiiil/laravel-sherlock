@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace Anabil\Sherlock\Context;
 
+use Anabil\Sherlock\Contracts\ServerProbe;
 use Anabil\Sherlock\Contracts\TraceContext as TraceContextContract;
 use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Data\LazyLoadRecord;
 use Anabil\Sherlock\Data\LogRecord;
+use Anabil\Sherlock\Data\MemoryLeakSignal;
 use Anabil\Sherlock\Data\QueryRecord;
 use Anabil\Sherlock\Data\TraceData;
 use Anabil\Sherlock\Enums\EntryType;
 use Anabil\Sherlock\Enums\RecordReason;
+use Closure;
 use DateTimeImmutable;
+use Throwable;
 
 /**
  * Mutable per-unit buffer. Every write is O(1) (array push / counter); the immutable
@@ -26,6 +31,9 @@ final class TraceContext implements TraceContextContract
 {
     /** Distinct SQL strings remembered for the first / second-occurrence backtrace rules. */
     public const MAX_SEEN_KEYS = 2000;
+
+    /** Distinct lazy-loaded relations remembered per trace. */
+    public const MAX_LAZY_LOADS = 100;
 
     /** @var list<QueryRecord> */
     private array $queries = [];
@@ -81,9 +89,21 @@ final class TraceContext implements TraceContextContract
 
     private ?int $memoryPeak = null;
 
+    private ?float $cpuStart = null;
+
+    private ?float $cpuEnd = null;
+
+    private ?float $queueWaitMs = null;
+
+    /** @var array<string, array{0: string, 1: string, 2: int, 3: string|null}> "Model::relation" => [model, relation, count, table] */
+    private array $lazyLoads = [];
+
+    private ?MemoryLeakSignal $memoryLeak = null;
+
     /**
      * @param  float  $startedAt  microtime(true) of the unit start
      * @param  list<RecordReason>  $reasons
+     * @param  ServerProbe|null  $probe  CPU time at start / end and load average at the end (null = not measured)
      */
     public function __construct(
         private readonly string $id,
@@ -95,7 +115,11 @@ final class TraceContext implements TraceContextContract
         private readonly int $maxQueries = 1000,
         private readonly int $maxHttpCalls = 200,
         private readonly int $maxLogs = 100,
-    ) {}
+        private readonly ?ServerProbe $probe = null,
+        private readonly ?string $release = null,
+    ) {
+        $this->cpuStart = $probe?->cpuTimeMs();
+    }
 
     public function id(): string
     {
@@ -194,6 +218,51 @@ final class TraceContext implements TraceContextContract
         if ($this->endedAt === null) {
             $this->cacheMs += $ms;
         }
+    }
+
+    /**
+     * Record a lazy-loading violation (O(1), deduplicated per "Model::relation"). $table resolves the
+     * related table once, on the first occurrence only.
+     *
+     * @param  (Closure(): ?string)|null  $table
+     */
+    public function addLazyLoad(string $model, string $relation, ?Closure $table = null): void
+    {
+        if ($this->endedAt !== null) {
+            return;
+        }
+
+        $key = $model.'::'.$relation;
+        if (isset($this->lazyLoads[$key])) {
+            $this->lazyLoads[$key][2]++;
+
+            return;
+        }
+
+        if (count($this->lazyLoads) >= self::MAX_LAZY_LOADS) {
+            return;
+        }
+
+        $resolved = null;
+        if ($table !== null) {
+            try {
+                $resolved = $table();
+            } catch (Throwable) {
+                $resolved = null;
+            }
+        }
+
+        $this->lazyLoads[$key] = [$model, $relation, 1, $resolved];
+    }
+
+    public function setQueueWaitMs(?float $ms): void
+    {
+        $this->queueWaitMs = $ms === null ? null : max(0.0, $ms);
+    }
+
+    public function setMemoryLeak(?MemoryLeakSignal $signal): void
+    {
+        $this->memoryLeak = $signal;
     }
 
     public function setName(string $name): void
@@ -302,6 +371,7 @@ final class TraceContext implements TraceContextContract
         if ($this->endedAt === null) {
             $this->endedAt = microtime(true);
             $this->memoryPeak = memory_get_peak_usage();
+            $this->cpuEnd = $this->probe?->cpuTimeMs();
         }
     }
 
@@ -331,6 +401,14 @@ final class TraceContext implements TraceContextContract
             $metadata['dropped_logs'] = $this->droppedLogs;
         }
 
+        $cpuEnd = $this->cpuEnd ?? $this->probe?->cpuTimeMs();
+        $cpuMs = $cpuEnd !== null && $this->cpuStart !== null ? round(max(0.0, $cpuEnd - $this->cpuStart), 3) : null;
+
+        $lazyLoads = [];
+        foreach ($this->lazyLoads as [$model, $relation, $count, $table]) {
+            $lazyLoads[] = new LazyLoadRecord($model, $relation, $count, $table);
+        }
+
         return new TraceData(
             id: $this->id,
             type: $this->type,
@@ -358,6 +436,12 @@ final class TraceContext implements TraceContextContract
             metadata: $metadata,
             totalQueryCount: $dropped ? $this->queryCount : null,
             totalDbMs: $dropped ? $this->dbMs : null,
+            release: $this->release,
+            cpuMs: $cpuMs,
+            loadAvg: $this->probe?->loadAverage(),
+            queueWaitMs: $this->queueWaitMs,
+            lazyLoads: $lazyLoads,
+            memoryLeak: $this->memoryLeak,
         );
     }
 

@@ -33,6 +33,8 @@ final class IssuesController
 {
     private const EXAMPLE_TRACES = 10;
 
+    private const RELEASE_OPTIONS = 50;
+
     public function __construct(
         private readonly IssueRepository $issues,
         private readonly TraceRepository $traces,
@@ -59,6 +61,7 @@ final class IssuesController
             'severities' => Severity::cases(),
             'statuses' => IssueStatus::cases(),
             'sorts' => IssueFilters::SORTS,
+            'releases' => $this->traces->releases(self::RELEASE_OPTIONS),
         ]);
     }
 

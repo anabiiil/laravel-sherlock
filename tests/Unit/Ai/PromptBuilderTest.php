@@ -227,3 +227,45 @@ it('lists slow external calls by host and path only', function (): void {
 it('skips the schema section without a database connection', function (): void {
     expect($this->builder->userPrompt(aiPromptIssue()))->not->toContain('Table schema');
 });
+
+it('says an issue appeared after the latest deploy, with server and lazy-load evidence', function (): void {
+    $repository = Mockery::mock(Anabil\Sherlock\Contracts\TraceRepository::class);
+    $repository->allows('releases')->with(2)->andReturn([
+        new Anabil\Sherlock\Data\ReleaseRecord('v2', new DateTimeImmutable('2026-10-20'), new DateTimeImmutable('2026-10-24')),
+        new Anabil\Sherlock\Data\ReleaseRecord('v1', new DateTimeImmutable('2026-10-01'), new DateTimeImmutable('2026-10-19')),
+    ]);
+    $builder = new PromptBuilder($this->config, Redactor::make(), null, $this->base, $repository);
+
+    $base = aiPromptIssue(IssueType::NPlusOne, [
+        'trace' => ['duration_ms' => 1200.5, 'cpu_ms' => 40.0, 'load_avg' => 7.9, 'cpu_cores' => 4, 'queue_wait_ms' => 1500.0],
+        'lazy_loads' => [['model' => 'App\\Models\\User', 'relation' => 'posts', 'count' => 12, 'table' => 'posts']],
+    ]);
+    $issue = new IssueRecord(
+        $base->id, $base->fingerprint, $base->type, $base->severity, $base->status, $base->title, $base->context, $base->occurrences,
+        $base->firstSeenAt, $base->lastSeenAt, firstSeenRelease: 'v2', lastSeenRelease: 'v2',
+    );
+
+    $prompt = $builder->userPrompt($issue);
+
+    expect($prompt)->toContain('- First seen in release: v2')
+        ->and($prompt)->toContain('- Deploy: appeared after deploy v2 (previous release v1 did not have it)')
+        ->and($prompt)->toContain('- CPU time of the process (ms): 40')
+        ->and($prompt)->toContain('- Server load average (1 min): 7.9')
+        ->and($prompt)->toContain('- Server CPU cores: 4')
+        ->and($prompt)->toContain('- Queue wait before start (ms): 1500')
+        ->and($prompt)->toContain('- App\\Models\\User::posts lazy loaded 12× (table posts)');
+
+    $older = new IssueRecord(
+        $base->id, $base->fingerprint, $base->type, $base->severity, $base->status, $base->title, $base->context, $base->occurrences,
+        $base->firstSeenAt, $base->lastSeenAt, firstSeenRelease: 'v1',
+    );
+
+    expect($builder->userPrompt($older))->not->toContain('appeared after deploy')
+        ->and($this->builder->userPrompt($issue))->not->toContain('appeared after deploy');
+});
+
+it('has task templates for server load, queue wait and memory leaks', function (): void {
+    expect($this->builder->task(IssueType::ServerLoad))->toContain('overloaded')
+        ->and($this->builder->task(IssueType::QueueWait))->toContain('worker')
+        ->and($this->builder->task(IssueType::MemoryLeak))->toContain('--max-jobs');
+});

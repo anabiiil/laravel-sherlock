@@ -17,6 +17,9 @@ enum IssueType: string
     case SlowExternalCall = 'slow_external_call';
     case CacheMissRate = 'cache_miss_rate';
     case MissingIndex = 'missing_index';
+    case ServerLoad = 'server_load';
+    case QueueWait = 'queue_wait';
+    case MemoryLeak = 'memory_leak';
     case Exception = 'exception';
     case LogError = 'log_error';
 
@@ -34,6 +37,9 @@ enum IssueType: string
             self::SlowExternalCall => 'Slow external call',
             self::CacheMissRate => 'High cache miss rate',
             self::MissingIndex => 'Missing index',
+            self::ServerLoad => 'Server load',
+            self::QueueWait => 'Queue wait',
+            self::MemoryLeak => 'Memory leak',
             self::Exception => 'Exception',
             self::LogError => 'Log error',
         };

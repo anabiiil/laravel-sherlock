@@ -30,6 +30,7 @@
         'sherlock.issues.index' => ['Issues', 'sherlock.issues.*'],
         'sherlock.traces.index' => ['Traces', 'sherlock.traces.*'],
         'sherlock.queries.index' => ['Queries', 'sherlock.queries.*'],
+        'sherlock.deploys.index' => ['Deploys', 'sherlock.deploys.*'],
     ];
 @endphp
 <header class="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900" x-data="{ open: false }">

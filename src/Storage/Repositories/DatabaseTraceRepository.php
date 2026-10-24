@@ -9,9 +9,11 @@ use Anabil\Sherlock\Contracts\QueryNormalizer;
 use Anabil\Sherlock\Contracts\TraceRepository;
 use Anabil\Sherlock\Data\EntryStat;
 use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\LazyLoadRecord;
 use Anabil\Sherlock\Data\QueryRecord;
 use Anabil\Sherlock\Data\QueryStat;
 use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Data\ReleaseRecord;
 use Anabil\Sherlock\Data\StoredQuery;
 use Anabil\Sherlock\Data\StoredTrace;
 use Anabil\Sherlock\Data\TraceFilter;
@@ -29,9 +31,12 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 
 /**
- * sherlock_traces + sherlock_queries through the query builder (no models, no hydration
- * overhead). A trace costs one insert plus one multi-row insert per chunk of queries,
+ * sherlock_traces + sherlock_queries (+ sherlock_releases) through the query builder (no models,
+ * no hydration overhead). A trace costs one insert plus one multi-row insert per chunk of queries,
  * inside one transaction.
+ *
+ * Releases: a trace with a release upserts its sherlock_releases row at most once per process per
+ * release, then refreshes last_seen_at at most every RELEASE_TOUCH_SECONDS (persist path only).
  */
 final class DatabaseTraceRepository implements TraceRepository
 {
@@ -41,11 +46,18 @@ final class DatabaseTraceRepository implements TraceRepository
     /** Trace ids per child delete while pruning (keeps each DELETE short). */
     private const CHILD_DELETE_CHUNK = 100;
 
+    /** Seconds between two last_seen_at refreshes of the same release by one process. */
+    public const RELEASE_TOUCH_SECONDS = 300;
+
     private const TRACE_COLUMNS = [
         'id', 'type', 'name', 'method', 'status_code', 'duration_ms', 'db_ms', 'db_count', 'http_ms',
         'http_count', 'cache_hits', 'cache_misses', 'bootstrap_ms', 'memory_peak', 'bottleneck',
         'verdict_reason', 'record_reason', 'user_id', 'details', 'created_at',
+        'release', 'cpu_ms', 'load_avg', 'cpu_cores', 'memory_free_mb', 'queue_wait_ms',
     ];
+
+    /** @var array<string, int> release => unix time of the last upsert / touch by this process */
+    private array $releasesTouched = [];
 
     public function __construct(
         private readonly ConnectionResolverInterface $db,
@@ -97,8 +109,16 @@ final class DatabaseTraceRepository implements TraceRepository
                 'http_calls' => array_map(static fn ($call): array => $call->toArray(), $data->httpCalls),
                 'logs' => array_map(static fn ($log): array => $log->toArray(), $data->logs),
                 'findings' => array_map(static fn (Finding $f): array => $f->toArray(), $trace->analysis->findings),
+                'lazy_loads' => array_map(static fn (LazyLoadRecord $l): array => $l->toArray(), $data->lazyLoads),
+                'memory_leak' => $data->memoryLeak?->toArray(),
             ]),
             'created_at' => $createdAt,
+            'release' => Values::truncate($data->release, 64),
+            'cpu_ms' => $data->cpuMs === null ? null : round($data->cpuMs, 3),
+            'load_avg' => $data->loadAvg === null ? null : round($data->loadAvg, 3),
+            'cpu_cores' => $data->cpuCores === null ? null : max(0, min(65535, $data->cpuCores)),
+            'memory_free_mb' => $data->memoryFreeMb === null ? null : max(0, $data->memoryFreeMb),
+            'queue_wait_ms' => $data->queueWaitMs === null ? null : round($data->queueWaitMs, 3),
         ];
 
         $queryRows = [];
@@ -115,7 +135,87 @@ final class DatabaseTraceRepository implements TraceRepository
             }
         });
 
+        if ($row['release'] !== null) {
+            $this->touchRelease($row['release'], $createdAt);
+        }
+
         return $data->id;
+    }
+
+    /**
+     * Upsert the release row: insertOrIgnore once per process per release, then a conditional
+     * last_seen_at refresh at most every RELEASE_TOUCH_SECONDS.
+     */
+    public function touchRelease(string $release, string $seenAt): void
+    {
+        $now = time();
+        $touched = $this->releasesTouched[$release] ?? null;
+        if ($touched !== null && $now - $touched < self::RELEASE_TOUCH_SECONDS) {
+            return;
+        }
+        $this->releasesTouched[$release] = $now;
+
+        $releases = $this->connection()->table($this->tables->releases());
+
+        if ($touched === null && $releases->insertOrIgnore([
+            'release' => $release,
+            'first_seen_at' => $seenAt,
+            'last_seen_at' => $seenAt,
+        ]) > 0) {
+            return;
+        }
+
+        $this->connection()->table($this->tables->releases())
+            ->where('release', $release)
+            ->where('last_seen_at', '<', $seenAt)
+            ->update(['last_seen_at' => $seenAt]);
+    }
+
+    public function releases(int $limit = 20): array
+    {
+        return array_values($this->connection()->table($this->tables->releases())
+            ->orderByDesc('first_seen_at')
+            ->orderByDesc('id')
+            ->limit(max(1, $limit))
+            ->get()
+            ->map(static fn (object $row): ReleaseRecord => new ReleaseRecord(
+                Values::string($row->release ?? null),
+                Values::toDate($row->first_seen_at ?? null) ?? new DateTimeImmutable,
+                Values::toDate($row->last_seen_at ?? null) ?? new DateTimeImmutable,
+            ))
+            ->all());
+    }
+
+    public function findRelease(string $release): ?ReleaseRecord
+    {
+        $row = $this->connection()->table($this->tables->releases())->where('release', $release)->first();
+
+        return $row === null ? null : new ReleaseRecord(
+            Values::string($row->release ?? null),
+            Values::toDate($row->first_seen_at ?? null) ?? new DateTimeImmutable,
+            Values::toDate($row->last_seen_at ?? null) ?? new DateTimeImmutable,
+        );
+    }
+
+    public function entryStatsForRelease(string $release, ?EntryType $type = null, int $limit = 50, ?RecordReason $reason = null): array
+    {
+        $query = $this->connection()->table($this->tables->traces())
+            ->selectRaw('type, name, COUNT(*) as aggregate_count, AVG(duration_ms) as avg_ms, MAX(duration_ms) as max_ms, AVG(db_ms) as avg_db_ms, AVG(db_count) as avg_queries')
+            ->where('release', $release)
+            ->groupBy('type', 'name')
+            ->orderByDesc('aggregate_count')
+            ->orderByDesc('avg_ms')
+            ->limit(max(1, $limit));
+
+        if ($type !== null) {
+            $query->where('type', $type->value);
+        }
+
+        if ($reason !== null) {
+            $query->where('record_reason', $reason->value);
+        }
+
+        return $this->entryStats($query);
     }
 
     public function find(string $id): ?StoredTrace
@@ -165,6 +265,10 @@ final class DatabaseTraceRepository implements TraceRepository
             $query->where('created_at', '>=', Values::date($filter->since));
         }
 
+        if ($filter->release !== null && $filter->release !== '') {
+            $query->where('release', $filter->release);
+        }
+
         if ($filter->issueId !== null) {
             $query->whereIn('id', function (Builder $sub) use ($filter): void {
                 $sub->select('trace_id')->from($this->tables->issueTraces())->where('issue_id', $filter->issueId);
@@ -206,6 +310,14 @@ final class DatabaseTraceRepository implements TraceRepository
             $query->where('type', $type->value);
         }
 
+        return $this->entryStats($query);
+    }
+
+    /**
+     * @return list<EntryStat>
+     */
+    private function entryStats(Builder $query): array
+    {
         $stats = [];
         foreach ($query->get() as $row) {
             $entryType = EntryType::tryFrom(Values::string($row->type ?? null));
@@ -420,7 +532,18 @@ final class DatabaseTraceRepository implements TraceRepository
             Values::userId($row->user_id ?? null),
             Values::toDate($row->created_at ?? null) ?? new DateTimeImmutable,
             $details,
+            Values::nullableString($row->release ?? null),
+            self::nullableFloat($row->cpu_ms ?? null),
+            self::nullableFloat($row->load_avg ?? null),
+            Values::nullableInt($row->cpu_cores ?? null),
+            Values::nullableInt($row->memory_free_mb ?? null),
+            self::nullableFloat($row->queue_wait_ms ?? null),
         );
+    }
+
+    private static function nullableFloat(mixed $value): ?float
+    {
+        return is_numeric($value) ? (float) $value : null;
     }
 
     private function hydrateQuery(object $row): StoredQuery

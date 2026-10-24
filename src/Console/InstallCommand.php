@@ -10,12 +10,12 @@ use Illuminate\Filesystem\Filesystem;
 
 /**
  * Publishes the config and migrations, optionally runs the migrations (after confirmation),
- * and prints the next steps. Re-running it is safe: an already-published migration is
- * never published a second time (vendor:publish would give it a new date).
+ * and prints the next steps. Re-running it is safe and upgrades: only migrations the app does
+ * not have yet are published.
  */
 final class InstallCommand extends Command
 {
-    private const MIGRATION_SUFFIX = '_create_sherlock_tables.php';
+    private const MIGRATIONS_PATH = __DIR__.'/../../database/migrations';
 
     private const NEXT_STEPS = [
         <<<'TEXT'
@@ -75,17 +75,7 @@ final class InstallCommand extends Command
             $configExists && ! $this->option('force') ? '<fg=yellow;options=bold>KEPT (use --force to overwrite)</>' : '<fg=green;options=bold>PUBLISHED</>',
         );
 
-        $migrationsPath = $app->databasePath('migrations');
-        if ($this->publishedMigration($files, $migrationsPath) !== null) {
-            $this->components->twoColumnDetail('database/migrations/*'.self::MIGRATION_SUFFIX, '<fg=yellow;options=bold>ALREADY PUBLISHED</>');
-        } else {
-            $this->callSilently('vendor:publish', ['--tag' => 'sherlock-migrations']);
-            $published = $this->publishedMigration($files, $migrationsPath);
-            $this->components->twoColumnDetail(
-                'database/migrations/'.($published === null ? '*'.self::MIGRATION_SUFFIX : basename($published)),
-                $published === null ? '<fg=red;options=bold>FAILED</>' : '<fg=green;options=bold>PUBLISHED</>',
-            );
-        }
+        $this->publishMigrations($files, $app->databasePath('migrations'));
 
         if ($this->option('migrate') || ($this->input->isInteractive() && $this->confirm('Run the database migrations now?', false))) {
             $this->call('migrate');
@@ -96,16 +86,39 @@ final class InstallCommand extends Command
         return self::SUCCESS;
     }
 
-    /** @phpstan-impure */
-    private function publishedMigration(Filesystem $files, string $path): ?string
+    /**
+     * Publishes each package migration that the app does not have yet, matched by name without
+     * its date prefix. Upgrades therefore receive new migrations, while already-published ones
+     * are never copied twice (vendor:publish would give them a new date).
+     */
+    private function publishMigrations(Filesystem $files, string $target): void
     {
-        if (! $files->isDirectory($path)) {
-            return null;
+        $files->ensureDirectoryExists($target);
+
+        $sources = $files->glob(self::MIGRATIONS_PATH.'/*.php');
+        sort($sources);
+        $timestamp = time();
+
+        foreach ($sources as $source) {
+            $name = self::migrationName(basename($source));
+            $existing = $files->glob(rtrim($target, '/').'/*_'.$name);
+
+            if ($existing !== []) {
+                $this->components->twoColumnDetail('database/migrations/'.basename($existing[0]), '<fg=yellow;options=bold>ALREADY PUBLISHED</>');
+
+                continue;
+            }
+
+            $published = date('Y_m_d_His', $timestamp++).'_'.$name;
+            $files->copy($source, rtrim($target, '/').'/'.$published);
+            $this->components->twoColumnDetail('database/migrations/'.$published, '<fg=green;options=bold>PUBLISHED</>');
         }
+    }
 
-        $matches = $files->glob(rtrim($path, '/').'/*'.self::MIGRATION_SUFFIX);
-
-        return $matches === [] ? null : $matches[0];
+    /** Strips the "YYYY_MM_DD_HHMMSS_" prefix. */
+    private static function migrationName(string $file): string
+    {
+        return (string) preg_replace('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', $file);
     }
 
     private function nextSteps(): void

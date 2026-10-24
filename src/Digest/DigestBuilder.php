@@ -6,18 +6,22 @@ namespace Anabil\Sherlock\Digest;
 
 use Anabil\Sherlock\Contracts\IssueRepository;
 use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\EntryDelta;
 use Anabil\Sherlock\Data\EntryStat;
 use Anabil\Sherlock\Data\IssueRecord;
 use Anabil\Sherlock\Data\NotificationMessage;
 use Anabil\Sherlock\Data\QueryStat;
+use Anabil\Sherlock\Data\ReleaseComparison;
 use Anabil\Sherlock\Enums\Bottleneck;
 use Anabil\Sherlock\Enums\IssueStatus;
 use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Releases\ReleaseComparator;
 use DateTimeImmutable;
 
 /**
  * Builds the periodic digest (Builder) from stored data only: repositories in, a
- * channel-agnostic NotificationMessage out. Never calls the AI: issues carry the analysis
+ * channel-agnostic NotificationMessage out. "Since last deploy" (ReleaseComparator) only
+ * appears once at least two releases were recorded. Never calls the AI: issues carry the analysis
  * stored when they were first analyzed, and only an excerpt of it is included.
  */
 final class DigestBuilder
@@ -34,13 +38,21 @@ final class DigestBuilder
     /** Issue lists are over-fetched so dropping ignored issues still fills "limit" rows. */
     private const OVERFETCH = 3;
 
+    /** Lines of the "Since last deploy" section (slower entries / new issues each). */
+    private const DEPLOY_LINES = 5;
+
+    private readonly ReleaseComparator $comparator;
+
     public function __construct(
         private readonly TraceRepository $traces,
         private readonly IssueRepository $issues,
         private readonly int $limit = 10,
         private readonly ?string $dashboardUrl = null,
         private readonly string $appName = 'Laravel',
-    ) {}
+        ?ReleaseComparator $comparator = null,
+    ) {
+        $this->comparator = $comparator ?? new ReleaseComparator($traces, $issues);
+    }
 
     public function build(DateTimeImmutable $since, DateTimeImmutable $until): DigestReport
     {
@@ -57,7 +69,21 @@ final class DigestBuilder
             $this->traces->slowestEntries($since, $limit),
             $this->traces->topQueries($since, 'total', $limit),
             $this->traces->bottleneckDistribution($since),
+            $this->impactful($this->issues->topByImpact($since, $limit * self::OVERFETCH), $limit),
+            $this->comparator->compareLatest(null, max(self::DEPLOY_LINES * 4, $limit)),
         );
+    }
+
+    /**
+     * @param  list<IssueRecord>  $issues
+     * @return list<IssueRecord>
+     */
+    private function impactful(array $issues, int $limit): array
+    {
+        return array_slice(array_values(array_filter(
+            $this->withoutIgnored($issues, count($issues)),
+            static fn (IssueRecord $issue): bool => $issue->impactMs > 0,
+        )), 0, $limit);
     }
 
     /**
@@ -85,6 +111,8 @@ final class DigestBuilder
             'New issues' => array_map(fn (IssueRecord $i): string => $this->issueLine($i), $report->newIssues),
             'Regressed issues' => array_map(fn (IssueRecord $i): string => $this->issueLine($i), $report->regressedIssues),
             'Most frequent issues' => array_map(fn (IssueRecord $i): string => $this->issueLine($i, true), $report->frequentIssues),
+            'Top by impact' => array_map(fn (IssueRecord $i): string => $this->impactLine($i), $report->impactIssues),
+            'Since last deploy' => $report->deploy === null ? [] : $this->deployLines($report->deploy),
             'Slowest entries' => array_map(fn (EntryStat $s): string => $this->entryLine($s), $report->slowestEntries),
             'Top queries' => array_map(fn (QueryStat $s): string => $this->queryLine($s), $report->topQueries),
         ];
@@ -192,6 +220,57 @@ final class DigestBuilder
         return $line;
     }
 
+    private function impactLine(IssueRecord $issue): string
+    {
+        return sprintf(
+            '• %s total · [%s] %s (%s · %sx)',
+            self::human($issue->impactMs),
+            strtoupper($issue->severity->value),
+            self::limit($issue->title, self::TITLE_CHARS),
+            $issue->type->label(),
+            number_format($issue->occurrences),
+        );
+    }
+
+    /**
+     * Headline, then the slowest regressions and the issues the deploy introduced.
+     *
+     * @return list<string>
+     */
+    private function deployLines(ReleaseComparison $deploy): array
+    {
+        $lines = [DeploySummary::headline($deploy).' (vs '.$deploy->previous.')'];
+
+        foreach (array_slice($deploy->slower(), 0, self::DEPLOY_LINES) as $delta) {
+            $lines[] = sprintf(
+                '• slower: %s (%s) %s -> %s (%s)%s',
+                self::limit($delta->name, self::TITLE_CHARS),
+                $delta->type->value,
+                self::ms($delta->previous->avgMs ?? 0.0),
+                self::ms($delta->current->avgMs ?? 0.0),
+                $delta->deltaRatio === null ? '+'.self::ms((float) $delta->deltaAvgMs) : '+'.(int) round($delta->deltaRatio * 100).'%',
+                $delta->basis === EntryDelta::BASIS_ALL ? ' [biased: all stored traces]' : '',
+            );
+        }
+
+        $issues = [
+            ...array_map(static fn (IssueRecord $i): array => ['new issue', $i], $deploy->newIssues),
+            ...array_map(static fn (IssueRecord $i): array => ['regressed', $i], $deploy->regressedIssues),
+        ];
+
+        foreach (array_slice($issues, 0, self::DEPLOY_LINES) as [$label, $issue]) {
+            $lines[] = sprintf(
+                '• %s: [%s] %s (%s)',
+                $label,
+                strtoupper($issue->severity->value),
+                self::limit($issue->title, self::TITLE_CHARS),
+                $issue->type->label(),
+            );
+        }
+
+        return $lines;
+    }
+
     private function location(IssueRecord $issue): ?string
     {
         $location = $issue->context['location'] ?? null;
@@ -250,6 +329,15 @@ final class DigestBuilder
     private static function ms(float $ms): string
     {
         return $ms >= 1000 ? number_format($ms / 1000, 2).' s' : number_format($ms, $ms < 10 ? 1 : 0).' ms';
+    }
+
+    private static function human(float $ms): string
+    {
+        return match (true) {
+            $ms >= 3_600_000 => number_format($ms / 3_600_000, 1).' h',
+            $ms >= 60_000 => number_format($ms / 60_000, 1).' min',
+            default => self::ms($ms),
+        };
     }
 
     private static function limit(string $text, int $chars): string

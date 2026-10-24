@@ -6,26 +6,32 @@ namespace Anabil\Sherlock\Http\Controllers;
 
 use Anabil\Sherlock\Contracts\IssueRepository;
 use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\IssueRecord;
 use Anabil\Sherlock\Enums\Bottleneck;
 use Anabil\Sherlock\Enums\EntryType;
 use Anabil\Sherlock\Enums\IssueStatus;
 use Anabil\Sherlock\Enums\Severity;
 use Anabil\Sherlock\Http\Support\Period;
 use Anabil\Sherlock\Http\Support\Views;
+use Anabil\Sherlock\Releases\ReleaseComparator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
 /**
  * Overview for a period: trace counts, open issues by severity, bottleneck split,
- * slowest entries, top queries and recent new / regressed issues.
+ * slowest entries, top queries, recent new / regressed issues, the issues costing the most
+ * time (cumulative impact) and a summary of the latest deploy (latest vs previous release).
  */
 final class OverviewController
 {
     private const LIST_LIMIT = 8;
 
+    private const DEPLOY_LIMIT = 50;
+
     public function __construct(
         private readonly TraceRepository $traces,
         private readonly IssueRepository $issues,
+        private readonly ReleaseComparator $comparator,
         private readonly Views $views,
     ) {}
 
@@ -55,6 +61,11 @@ final class OverviewController
             'topQueries' => $this->traces->topQueries($period->since, 'total', self::LIST_LIMIT),
             'newIssues' => $this->issues->newSince($period->since, self::LIST_LIMIT),
             'regressedIssues' => $this->issues->regressedSince($period->since, self::LIST_LIMIT),
+            'impactIssues' => array_values(array_filter(
+                $this->issues->topByImpact($period->since, self::LIST_LIMIT),
+                static fn (IssueRecord $issue): bool => $issue->impactMs > 0,
+            )),
+            'deploy' => $this->comparator->compareLatest(null, self::DEPLOY_LIMIT),
         ]);
     }
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Anabil\Sherlock;
 
+use Anabil\Sherlock\Collectors\LazyLoadingCollector;
+use Anabil\Sherlock\Context\ContextManager as RecordingContextManager;
 use Anabil\Sherlock\Contracts\AiProviderFactory;
 use Anabil\Sherlock\Contracts\ContextManager;
 use Anabil\Sherlock\Contracts\Redactor;
@@ -13,6 +15,7 @@ use Anabil\Sherlock\Enums\SherlockMode;
 use Closure;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Main service behind the Sherlock facade (user-facing API only).
@@ -56,6 +59,25 @@ final class Sherlock
         }
 
         $context->tag($key, $value);
+    }
+
+    /**
+     * Record a lazy-loaded relation in the current trace (named in N+1 findings). For apps that use
+     * Model::preventLazyLoading() with their own handler:
+     *
+     *     Model::handleLazyLoadingViolationUsing(function ($model, $relation) {
+     *         Sherlock::recordLazyLoad($model, $relation);
+     *         // ... the app's own handling
+     *     });
+     *
+     * O(1), deduplicated per trace, never throws; a no-op when not recording.
+     */
+    public function recordLazyLoad(Model|string $model, string $relation): void
+    {
+        $manager = $this->contexts();
+        if ($manager instanceof RecordingContextManager) {
+            LazyLoadingCollector::record($manager, $model, $relation);
+        }
     }
 
     /**

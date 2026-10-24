@@ -8,12 +8,51 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **Server signals** per trace: CPU time (`getrusage()`), 1-minute load average, CPU cores (lazily, once
+  per process) and available memory (persisted traces only); config `server.*`. New verdicts
+  `server_load`, `queue_backlog` and `waiting` (blocked: little CPU for the wall time); the signals used are
+  stored in `details.verdict.signals`. New `ServerLoadAnalyzer` (`server_load` issues, one per server).
+- **Queue wait** on job traces (`queue_wait_ms`, from `available_at` / `pushedAt` / `createdAt` + `delay`) and
+  `QueueWaitAnalyzer` (`queue_wait` issues per connection + queue, `thresholds.queue_wait.*`).
+- **Worker memory leak detection** (`memory_leak.*`): steady memory growth across consecutive jobs raises a
+  `memory_leak` issue with the growth per job class (`MemoryLeakAnalyzer`).
+- **Lazy-loading integration** (`lazy_loading.detect`, `SHERLOCK_LAZY_LOADING`; null = local mode only): exact
+  `Model::relation` names on N+1 findings (`model`, `relation_source` metrics, `details.lazy_loads`), and
+  `Sherlock::recordLazyLoad($model, $relation)` for apps with their own violation handler.
+- **Releases**: every trace carries `release` (`SHERLOCK_RELEASE`, else a `.release` / `REVISION` file, else the
+  git short SHA; baked in by `config:cache`), issues carry `first_seen_release` / `last_seen_release`, new
+  `sherlock_releases` table and `ReleaseComparator` (before / after per entry, sampled traces when there are
+  enough of them, `releases.*`).
+- **Impact**: issues accumulate `impact_ms`, the time each occurrence cost (`impact.exception_ms` for
+  exceptions); `IssueFilter(sort: 'impact')` and `IssueRepository::topByImpact()`.
+- Dashboard **Deploys** page: release list and comparison of the latest release with the previous one (or any
+  two), with slower / faster / new / gone entries, before → after averages, % / ms / DB / query deltas, a
+  "biased" marker when the comparison could not use sampled traces, and new / regressed / gone issues.
+- Dashboard: Impact column and sort and a first-seen release filter on Issues; impact, first / last seen
+  release, the N+1 relation (exact or guessed), lazy loads, memory leak and server signals on the issue page;
+  a server signals panel (CPU vs wall time, load per core, free memory, queue wait), release, lazy-loading
+  violations and memory leak on the trace page; a release filter on Traces; "Top issues by impact" and
+  "Latest deploy" cards on the Overview.
+- `sherlock:report`: "Top issues by impact" and "Latest deploy" sections, `--release=` (compare a release with
+  the one before it) and `--compare=after,before`.
+- Digest: "Top by impact" and "Since last deploy" (only with at least two releases) sections, from stored
+  data only.
+- Notifications: `Release` and `Total impact` fields, "First seen in release ..." in new-issue summaries.
+- **Test assertions** (`Anabil\Sherlock\Testing`): `InteractsWithSherlock` trait (`assertNoNPlusOne`,
+  `assertNoDuplicateQueries`, `assertNoSlowQueries`, `assertQueryCountLessThan`, `assertQueryCount`,
+  `assertNoQueryIssues`, `sherlockProbe`) and Pest expectations (`Expectations::register()`:
+  `toHaveNoNPlusOne`, `toHaveNoDuplicateQueries`, `toHaveNoSlowQueries`, `toHaveNoQueryIssues`,
+  `toRunQueriesLessThan`, `toRunQueries`). Work in every mode, `off` included; N+1 threshold 2 in tests;
+  config `testing.*`.
 - `benchmarks/capture-overhead.php`: a "100 distinct SQL" scenario and measured backtrace counts.
 - `watch.enabled` (`SHERLOCK_WATCH_ENABLED`) to never read the cache in the request path, and
   `watch.shared_memo`: on PHP-FPM the watch-window read is shared between workers through APCu.
 
 ### Changed
 
+- **Upgrade:** run `php artisan migrate` (new migration `2026_10_24_000000_add_sherlock_server_signals_and_releases`).
+  A published `config/sherlock.php` must add `ServerLoadAnalyzer`, `QueueWaitAnalyzer` and
+  `MemoryLeakAnalyzer` to `analyzers` to get the new issue types.
 - **Breaking:** renamed the package to **Laravel Sherlock**: `anabil/laravel-tracing` is now `anabiiil/laravel-sherlock`, namespace
   `Anabil\Tracing` is now `Anabil\Sherlock` (`SherlockServiceProvider`, `Sherlock` facade). Config
   `config/sherlock.php`, env vars `SHERLOCK_*`, commands `sherlock:*`, tables `sherlock_*`, publish tags
@@ -29,6 +68,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Fixed
 
+- The dashboard threw an `UnhandledMatchError` for traces with the new `server_load`, `queue_backlog` and
+  `waiting` verdicts (missing badge colors).
 - EXPLAIN (missing-index detection) never ran in production for parameterized queries. Queries slow enough
   to be explained now keep their redacted bindings in memory for EXPLAIN only; they are dropped before
   analysis, persistence and queued payloads. Literal values are scrubbed from raw plans before they are

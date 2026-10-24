@@ -10,7 +10,7 @@ use Anabil\Sherlock\Enums\EntryType;
 use Illuminate\Http\Request;
 
 /**
- * Traces list query string (type, name, bottleneck, min duration, issue, sort). Lenient:
+ * Traces list query string (type, name, bottleneck, min duration, issue, release, sort). Lenient:
  * unknown values are dropped instead of failing the page.
  */
 final readonly class TraceFilters
@@ -30,6 +30,7 @@ final readonly class TraceFilters
         public ?float $minDurationMs = null,
         public ?string $issueId = null,
         public string $sort = 'created_at',
+        public ?string $release = null,
     ) {}
 
     public static function fromRequest(Request $request): self
@@ -45,6 +46,7 @@ final readonly class TraceFilters
             is_numeric($min) && (float) $min > 0 ? (float) $min : null,
             preg_match('/^[A-Za-z0-9_-]{1,64}$/', $issue) === 1 ? $issue : null,
             isset(self::SORTS[$sort]) ? $sort : 'created_at',
+            Input::release($request),
         );
     }
 
@@ -57,6 +59,7 @@ final readonly class TraceFilters
             minDurationMs: $this->minDurationMs,
             issueId: $this->issueId,
             sort: $this->sort,
+            release: $this->release,
         );
     }
 
@@ -74,6 +77,7 @@ final readonly class TraceFilters
             'min_ms' => $this->minDurationMs === null ? '' : (string) $this->minDurationMs,
             'issue' => (string) $this->issueId,
             'sort' => $this->sort === 'created_at' ? '' : $this->sort,
+            'release' => (string) $this->release,
         ], static fn (string $value): bool => $value !== '');
     }
 }

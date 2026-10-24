@@ -58,6 +58,7 @@ final class ExceptionAnalyzer implements Analyzer
         private readonly Fingerprinter $fingerprinter,
         private readonly ?SourceLocator $locator = null,
         array $logLevels = self::DEFAULT_LOG_LEVELS,
+        private readonly float $exceptionImpactMs = 0.0,
     ) {
         $levels = [];
         foreach ($logLevels as $level => $severity) {
@@ -118,6 +119,7 @@ final class ExceptionAnalyzer implements Analyzer
 
         return new Finding(
             type: IssueType::Exception,
+            impactMs: $this->exceptionImpactMs * $count,
             severity: Severity::Critical,
             title: $short.' in '.$where,
             description: Describe::truncate($log->message, 500).($count > 1 ? sprintf(' (thrown %d times in this %s)', $count, strtolower($trace->type->label())) : ''),

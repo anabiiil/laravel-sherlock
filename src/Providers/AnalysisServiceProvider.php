@@ -9,8 +9,11 @@ use Anabil\Sherlock\Analysis\Analyzers\DuplicateQueryAnalyzer;
 use Anabil\Sherlock\Analysis\Analyzers\ExceptionAnalyzer;
 use Anabil\Sherlock\Analysis\Analyzers\ExcessiveQueriesAnalyzer;
 use Anabil\Sherlock\Analysis\Analyzers\HighMemoryAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\MemoryLeakAnalyzer;
 use Anabil\Sherlock\Analysis\Analyzers\MissingIndexAnalyzer;
 use Anabil\Sherlock\Analysis\Analyzers\NPlusOneAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\QueueWaitAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\ServerLoadAnalyzer;
 use Anabil\Sherlock\Analysis\Analyzers\SlowEntryAnalyzer;
 use Anabil\Sherlock\Analysis\Analyzers\SlowExternalCallAnalyzer;
 use Anabil\Sherlock\Analysis\Analyzers\SlowQueryAnalyzer;
@@ -55,7 +58,7 @@ final class AnalysisServiceProvider extends ServiceProvider
         ));
 
         $this->app->singleton(BottleneckClassifier::class, static fn (Application $app): DefaultBottleneckClassifier => new DefaultBottleneckClassifier(
-            self::array($app, 'sherlock.bottleneck'),
+            self::classifierRules($app),
         ));
 
         $this->registerAnalyzers();
@@ -130,9 +133,28 @@ final class AnalysisServiceProvider extends ServiceProvider
             $fp($app),
             $app->make(SourceLocator::class),
             self::array($app, 'sherlock.thresholds.log_levels') ?: ExceptionAnalyzer::DEFAULT_LOG_LEVELS,
+            max(0.0, self::float($app, 'sherlock.impact.exception_ms', 0)),
         ));
 
         $this->app->bind(MissingIndexAnalyzer::class, static fn (Application $app): MissingIndexAnalyzer => new MissingIndexAnalyzer($fp($app)));
+
+        $this->app->bind(ServerLoadAnalyzer::class, static fn (Application $app): ServerLoadAnalyzer => new ServerLoadAnalyzer(
+            $fp($app),
+            self::float($app, 'sherlock.server.load_per_core_warning', 1.5),
+            self::float($app, 'sherlock.server.load_per_core_critical', 3.0),
+            self::array($app, 'sherlock.thresholds.entries') ?: SlowEntryAnalyzer::DEFAULTS,
+        ));
+
+        $this->app->bind(QueueWaitAnalyzer::class, static fn (Application $app): QueueWaitAnalyzer => new QueueWaitAnalyzer(
+            $fp($app),
+            self::float($app, 'sherlock.thresholds.queue_wait.warning_ms', 30000),
+            self::float($app, 'sherlock.thresholds.queue_wait.critical_ms', 300000),
+        ));
+
+        $this->app->bind(MemoryLeakAnalyzer::class, static fn (Application $app): MemoryLeakAnalyzer => new MemoryLeakAnalyzer(
+            $fp($app),
+            self::float($app, 'sherlock.memory_leak.critical_mb', 128),
+        ));
     }
 
     private function registerExplain(): void
@@ -191,6 +213,31 @@ final class AnalysisServiceProvider extends ServiceProvider
         }
 
         return $analyzers;
+    }
+
+    /**
+     * sherlock.bottleneck plus the server / queue thresholds the classifier uses.
+     *
+     * @return array<array-key, mixed>
+     */
+    private static function classifierRules(Application $app): array
+    {
+        $rules = self::array($app, 'sherlock.bottleneck');
+        $config = $app->make(Config::class);
+
+        foreach ([
+            'server_load' => 'sherlock.server.load_per_core_warning',
+            'cpu_bound' => 'sherlock.server.cpu_bound_ratio',
+            'waiting' => 'sherlock.server.waiting_ratio',
+            'queue_wait_ms' => 'sherlock.thresholds.queue_wait.warning_ms',
+        ] as $rule => $key) {
+            $value = $config->get($key);
+            if (! isset($rules[$rule]) && is_numeric($value)) {
+                $rules[$rule] = (float) $value;
+            }
+        }
+
+        return $rules;
     }
 
     /**

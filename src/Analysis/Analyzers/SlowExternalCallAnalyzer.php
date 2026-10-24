@@ -54,6 +54,7 @@ final class SlowExternalCallAnalyzer implements Analyzer
 
             $findings[] = new Finding(
                 type: IssueType::SlowExternalCall,
+                impactMs: round($group['total'], 3),
                 severity: $slowest->durationMs >= $this->criticalMs ? Severity::Critical : Severity::Warning,
                 title: 'Slow external call to '.$host.' ('.Describe::duration($slowest->durationMs)
                     .($group['count'] > 1 ? ', '.$group['count'].'×' : '').')'.Describe::where($trace, $slowest->location),

@@ -101,7 +101,7 @@ it('applies the configured middleware to every dashboard route', function (): vo
     $routes = collect(Route::getRoutes()->getRoutes())
         ->filter(fn ($route): bool => str_starts_with((string) $route->getName(), 'sherlock.'));
 
-    expect($routes)->toHaveCount(10);
+    expect($routes)->toHaveCount(11);
 
     foreach ($routes as $route) {
         expect($route->gatherMiddleware())->toContain('web', Authorize::class);

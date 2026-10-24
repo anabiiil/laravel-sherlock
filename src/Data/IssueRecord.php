@@ -17,6 +17,7 @@ final readonly class IssueRecord
 {
     /**
      * @param  array<string, mixed>  $context  latest Finding::toArray() plus entry info / verdict / explain
+     * @param  float  $impactMs  cumulative time cost of every occurrence (Finding::$impactMs summed)
      */
     public function __construct(
         public int|string $id,
@@ -37,6 +38,9 @@ final readonly class IssueRecord
         public ?string $aiAnalysis = null,
         public ?string $aiModel = null,
         public ?DateTimeImmutable $aiAnalyzedAt = null,
+        public ?string $firstSeenRelease = null,
+        public ?string $lastSeenRelease = null,
+        public float $impactMs = 0.0,
     ) {}
 
     public function hasAiAnalysis(): bool
@@ -68,6 +72,9 @@ final readonly class IssueRecord
             'ai_analysis' => $this->aiAnalysis,
             'ai_model' => $this->aiModel,
             'ai_analyzed_at' => $this->aiAnalyzedAt?->format(DATE_ATOM),
+            'first_seen_release' => $this->firstSeenRelease,
+            'last_seen_release' => $this->lastSeenRelease,
+            'impact_ms' => $this->impactMs,
         ];
     }
 }

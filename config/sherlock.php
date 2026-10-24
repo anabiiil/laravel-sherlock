@@ -30,6 +30,50 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Release
+    |--------------------------------------------------------------------------
+    |
+    | Release / deploy identifier stamped on every trace and issue (first / last seen
+    | release), the base of before / after deploy comparisons. SHERLOCK_RELEASE wins;
+    | otherwise it is detected from a ".release" / "REVISION" file or the git HEAD (short
+    | SHA) of the application, without shelling out. Run "php artisan config:cache" on
+    | deploy: the value is then baked into the cached config (no file read per request).
+    |
+    */
+
+    'release' => Anabil\Sherlock\Support\ReleaseDetector::normalize(env('SHERLOCK_RELEASE'))
+        ?? Anabil\Sherlock\Support\ReleaseDetector::detect(function_exists('base_path') ? base_path() : null),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Server signals
+    |--------------------------------------------------------------------------
+    |
+    | Answers "is it the query or the server?". Per unit: CPU time (getrusage() at start
+    | and end) and the 1-minute load average (sys_getloadavg() when the unit ends). The
+    | core count is resolved once per process, only when needed: "cpu_cores", else Linux
+    | /proc/cpuinfo. Available memory (Linux /proc/meminfo) is read only for persisted
+    | traces. Never shells out.
+    |
+    */
+
+    'server' => [
+        'cpu_time' => env('SHERLOCK_SERVER_CPU_TIME', true),
+        'load_average' => env('SHERLOCK_SERVER_LOAD', true),
+        'memory' => env('SHERLOCK_SERVER_MEMORY', true),
+        // Cores of the server; null = detected (Linux). Set it on macOS / containers with CPU limits.
+        'cpu_cores' => env('SHERLOCK_CPU_CORES'),
+        // Load average per core: ServerLoadAnalyzer finding on slow entries + "server_load" verdict.
+        'load_per_core_warning' => 1.5,
+        'load_per_core_critical' => 3.0,
+        // Application segment classification: CPU time / application time >= cpu_bound_ratio is
+        // CPU-bound code; <= waiting_ratio is waiting / blocked (locks, sleep, I/O, slow disk).
+        'cpu_bound_ratio' => 0.7,
+        'waiting_ratio' => 0.3,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Capture
     |--------------------------------------------------------------------------
     |
@@ -126,6 +170,12 @@ return [
             'critical_rows' => 100000,
         ],
 
+        // Queue jobs: time between becoming available (push + delay) and starting.
+        'queue_wait' => [
+            'warning_ms' => (int) env('SHERLOCK_QUEUE_WAIT_MS', 30000),
+            'critical_ms' => 300000,
+        ],
+
         // Severity of captured log records per PSR-3 level (exceptions are always critical).
         // Levels not listed here never raise a log_error finding.
         'log_levels' => [
@@ -157,6 +207,82 @@ return [
         'Anabil\Sherlock\Analysis\Analyzers\CacheMissRateAnalyzer',
         'Anabil\Sherlock\Analysis\Analyzers\ExceptionAnalyzer',
         'Anabil\Sherlock\Analysis\Analyzers\MissingIndexAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\ServerLoadAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\QueueWaitAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\MemoryLeakAnalyzer',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Lazy-loading violations (exact N+1 relation names)
+    |--------------------------------------------------------------------------
+    |
+    | When enabled and the app does not use Model::preventLazyLoading() itself, Sherlock
+    | enables it with a handler that records "Model::relation" in the trace and never
+    | throws (the relation still loads). null = enabled in local mode only. Apps with their
+    | own handler can call Sherlock::recordLazyLoad($model, $relation) from it.
+    |
+    */
+
+    'lazy_loading' => [
+        'detect' => env('SHERLOCK_LAZY_LOADING'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Memory leaks in queue workers
+    |--------------------------------------------------------------------------
+    |
+    | After each job a worker records memory_get_usage() in a bounded ring buffer. Growth
+    | of "growth_mb" over the baseline (taken after "warmup_jobs"), steady across at least
+    | "min_jobs" jobs, raises a memory_leak finding on the job that crossed it (once per
+    | worker process per growth_mb step). Zero cost outside queue workers.
+    |
+    */
+
+    'memory_leak' => [
+        'enabled' => env('SHERLOCK_MEMORY_LEAK', true),
+        'growth_mb' => 32,
+        'critical_mb' => 128,
+        'min_jobs' => 20,
+        'warmup_jobs' => 5,
+        'buffer' => 50,
+        // Share of the buffered jobs that must have grown the memory (steady growth).
+        'min_growing_ratio' => 0.5,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Impact
+    |--------------------------------------------------------------------------
+    |
+    | Issues accumulate impact_ms: the time each occurrence cost (N+1: the repeated
+    | queries, slow query: its time, slow entry: the excess over the threshold, excessive
+    | queries: db time, external call: its duration, queue wait: the wait). Exceptions
+    | count "exception_ms" each.
+    |
+    */
+
+    'impact' => [
+        'exception_ms' => 0,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Release comparison
+    |--------------------------------------------------------------------------
+    |
+    | In production only sampled / threshold traces are stored, so averages of all stored
+    | traces are biased towards slow ones. Comparisons use "sample" traces when both
+    | releases have at least "compare_min_samples" of them for an entry.
+    |
+    */
+
+    'releases' => [
+        'compare_min_samples' => 20,
+        // An entry is slower / faster when its average changes by this ratio and by delta_ms.
+        'compare_min_change' => 0.1,
+        'compare_min_delta_ms' => 5,
     ],
 
     /*
@@ -294,6 +420,9 @@ return [
             'reverb:*',
             'pulse:*',
             'tinker',
+            'serve',
+            'pail',
+            'queue:restart',
             'package:discover',
             'vendor:publish',
             'migrate*',
@@ -585,6 +714,31 @@ return [
         // The viewSherlock gate middleware is always appended.
         'middleware' => ['web'],
         'per_page' => 25,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Test assertions
+    |--------------------------------------------------------------------------
+    |
+    | Thresholds of the PHPUnit trait (Anabil\Sherlock\Testing\InteractsWithSherlock)
+    | and the Pest expectations (toHaveNoNPlusOne()...). They work in every mode, "off"
+    | included. null = fall back to the matching "thresholds.*" value. The N+1 threshold
+    | is stricter than in production on purpose: a query repeated twice from the same
+    | line is already an N+1 in a test.
+    |
+    */
+
+    'testing' => [
+        // Same query from the same source location this many times = N+1 (min 2; null = 2,
+        // never thresholds.n_plus_one: test fixtures are too small for the production value).
+        'n_plus_one' => env('SHERLOCK_TEST_N_PLUS_ONE', 2),
+        // null = thresholds.duplicate_query.min_count
+        'duplicate_query' => null,
+        // null = thresholds.slow_query.warning_ms
+        'slow_query_ms' => null,
+        // null = thresholds.excessive_queries.warning_count (used by assertNoQueryIssues())
+        'max_queries' => null,
     ],
 
 ];

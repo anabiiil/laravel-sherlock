@@ -51,11 +51,16 @@ final class Tables
         return $this->prefix.'issue_traces';
     }
 
+    public function releases(): string
+    {
+        return $this->prefix.'releases';
+    }
+
     /**
      * @return list<string>
      */
     public function all(): array
     {
-        return [$this->traces(), $this->queries(), $this->issues(), $this->issueTraces()];
+        return [$this->traces(), $this->queries(), $this->issues(), $this->issueTraces(), $this->releases()];
     }
 }

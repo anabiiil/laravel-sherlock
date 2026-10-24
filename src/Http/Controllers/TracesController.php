@@ -23,6 +23,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class TracesController
 {
+    private const RELEASE_OPTIONS = 50;
+
     public function __construct(
         private readonly TraceRepository $traces,
         private readonly IssueRepository $issues,
@@ -46,6 +48,7 @@ final class TracesController
             'types' => EntryType::cases(),
             'bottlenecks' => Bottleneck::cases(),
             'sorts' => TraceFilters::SORTS,
+            'releases' => $this->traces->releases(self::RELEASE_OPTIONS),
         ]);
     }
 

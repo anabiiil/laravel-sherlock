@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Anabil\Sherlock\Ai;
 
 use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\TraceRepository;
 use Anabil\Sherlock\Data\AiRequest;
 use Anabil\Sherlock\Data\IssueRecord;
 use Anabil\Sherlock\Enums\IssueType;
@@ -53,6 +54,7 @@ final class PromptBuilder
         private readonly Redactor $redactor,
         private readonly ?ConnectionResolverInterface $db,
         private readonly string $basePath,
+        private readonly ?TraceRepository $traces = null,
     ) {}
 
     public function build(IssueRecord $issue): AiRequest
@@ -105,6 +107,8 @@ final class PromptBuilder
             $this->snippetSection($context),
             $this->exceptionSection($context),
             $this->httpSection($context),
+            $this->lazyLoadSection($context),
+            $this->memoryLeakSection($context),
             $this->section('Detector recommendation', self::str($context['recommendation'] ?? null) ?? ''),
         ], static fn (string $section): bool => $section !== '');
 
@@ -126,7 +130,33 @@ final class PromptBuilder
             IssueType::CacheMissRate => 'The cache hit rate is poor. Explain likely causes (keys too specific, short TTLs, invalidation storms, cache not warmed) and how to restructure keys / TTLs / remember() usage.',
             IssueType::Exception => 'This exception keeps happening. Using the exception class, message and application frames, explain the root cause and show a robust fix (validation, null handling, guarding, retry or failing gracefully). Do not just suggest catching and ignoring it.',
             IssueType::LogError => 'This error is logged repeatedly. Using the message and location, explain the root cause and show how to fix it at the source rather than silencing the log.',
+            IssueType::ServerLoad => 'A slow entry point ran while the server was overloaded (load average per CPU core above the threshold, low CPU time of the process itself). Explain what this means for the diagnosis (the code may be fine), how to confirm what saturates the CPUs, and how to size PHP-FPM / workers or scale the server.',
+            IssueType::QueueWait => 'Queue jobs wait too long before a worker starts them. Explain the likely causes (too few workers, long jobs blocking the queue, one queue shared by bulk and latency-sensitive jobs) and propose worker / Horizon configuration and queue separation.',
+            IssueType::MemoryLeak => 'A long-running queue worker grows memory steadily across jobs. Using the job classes that contributed the most growth, explain the likely leak (static / singleton caches, listeners registered per job, query log enabled, references kept on long-lived services) and show how to fix it, plus the --max-jobs / --memory safety net.',
         };
+    }
+
+    /**
+     * "appeared after deploy X" when the issue was first seen in the most recent release (and an
+     * earlier release exists, so it really is new in that deploy).
+     */
+    private function appearedAfterDeploy(IssueRecord $issue): ?string
+    {
+        if ($issue->firstSeenRelease === null || $this->traces === null) {
+            return null;
+        }
+
+        try {
+            $releases = $this->traces->releases(2);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (count($releases) < 2 || $releases[0]->release !== $issue->firstSeenRelease) {
+            return null;
+        }
+
+        return "appeared after deploy {$issue->firstSeenRelease} (previous release {$releases[1]->release} did not have it): look for what changed in that deploy";
     }
 
     private function issueSection(IssueRecord $issue): string
@@ -139,6 +169,8 @@ final class PromptBuilder
             'First seen' => $issue->firstSeenAt->format('Y-m-d H:i T'),
             'Last seen' => $issue->lastSeenAt->format('Y-m-d H:i T'),
             'Regressed' => $issue->regressedAt !== null ? 'yes, it came back after being resolved' : null,
+            'First seen in release' => $issue->firstSeenRelease,
+            'Deploy' => $this->appearedAfterDeploy($issue),
             'Description' => self::str($issue->context['description'] ?? null),
         ]));
     }
@@ -184,6 +216,11 @@ final class PromptBuilder
                 : null,
             'Bootstrap (ms)' => self::scalar($trace['bootstrap_ms'] ?? null),
             'Peak memory (MB)' => is_numeric($memory) ? (string) round((float) $memory / 1_048_576, 1) : null,
+            'CPU time of the process (ms)' => self::scalar($trace['cpu_ms'] ?? null),
+            'Server load average (1 min)' => self::scalar($trace['load_avg'] ?? null),
+            'Server CPU cores' => self::scalar($trace['cpu_cores'] ?? null),
+            'Available server memory (MB)' => self::scalar($trace['memory_free_mb'] ?? null),
+            'Queue wait before start (ms)' => self::scalar($trace['queue_wait_ms'] ?? null),
         ];
 
         return $this->section('Metrics (latest occurrence)', $this->list($metrics));
@@ -562,6 +599,53 @@ final class PromptBuilder
         }
 
         return $lines === [] ? '' : $this->section('Slowest external calls', implode("\n", $lines));
+    }
+
+    /**
+     * Relations Eloquent reported as lazy loaded on collections (class names and relation names only).
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function lazyLoadSection(array $context): string
+    {
+        $lines = [];
+        foreach (array_slice(self::arr($context['lazy_loads'] ?? null), 0, 10) as $record) {
+            $record = self::arr($record);
+            $model = self::str($record['model'] ?? null);
+            $relation = self::str($record['relation'] ?? null);
+            if ($model !== null && $relation !== null) {
+                $lines[] = "- {$model}::{$relation} lazy loaded ".(self::scalar($record['count'] ?? null) ?? '?').'×'
+                    .(($table = self::str($record['table'] ?? null)) !== null ? " (table {$table})" : '');
+            }
+        }
+
+        return $lines === [] ? '' : $this->section('Lazy-loaded relations (Model::preventLazyLoading violations)', implode("\n", $lines));
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function memoryLeakSection(array $context): string
+    {
+        $leak = self::arr($context['memory_leak'] ?? null);
+        if ($leak === []) {
+            return '';
+        }
+
+        $contributors = [];
+        foreach (self::arr($leak['contributors'] ?? null) as $class => $bytes) {
+            if (is_string($class) && is_numeric($bytes)) {
+                $contributors[] = $class.' +'.round((float) $bytes / 1024).' KB';
+            }
+        }
+
+        return $this->section('Worker memory growth', $this->list([
+            'Baseline (bytes)' => self::scalar($leak['baseline_bytes'] ?? null),
+            'Current (bytes)' => self::scalar($leak['current_bytes'] ?? null),
+            'Jobs since baseline' => self::scalar($leak['jobs'] ?? null),
+            'Share of recent jobs that grew memory' => self::scalar($leak['growing_ratio'] ?? null),
+            'Largest contributors (recent jobs)' => $contributors === [] ? null : implode(', ', $contributors),
+        ]));
     }
 
     private function section(string $title, string $body): string

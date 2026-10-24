@@ -11,6 +11,9 @@ enum Bottleneck: string
     case ExternalService = 'external_service';
     case Cache = 'cache';
     case Bootstrap = 'bootstrap';
+    case ServerLoad = 'server_load';
+    case QueueBacklog = 'queue_backlog';
+    case Waiting = 'waiting';
     case Mixed = 'mixed';
     case Unknown = 'unknown';
 
@@ -22,6 +25,9 @@ enum Bottleneck: string
             self::ExternalService => 'External service',
             self::Cache => 'Cache',
             self::Bootstrap => 'Bootstrap',
+            self::ServerLoad => 'Server load',
+            self::QueueBacklog => 'Queue backlog',
+            self::Waiting => 'Waiting / blocked',
             self::Mixed => 'Mixed',
             self::Unknown => 'Unknown',
         };

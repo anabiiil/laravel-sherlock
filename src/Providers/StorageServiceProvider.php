@@ -15,6 +15,7 @@ use Anabil\Sherlock\Contracts\QueryNormalizer;
 use Anabil\Sherlock\Contracts\TraceRepository;
 use Anabil\Sherlock\Issues\DefaultIssueService;
 use Anabil\Sherlock\Issues\IssueContextBuilder;
+use Anabil\Sherlock\Releases\ReleaseComparator;
 use Anabil\Sherlock\Storage\Persistence\AfterResponsePersistence;
 use Anabil\Sherlock\Storage\Persistence\QueuedPersistence;
 use Anabil\Sherlock\Storage\Persistence\TraceWriter;
@@ -83,6 +84,20 @@ final class StorageServiceProvider extends ServiceProvider
                 ! (self::servesHttp($app) && self::queueIsSync($config)),
                 $notify,
                 new AiEligibility($config),
+            );
+        });
+
+        $this->app->singleton(ReleaseComparator::class, static function (Application $app): ReleaseComparator {
+            $config = $app->make(Repository::class);
+            $change = $config->get('sherlock.releases.compare_min_change');
+            $delta = $config->get('sherlock.releases.compare_min_delta_ms');
+
+            return new ReleaseComparator(
+                $app->make(TraceRepository::class),
+                $app->make(IssueRepository::class),
+                self::int($config->get('sherlock.releases.compare_min_samples'), 20),
+                is_numeric($change) ? max(0.0, (float) $change) : 0.1,
+                is_numeric($delta) ? max(0.0, (float) $delta) : 5.0,
             );
         });
 

@@ -69,6 +69,7 @@ final class SlowQueryAnalyzer implements Analyzer
 
         return new Finding(
             type: IssueType::SlowQuery,
+            impactMs: round($total, 3),
             severity: $severity,
             title: 'Slow query on '.Describe::table($table).' ('.Describe::duration($slowest->timeMs).$times.')'.Describe::where($trace, $slowest->location),
             description: sprintf(

@@ -15,9 +15,8 @@ use Anabil\Sherlock\Http\Support\Value;
 use Illuminate\Support\HtmlString;
 
 /**
- * Read-only view of a stored trace: summary, time breakdown, queries grouped by
- * fingerprint, HTTP calls,
- * logs / exceptions and tags. All values stay plain strings; the views escape them.
+ * Read-only view of a stored trace: summary, time breakdown, server signals, queries grouped
+ * by fingerprint, lazy loads, HTTP calls, logs / exceptions, memory leak and tags. All values stay plain strings; the views escape them.
  *
  * N+1 here is "same fingerprint >= threshold times": source locations are only captured
  * for the first execution of a fingerprint, so repeats cannot be grouped by location.
@@ -55,9 +54,153 @@ final readonly class TracePresenter
             'Cache' => $trace->cacheHits.' hits / '.$trace->cacheMisses.' misses',
             'Memory peak' => Format::bytes($trace->memoryPeak),
             'Recorded because' => $trace->recordReason->value,
+            'Release' => (string) $trace->release,
             'User' => $trace->userId === null ? '' : (string) $trace->userId,
             'Recorded at' => Format::date($trace->createdAt),
         ], static fn (string $value): bool => $value !== '');
+    }
+
+    /**
+     * Server / queue signals of the unit: CPU time vs wall time, load average (per core),
+     * free memory, queue wait. Columns first, the verdict's stored signals as a fallback.
+     *
+     * @return array{rows: array<string, string>, cpu_percent: float|null, load_percent: float|null, waiting: bool}
+     */
+    public function signals(): array
+    {
+        $trace = $this->trace;
+        $stored = Value::array(Value::array($trace->details['verdict'] ?? null)['signals'] ?? null);
+
+        return self::signalRows([
+            'duration_ms' => $trace->durationMs,
+            'cpu_ms' => $trace->cpuMs ?? Value::nullableFloat($stored['cpu_ms'] ?? null),
+            'load_avg' => $trace->loadAvg ?? Value::nullableFloat($stored['load_avg'] ?? null),
+            'cpu_cores' => $trace->cpuCores ?? Value::nullableInt($stored['cpu_cores'] ?? null),
+            'memory_free_mb' => $trace->memoryFreeMb,
+            'queue_wait_ms' => $trace->queueWaitMs ?? Value::nullableFloat($stored['queue_wait_ms'] ?? null),
+        ]);
+    }
+
+    /**
+     * Shared by the trace and issue pages.
+     *
+     * @param  array{duration_ms: float|null, cpu_ms: float|null, load_avg: float|null, cpu_cores: int|null, memory_free_mb: int|null, queue_wait_ms: float|null}  $signals
+     * @return array{rows: array<string, string>, cpu_percent: float|null, load_percent: float|null, waiting: bool}
+     */
+    public static function signalRows(array $signals): array
+    {
+        $duration = $signals['duration_ms'];
+        $cpu = $signals['cpu_ms'];
+        $load = $signals['load_avg'];
+        $cores = $signals['cpu_cores'];
+        $cpuPercent = $cpu !== null && $duration !== null && $duration > 0 ? round(min(100.0, $cpu / $duration * 100), 1) : null;
+        $loadPercent = $load !== null && $cores !== null && $cores > 0 ? round($load / $cores * 100, 0) : null;
+        $rows = [];
+
+        if ($cpu !== null) {
+            $rows['CPU time'] = Format::ms($cpu).($cpuPercent === null ? '' : ' ('.Format::percent($cpuPercent).' of wall time)');
+        }
+        if ($cpu !== null && $duration !== null) {
+            $rows['Wall time'] = Format::ms($duration);
+        }
+        if ($load !== null) {
+            $rows['Load average'] = number_format($load, 2).($cores !== null ? ' on '.$cores.' '.($cores === 1 ? 'core' : 'cores') : '');
+        }
+        if ($loadPercent !== null) {
+            $rows['Load per core'] = Format::percent($loadPercent);
+        }
+        if ($signals['memory_free_mb'] !== null) {
+            $rows['Free memory'] = Format::bytes($signals['memory_free_mb'] * 1_048_576);
+        }
+        if ($signals['queue_wait_ms'] !== null) {
+            $rows['Queue wait'] = Format::ms($signals['queue_wait_ms']);
+        }
+
+        return [
+            'rows' => $rows,
+            'cpu_percent' => $cpuPercent,
+            'load_percent' => $loadPercent,
+            // Little CPU for the wall time: the unit mostly waited (locks, sleep, I/O, slow disk).
+            'waiting' => $cpuPercent !== null && $duration !== null && $duration >= 50 && $cpuPercent <= 30,
+        ];
+    }
+
+    /**
+     * Relations lazy loaded on collections (Model::preventLazyLoading() violations).
+     *
+     * @return list<array{model: string, relation: string, short: string, count: int, table: string|null}>
+     */
+    public function lazyLoads(): array
+    {
+        return self::lazyLoadRows($this->trace->details['lazy_loads'] ?? null);
+    }
+
+    /**
+     * @return list<array{model: string, relation: string, short: string, count: int, table: string|null}>
+     */
+    public static function lazyLoadRows(mixed $records): array
+    {
+        $rows = [];
+
+        foreach (Value::rows($records) as $record) {
+            $model = Value::string($record['model'] ?? null);
+            $relation = Value::string($record['relation'] ?? null);
+            if ($model === '' || $relation === '') {
+                continue;
+            }
+
+            $position = strrpos($model, '\\');
+            $rows[] = [
+                'model' => $model,
+                'relation' => $relation,
+                'short' => ($position === false ? $model : substr($model, $position + 1)).'::'.$relation,
+                'count' => max(1, (int) Value::float($record['count'] ?? 1)),
+                'table' => Value::nullableString($record['table'] ?? null),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Queue worker memory growth attached to this job, when it crossed the leak threshold.
+     *
+     * @return array{rows: array<string, string>, contributors: array<string, string>}|null
+     */
+    public function memoryLeak(): ?array
+    {
+        return self::memoryLeakRows($this->trace->details['memory_leak'] ?? null);
+    }
+
+    /**
+     * @return array{rows: array<string, string>, contributors: array<string, string>}|null
+     */
+    public static function memoryLeakRows(mixed $leak): ?array
+    {
+        $leak = Value::array($leak);
+
+        if ($leak === []) {
+            return null;
+        }
+
+        $contributors = [];
+        foreach (Value::array($leak['contributors'] ?? null) as $class => $bytes) {
+            if (is_numeric($bytes)) {
+                $contributors[(string) $class] = Format::bytes((int) $bytes);
+            }
+        }
+
+        return [
+            'rows' => array_filter([
+                'Growth' => Format::bytes((int) Value::float($leak['growth_bytes'] ?? null)),
+                'Baseline' => Format::bytes((int) Value::float($leak['baseline_bytes'] ?? null)),
+                'Now' => Format::bytes((int) Value::float($leak['current_bytes'] ?? null)),
+                'Jobs since baseline' => Format::number((int) Value::float($leak['jobs'] ?? null)),
+                'Jobs that grew memory' => Format::percent(Value::float($leak['growing_ratio'] ?? null) * 100),
+                'Threshold' => Value::float($leak['threshold_bytes'] ?? null) > 0 ? Format::bytes((int) Value::float($leak['threshold_bytes'] ?? null)) : '',
+            ], static fn (string $value): bool => $value !== ''),
+            'contributors' => $contributors,
+        ];
     }
 
     public function failed(): bool

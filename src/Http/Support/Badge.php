@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Anabil\Sherlock\Http\Support;
 
+use Anabil\Sherlock\Data\EntryDelta;
 use Anabil\Sherlock\Enums\Bottleneck;
 use Anabil\Sherlock\Enums\IssueStatus;
 use Anabil\Sherlock\Enums\Severity;
@@ -39,8 +40,25 @@ final class Badge
             Bottleneck::Cache => 'bg-amber-500',
             Bottleneck::Bootstrap => 'bg-zinc-400',
             Bottleneck::Application => 'bg-emerald-500',
+            Bottleneck::ServerLoad => 'bg-orange-500',
+            Bottleneck::QueueBacklog => 'bg-fuchsia-500',
+            Bottleneck::Waiting => 'bg-yellow-500',
             Bottleneck::Mixed => 'bg-rose-400',
             Bottleneck::Unknown => 'bg-zinc-300 dark:bg-zinc-600',
+        };
+    }
+
+    /**
+     * Release comparison status (EntryDelta::SLOWER...).
+     */
+    public static function delta(string $status): string
+    {
+        return match ($status) {
+            EntryDelta::SLOWER => 'bg-red-100 text-red-800 ring-red-600/20 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-400/30',
+            EntryDelta::FASTER => 'bg-emerald-100 text-emerald-800 ring-emerald-600/20 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-400/30',
+            EntryDelta::NEW => 'bg-sky-100 text-sky-800 ring-sky-600/20 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-400/30',
+            EntryDelta::GONE => 'bg-zinc-100 text-zinc-600 ring-zinc-500/20 dark:bg-zinc-500/15 dark:text-zinc-400 dark:ring-zinc-400/30',
+            default => 'bg-white text-zinc-600 ring-zinc-300 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-zinc-700',
         };
     }
 

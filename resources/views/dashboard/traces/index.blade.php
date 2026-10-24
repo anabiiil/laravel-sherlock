@@ -21,7 +21,7 @@
         @endif
     </div>
 
-    <form method="GET" action="{{ route('sherlock.traces.index') }}" class="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm sm:grid-cols-3 lg:grid-cols-6 dark:border-zinc-800 dark:bg-zinc-900">
+    <form method="GET" action="{{ route('sherlock.traces.index') }}" @class(['mb-4 grid grid-cols-2 gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm sm:grid-cols-3 dark:border-zinc-800 dark:bg-zinc-900', 'lg:grid-cols-6' => $releases === [], 'lg:grid-cols-7' => $releases !== []])>
         @if ($filters->issueId !== null)
             <input type="hidden" name="issue" value="{{ $filters->issueId }}">
         @endif
@@ -53,6 +53,20 @@
             <input type="number" name="min_ms" min="0" step="1" value="{{ $filters->minDurationMs }}" placeholder="Min ms"
                    class="w-full rounded-md border border-zinc-300 bg-white px-3 py-1.5 dark:border-zinc-700 dark:bg-zinc-950">
         </label>
+        @if ($releases !== [])
+            <label>
+                <span class="sr-only">Release</span>
+                <select name="release" class="w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-950">
+                    <option value="">Any release</option>
+                    @foreach ($releases as $release)
+                        <option value="{{ $release->release }}" @selected($filters->release === $release->release)>{{ $release->release }}</option>
+                    @endforeach
+                    @if ($filters->release !== null && ! collect($releases)->contains('release', $filters->release))
+                        <option value="{{ $filters->release }}" selected>{{ $filters->release }}</option>
+                    @endif
+                </select>
+            </label>
+        @endif
         <div class="flex gap-2">
             <label class="min-w-0 flex-1">
                 <span class="sr-only">Sort</span>
@@ -89,7 +103,7 @@
                             <td class="max-w-[11rem] px-4 py-2.5 sm:max-w-md">
                                 <a href="{{ route('sherlock.traces.show', ['trace' => $trace->id]) }}" class="block truncate font-mono text-xs font-medium hover:underline" title="{{ $trace->name }}">{{ $trace->name }}</a>
                                 <span class="text-xs text-zinc-500 dark:text-zinc-400">
-                                    {{ $trace->type->label() }}@if ($trace->statusCode) · <span class="{{ Badge::tone($trace->statusCode >= 500) }}">{{ $trace->statusCode }}</span>@endif · {{ $trace->recordReason->value }}
+                                    {{ $trace->type->label() }}@if ($trace->statusCode) · <span class="{{ Badge::tone($trace->statusCode >= 500) }}">{{ $trace->statusCode }}</span>@endif · {{ $trace->recordReason->value }}@if ($trace->release) · <span class="font-mono">{{ $trace->release }}</span>@endif
                                 </span>
                             </td>
                             <td class="px-4 py-2.5 text-right tabular-nums">{{ Format::ms($trace->durationMs) }}</td>

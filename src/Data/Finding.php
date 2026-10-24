@@ -16,6 +16,7 @@ final readonly class Finding
     /**
      * @param  array<string, scalar|null>  $metrics  e.g. ['time_ms' => 912.4, 'count' => 38]
      * @param  string|null  $sql  normalized SQL (placeholders only), never raw values
+     * @param  float  $impactMs  time cost attributed to this problem in this trace (summed per issue as impact_ms)
      */
     public function __construct(
         public IssueType $type,
@@ -28,13 +29,14 @@ final readonly class Finding
         public ?string $sql = null,
         public ?string $queryFingerprint = null,
         public ?string $recommendation = null,
+        public float $impactMs = 0.0,
     ) {}
 
     public function withSeverity(Severity $severity): self
     {
         return new self(
             $this->type, $severity, $this->title, $this->description, $this->fingerprint,
-            $this->metrics, $this->location, $this->sql, $this->queryFingerprint, $this->recommendation,
+            $this->metrics, $this->location, $this->sql, $this->queryFingerprint, $this->recommendation, $this->impactMs,
         );
     }
 
@@ -42,7 +44,7 @@ final readonly class Finding
     {
         return new self(
             $this->type, $this->severity, $this->title, $this->description, $this->fingerprint,
-            $this->metrics, $this->location, $this->sql, $this->queryFingerprint, $recommendation,
+            $this->metrics, $this->location, $this->sql, $this->queryFingerprint, $recommendation, $this->impactMs,
         );
     }
 
@@ -62,6 +64,7 @@ final readonly class Finding
             'sql' => $this->sql,
             'query_fingerprint' => $this->queryFingerprint,
             'recommendation' => $this->recommendation,
+            'impact_ms' => $this->impactMs,
         ];
     }
 
@@ -86,6 +89,7 @@ final readonly class Finding
             isset($data['sql']) ? (string) $data['sql'] : null,
             isset($data['query_fingerprint']) ? (string) $data['query_fingerprint'] : null,
             isset($data['recommendation']) ? (string) $data['recommendation'] : null,
+            is_numeric($data['impact_ms'] ?? null) ? max(0.0, (float) $data['impact_ms']) : 0.0,
         );
     }
 }

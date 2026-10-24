@@ -7,15 +7,17 @@ namespace Anabil\Sherlock\Contracts;
 use Anabil\Sherlock\Data\EntryStat;
 use Anabil\Sherlock\Data\QueryStat;
 use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Data\ReleaseRecord;
 use Anabil\Sherlock\Data\StoredQuery;
 use Anabil\Sherlock\Data\StoredTrace;
 use Anabil\Sherlock\Data\TraceFilter;
 use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\RecordReason;
 use DateTimeImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * sherlock_traces + sherlock_queries on the Sherlock connection.
+ * sherlock_traces + sherlock_queries + sherlock_releases on the Sherlock connection.
  */
 interface TraceRepository
 {
@@ -55,6 +57,24 @@ interface TraceRepository
     public function bottleneckDistribution(DateTimeImmutable $since): array;
 
     public function countSince(DateTimeImmutable $since, ?EntryType $type = null): int;
+
+    /**
+     * Releases seen by persisted traces, most recently deployed (first seen) first.
+     *
+     * @return list<ReleaseRecord>
+     */
+    public function releases(int $limit = 20): array;
+
+    public function findRelease(string $release): ?ReleaseRecord;
+
+    /**
+     * Per-entry statistics of the persisted traces of one release, most frequent first.
+     * In production only sampled / threshold traces are stored: pass RecordReason::Sample for an
+     * unbiased (but smaller) population.
+     *
+     * @return list<EntryStat>
+     */
+    public function entryStatsForRelease(string $release, ?EntryType $type = null, int $limit = 50, ?RecordReason $reason = null): array;
 
     /** Delete traces (and their queries / issue links) created before $before, in chunks. Returns deleted traces. */
     public function pruneOlderThan(DateTimeImmutable $before, int $chunkSize = 1000): int;

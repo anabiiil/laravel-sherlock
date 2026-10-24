@@ -15,6 +15,7 @@ use Anabil\Sherlock\Contracts\AiProvider;
 use Anabil\Sherlock\Contracts\AiProviderFactory;
 use Anabil\Sherlock\Contracts\IssueRepository;
 use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\TraceRepository;
 use Anabil\Sherlock\Sherlock;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Repository as Cache;
@@ -60,6 +61,7 @@ final class AiServiceProvider extends ServiceProvider
             $app->make(Redactor::class),
             $app->bound('db') ? $app->make(ConnectionResolverInterface::class) : null,
             $app->basePath(),
+            $app->make(TraceRepository::class),
         ));
 
         $this->app->singleton(AiAnalyzer::class, static fn (Application $app): DefaultAiAnalyzer => new DefaultAiAnalyzer(

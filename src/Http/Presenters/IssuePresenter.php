@@ -6,6 +6,7 @@ namespace Anabil\Sherlock\Http\Presenters;
 
 use Anabil\Sherlock\Data\IssueRecord;
 use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\IssueType;
 use Anabil\Sherlock\Enums\Severity;
 use Anabil\Sherlock\Http\Support\Format;
 use Anabil\Sherlock\Http\Support\Markdown;
@@ -139,6 +140,11 @@ final readonly class IssuePresenter
     {
         $metrics = [];
         foreach (Value::array($this->issue->context['metrics'] ?? null) as $key => $value) {
+            // Shown in the "Relation" card (relation()), or null for non lazy-loading N+1s.
+            if (in_array($key, ['model', 'relation_source'], true) || $value === null) {
+                continue;
+            }
+
             $metrics[Format::label((string) $key)] = Format::metric((string) $key, $value);
         }
 
@@ -232,6 +238,74 @@ final readonly class IssuePresenter
     public function httpCalls(): array
     {
         return TracePresenter::calls($this->issue->context['http_calls'] ?? null);
+    }
+
+    /** Cumulative time cost of every occurrence, or null when none was attributed. */
+    public function impact(): ?string
+    {
+        return $this->issue->impactMs > 0 ? Format::human($this->issue->impactMs) : null;
+    }
+
+    /**
+     * N+1: the lazy loaded relation (exact when Eloquent reported it, otherwise guessed from the SQL).
+     *
+     * @return array{model: string|null, relation: string, exact: bool}|null
+     */
+    public function relation(): ?array
+    {
+        if ($this->issue->type !== IssueType::NPlusOne) {
+            return null;
+        }
+
+        $metrics = Value::array($this->issue->context['metrics'] ?? null);
+        $relation = Value::nullableString($metrics['relation'] ?? null);
+
+        if ($relation === null) {
+            return null;
+        }
+
+        return [
+            'model' => Value::nullableString($metrics['model'] ?? null),
+            'relation' => $relation,
+            'exact' => Value::string($metrics['relation_source'] ?? null) === 'lazy_loading',
+        ];
+    }
+
+    /**
+     * Server / queue signals of the latest occurrence.
+     *
+     * @return array{rows: array<string, string>, cpu_percent: float|null, load_percent: float|null, waiting: bool}
+     */
+    public function signals(): array
+    {
+        $trace = Value::array($this->issue->context['trace'] ?? null);
+        $stored = Value::array(Value::array($this->issue->context['verdict'] ?? null)['signals'] ?? null);
+        $pick = static fn (string $key): mixed => $trace[$key] ?? $stored[$key] ?? null;
+
+        return TracePresenter::signalRows([
+            'duration_ms' => Value::nullableFloat($trace['duration_ms'] ?? null),
+            'cpu_ms' => Value::nullableFloat($pick('cpu_ms')),
+            'load_avg' => Value::nullableFloat($pick('load_avg')),
+            'cpu_cores' => Value::nullableInt($pick('cpu_cores')),
+            'memory_free_mb' => Value::nullableInt($trace['memory_free_mb'] ?? null),
+            'queue_wait_ms' => Value::nullableFloat($pick('queue_wait_ms')),
+        ]);
+    }
+
+    /**
+     * @return list<array{model: string, relation: string, short: string, count: int, table: string|null}>
+     */
+    public function lazyLoads(): array
+    {
+        return TracePresenter::lazyLoadRows($this->issue->context['lazy_loads'] ?? null);
+    }
+
+    /**
+     * @return array{rows: array<string, string>, contributors: array<string, string>}|null
+     */
+    public function memoryLeak(): ?array
+    {
+        return TracePresenter::memoryLeakRows($this->issue->context['memory_leak'] ?? null);
     }
 
     public function aiAnalysis(): ?HtmlString

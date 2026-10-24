@@ -20,6 +20,10 @@
     $analysis = $presenter->aiAnalysis();
     $breakdown = $presenter->breakdown();
     $queryStats = $presenter->queryStats();
+    $relation = $presenter->relation();
+    $signals = $presenter->signals();
+    $lazyLoads = $presenter->lazyLoads();
+    $leak = $presenter->memoryLeak();
 @endphp
 
 @section('content')
@@ -63,10 +67,23 @@
     </div>
 
     {{-- Key numbers --}}
-    <dl class="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <dl class="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <div class="{{ $card }}"><dt class="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Occurrences</dt><dd class="mt-1 text-lg font-semibold tabular-nums">{{ Format::number($issue->occurrences) }}</dd></div>
-        <div class="{{ $card }}"><dt class="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">First seen</dt><dd class="mt-1 text-sm font-medium" title="{{ Format::date($issue->firstSeenAt) }}">{{ Format::ago($issue->firstSeenAt) }}</dd></div>
-        <div class="{{ $card }}"><dt class="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Last seen</dt><dd class="mt-1 text-sm font-medium" title="{{ Format::date($issue->lastSeenAt) }}">{{ Format::ago($issue->lastSeenAt) }}</dd></div>
+        <div class="{{ $card }}"><dt class="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400" title="Cumulative time cost of every occurrence">Impact</dt><dd class="mt-1 text-lg font-semibold tabular-nums">{{ $presenter->impact() ?? '-' }}</dd></div>
+        <div class="{{ $card }}">
+            <dt class="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">First seen</dt>
+            <dd class="mt-1 text-sm font-medium" title="{{ Format::date($issue->firstSeenAt) }}">{{ Format::ago($issue->firstSeenAt) }}</dd>
+            @if ($issue->firstSeenRelease)
+                <dd class="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">in <a href="{{ route('sherlock.deploys.index', ['current' => $issue->firstSeenRelease]) }}" class="font-mono hover:underline">{{ $issue->firstSeenRelease }}</a></dd>
+            @endif
+        </div>
+        <div class="{{ $card }}">
+            <dt class="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Last seen</dt>
+            <dd class="mt-1 text-sm font-medium" title="{{ Format::date($issue->lastSeenAt) }}">{{ Format::ago($issue->lastSeenAt) }}</dd>
+            @if ($issue->lastSeenRelease)
+                <dd class="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">in <a href="{{ route('sherlock.traces.index', ['release' => $issue->lastSeenRelease]) }}" class="font-mono hover:underline">{{ $issue->lastSeenRelease }}</a></dd>
+            @endif
+        </div>
         <div class="{{ $card }}">
             <dt class="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{{ $issue->resolvedAt ? 'Resolved' : ($issue->regressedAt ? 'Regressed' : 'AI analysis') }}</dt>
             <dd class="mt-1 text-sm font-medium">
@@ -108,6 +125,29 @@
                 @endif
                 @include('sherlock::dashboard.partials.breakdown', ['breakdown' => $breakdown])
             </section>
+
+            @if ($relation || $lazyLoads !== [])
+                <section class="{{ $card }}">
+                    @include('sherlock::dashboard.partials.card-title', ['title' => 'Relation'])
+                    @if ($relation)
+                        <p class="text-sm">
+                            <span class="font-mono font-medium">{{ $relation['model'] ? $relation['model'].'::' : '' }}{{ $relation['relation'] }}</span>
+                            <span class="ml-1 rounded-md px-2 py-0.5 text-xs font-medium {{ $relation['exact'] ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300' }}"
+                                  title="{{ $relation['exact'] ? 'Reported by Eloquent (lazy loading violation)' : 'Guessed from the SQL (enable sherlock.lazy_loading.detect for exact names)' }}">{{ $relation['exact'] ? 'lazy loading' : 'guessed' }}</span>
+                        </p>
+                    @endif
+                    @if ($lazyLoads !== [])
+                        <div class="mt-3">@include('sherlock::dashboard.partials.lazy-loads', ['lazyLoads' => $lazyLoads])</div>
+                    @endif
+                </section>
+            @endif
+
+            @if ($leak)
+                <section class="{{ $card }}">
+                    @include('sherlock::dashboard.partials.card-title', ['title' => 'Worker memory leak'])
+                    @include('sherlock::dashboard.partials.memory-leak', ['leak' => $leak])
+                </section>
+            @endif
 
             @if ($sql)
                 <section class="{{ $card }}">
@@ -226,6 +266,13 @@
                     @if ($presenter->latestTraceId())
                         <a href="{{ route('sherlock.traces.show', ['trace' => $presenter->latestTraceId()]) }}" class="mt-3 inline-block text-xs text-sky-700 hover:underline dark:text-sky-400">Open latest trace &rarr;</a>
                     @endif
+                </section>
+            @endif
+
+            @if ($signals['rows'] !== [])
+                <section class="{{ $card }}">
+                    @include('sherlock::dashboard.partials.card-title', ['title' => 'Server signals'])
+                    @include('sherlock::dashboard.partials.signals', ['signals' => $signals])
                 </section>
             @endif
 

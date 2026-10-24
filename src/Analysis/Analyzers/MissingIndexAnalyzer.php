@@ -96,6 +96,7 @@ final class MissingIndexAnalyzer implements PlanAwareAnalyzer
 
         return new Finding(
             type: IssueType::MissingIndex,
+            impactMs: $query !== null ? round($query->timeMs, 3) : 0.0,
             severity: $severity,
             title: 'Missing index on '.Describe::table($primary->table).' ('.$what.$rows.')'
                 .($query !== null ? Describe::where($trace, $query->location) : ''),

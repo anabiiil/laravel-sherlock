@@ -26,6 +26,53 @@ final class Format
         return number_format($ms, $ms >= 1 ? 1 : 2).' ms';
     }
 
+    /**
+     * Cumulative time for humans (impact): "850 ms", "12.4 s", "3.2 min", "1.5 h".
+     */
+    public static function human(float $ms): string
+    {
+        return match (true) {
+            $ms >= 3_600_000 => number_format($ms / 3_600_000, 1).' h',
+            $ms >= 60_000 => number_format($ms / 60_000, 1).' min',
+            $ms >= 1000 => number_format($ms / 1000, 1).' s',
+            default => number_format($ms, 0).' ms',
+        };
+    }
+
+    /** "+50 ms" / "-1.20 s" / "0 ms". */
+    public static function signedMs(?float $ms): string
+    {
+        if ($ms === null) {
+            return '-';
+        }
+
+        return ($ms > 0 ? '+' : ($ms < 0 ? '-' : '')).self::ms(abs($ms));
+    }
+
+    /** Ratio as a signed percentage: 0.25 => "+25%". */
+    public static function signedRatio(?float $ratio): string
+    {
+        if ($ratio === null) {
+            return '-';
+        }
+
+        $percent = $ratio * 100;
+
+        return ($percent > 0 ? '+' : ($percent < 0 ? '-' : '')).self::percent(abs($percent));
+    }
+
+    /** "+3.5" / "-2" (query count deltas). */
+    public static function signedNumber(?float $value): string
+    {
+        if ($value === null) {
+            return '-';
+        }
+
+        $text = number_format(abs($value), floor($value) === $value ? 0 : 1);
+
+        return ($value > 0 ? '+' : ($value < 0 ? '-' : '')).$text;
+    }
+
     public static function bytes(int $bytes): string
     {
         if ($bytes >= 1_073_741_824) {

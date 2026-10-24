@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Anabil\Sherlock\Http\Filters;
 
+use Anabil\Sherlock\Support\ReleaseDetector;
 use Illuminate\Http\Request;
 
 /**
@@ -16,6 +17,16 @@ final class Input
         $value = $request->query($key);
 
         return is_string($value) ? trim($value) : '';
+    }
+
+    /**
+     * A release identifier ([A-Za-z0-9._-/+], at most 64 chars), or null when absent / invalid.
+     */
+    public static function release(Request $request, string $key = 'release'): ?string
+    {
+        $value = self::string($request, $key);
+
+        return $value !== '' && ReleaseDetector::normalize($value) === $value ? $value : null;
     }
 
     public static function page(Request $request): int

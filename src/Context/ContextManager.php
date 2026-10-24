@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Anabil\Sherlock\Context;
 
 use Anabil\Sherlock\Contracts\ContextManager as ContextManagerContract;
+use Anabil\Sherlock\Contracts\ServerProbe;
 use Anabil\Sherlock\Contracts\TraceContext as TraceContextContract;
 use Anabil\Sherlock\Data\RecordingDecision;
 use Anabil\Sherlock\Data\TraceData;
@@ -37,10 +38,16 @@ final class ContextManager implements ContextManagerContract
 
     private int $paused = 0;
 
+    /**
+     * @param  ServerProbe|null  $probe  server signals per unit (CPU time, load average); null = none
+     * @param  string|null  $release  release identifier stamped on every trace
+     */
     public function __construct(
         private readonly int $maxQueries = 1000,
         private readonly int $maxHttpCalls = 200,
         private readonly int $maxLogs = 100,
+        private readonly ?ServerProbe $probe = null,
+        private readonly ?string $release = null,
     ) {
         $this->null = new NullTraceContext;
     }
@@ -161,7 +168,7 @@ final class ContextManager implements ContextManagerContract
     /** Standalone context for logs raised outside any unit (created on first use). */
     public function orphan(EntryType $type, string $name): TraceContext
     {
-        return $this->orphan ??= $this->newContext($type, $name, false, [], null);
+        return $this->orphan ??= $this->newContext($type, $name, false, [], null, false);
     }
 
     public function hasOrphan(): bool
@@ -180,7 +187,7 @@ final class ContextManager implements ContextManagerContract
     /**
      * @param  list<\Anabil\Sherlock\Enums\RecordReason>  $reasons
      */
-    private function newContext(EntryType $type, string $name, bool $full, array $reasons, ?float $startedAt): TraceContext
+    private function newContext(EntryType $type, string $name, bool $full, array $reasons, ?float $startedAt, bool $measure = true): TraceContext
     {
         return new TraceContext(
             (string) Str::ulid(),
@@ -192,6 +199,8 @@ final class ContextManager implements ContextManagerContract
             $this->maxQueries,
             $this->maxHttpCalls,
             $this->maxLogs,
+            $measure ? $this->probe : null,
+            $this->release,
         );
     }
 }

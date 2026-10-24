@@ -67,3 +67,25 @@ it('does not migrate without confirmation in non-interactive mode', function ():
 
     expect(File::exists(config_path('sherlock.php')))->toBeTrue();
 });
+
+it('publishes only the migrations an upgraded app is missing, in order', function (): void {
+    File::copy(
+        __DIR__.'/../../../database/migrations/2026_01_01_000000_create_sherlock_tables.php',
+        database_path('migrations/2025_01_01_000000_create_sherlock_tables.php'),
+    );
+
+    $this->artisan('sherlock:install', ['--no-interaction' => true])
+        ->expectsOutputToContain('ALREADY PUBLISHED')
+        ->assertSuccessful();
+
+    $published = array_map(basename(...), File::glob(database_path('migrations/*.php')));
+    $packaged = array_map(
+        static fn (string $file): string => (string) preg_replace('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', basename($file)),
+        File::glob(__DIR__.'/../../../database/migrations/*.php'),
+    );
+
+    expect($published)->toHaveCount(count($packaged))
+        ->and($published[0])->toBe('2025_01_01_000000_create_sherlock_tables.php')
+        ->and(File::glob(database_path('migrations/*_create_sherlock_tables.php')))->toHaveCount(1)
+        ->and(File::glob(database_path('migrations/*_add_sherlock_server_signals_and_releases.php')))->toHaveCount(1);
+});

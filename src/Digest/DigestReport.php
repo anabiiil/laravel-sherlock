@@ -7,13 +7,15 @@ namespace Anabil\Sherlock\Digest;
 use Anabil\Sherlock\Data\EntryStat;
 use Anabil\Sherlock\Data\IssueRecord;
 use Anabil\Sherlock\Data\QueryStat;
+use Anabil\Sherlock\Data\ReleaseComparison;
 use Anabil\Sherlock\Enums\Severity;
 use DateTimeImmutable;
 
 /**
  * Everything a digest covers, read from storage only (no AI calls): the period summary,
- * new / regressed / most frequent issues (with their stored AI analysis), slowest entries,
- * top query fingerprints and the bottleneck distribution.
+ * new / regressed / most frequent issues (with their stored AI analysis), the issues costing
+ * the most time (impact), slowest entries, top query fingerprints, the bottleneck distribution
+ * and the latest deploy comparison (only when at least two releases were recorded).
  */
 final readonly class DigestReport
 {
@@ -25,6 +27,8 @@ final readonly class DigestReport
      * @param  list<EntryStat>  $slowestEntries
      * @param  list<QueryStat>  $topQueries
      * @param  array<string, int>  $bottlenecks  bottleneck value => trace count
+     * @param  list<IssueRecord>  $impactIssues  seen in the period, highest cumulative impact first
+     * @param  ReleaseComparison|null  $deploy  latest release vs the previous one (null with fewer than 2 releases)
      */
     public function __construct(
         public DateTimeImmutable $since,
@@ -37,6 +41,8 @@ final readonly class DigestReport
         public array $slowestEntries,
         public array $topQueries,
         public array $bottlenecks,
+        public array $impactIssues = [],
+        public ?ReleaseComparison $deploy = null,
     ) {}
 
     public function openIssues(): int

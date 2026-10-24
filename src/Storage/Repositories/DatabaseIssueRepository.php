@@ -60,9 +60,10 @@ final class DatabaseIssueRepository implements IssueRepository
         return $row === null ? null : $this->hydrate($row);
     }
 
-    public function recordOccurrence(Finding $finding, array $context, DateTimeImmutable $seenAt, ?string $traceId = null, ?AiStatus $aiStatus = AiStatus::Pending): IssueOutcome
+    public function recordOccurrence(Finding $finding, array $context, DateTimeImmutable $seenAt, ?string $traceId = null, ?AiStatus $aiStatus = AiStatus::Pending, ?string $release = null): IssueOutcome
     {
         $now = Values::date($seenAt);
+        $release = Values::truncate($release, 64);
         $current = $this->currentState($finding->fingerprint);
 
         if ($current === null) {
@@ -78,6 +79,9 @@ final class DatabaseIssueRepository implements IssueRepository
                 'last_seen_at' => $now,
                 'pending_notify_count' => 0,
                 'ai_status' => $aiStatus?->value,
+                'first_seen_release' => $release,
+                'last_seen_release' => $release,
+                'impact_ms' => max(0.0, round($finding->impactMs, 3)),
             ]);
 
             $current = $this->currentState($finding->fingerprint);
@@ -94,11 +98,11 @@ final class DatabaseIssueRepository implements IssueRepository
             // Another worker created it first: fall through and count this one as a repeat.
         }
 
-        if ($current['status'] === IssueStatus::Resolved && $this->regress($current['id'], $finding, $context, $now, $aiStatus)) {
+        if ($current['status'] === IssueStatus::Resolved && $this->regress($current['id'], $finding, $context, $now, $aiStatus, $release)) {
             return $this->outcome($this->currentState($finding->fingerprint) ?? $current, $finding, OccurrenceType::Regressed, $traceId);
         }
 
-        $this->recur($current['id'], $current['status'], $finding, $context, $now);
+        $this->recur($current['id'], $current['status'], $finding, $context, $now, $release);
 
         return $this->outcome($this->currentState($finding->fingerprint) ?? $current, $finding, OccurrenceType::Recurring, $traceId);
     }
@@ -177,11 +181,16 @@ final class DatabaseIssueRepository implements IssueRepository
             });
         }
 
+        if ($filter->release !== null && $filter->release !== '') {
+            $query->where('first_seen_release', $filter->release);
+        }
+
         $total = (clone $query)->count();
 
         match ($filter->sort) {
             'first_seen' => $query->orderByDesc('first_seen_at'),
             'occurrences' => $query->orderByDesc('occurrences'),
+            'impact' => $query->orderByDesc('impact_ms')->orderByDesc('last_seen_at'),
             'severity' => $query->orderByRaw(self::SEVERITY_WEIGHT_SQL.' desc')->orderByDesc('last_seen_at'),
             default => $query->orderByDesc('last_seen_at'),
         };
@@ -271,6 +280,43 @@ final class DatabaseIssueRepository implements IssueRepository
         );
     }
 
+    public function topByImpact(DateTimeImmutable $since, int $limit = 10): array
+    {
+        return $this->list(
+            $this->issues()->where('last_seen_at', '>=', Values::date($since))->where('impact_ms', '>', 0)->orderByDesc('impact_ms'),
+            $limit,
+        );
+    }
+
+    public function firstSeenInRelease(string $release, int $limit = 50): array
+    {
+        return $this->list(
+            $this->issues()->where('first_seen_release', $release)->orderByDesc('impact_ms')->orderByDesc('first_seen_at'),
+            $limit,
+        );
+    }
+
+    public function regressedInRelease(string $release, int $limit = 50): array
+    {
+        $query = $this->issues()->where('last_seen_release', $release)->whereNotNull('regressed_at');
+
+        // Only regressions after the release was first seen (not an older one still open).
+        $deployedAt = $this->connection()->table($this->tables->releases())->where('release', $release)->value('first_seen_at');
+        if ($deployedAt !== null) {
+            $query->where('regressed_at', '>=', $deployedAt);
+        }
+
+        return $this->list($query->orderByDesc('regressed_at'), $limit);
+    }
+
+    public function lastSeenInRelease(string $release, int $limit = 50): array
+    {
+        return $this->list(
+            $this->issues()->where('last_seen_release', $release)->orderByDesc('impact_ms')->orderByDesc('last_seen_at'),
+            $limit,
+        );
+    }
+
     public function countBySeverity(?IssueStatus $status = IssueStatus::Open): array
     {
         $query = $this->issues()->selectRaw('severity, COUNT(*) as aggregate_count')->groupBy('severity');
@@ -345,7 +391,7 @@ final class DatabaseIssueRepository implements IssueRepository
      *
      * @param  array<string, mixed>  $context
      */
-    private function regress(int|string $id, Finding $finding, array $context, string $now, ?AiStatus $aiStatus): bool
+    private function regress(int|string $id, Finding $finding, array $context, string $now, ?AiStatus $aiStatus, ?string $release): bool
     {
         // Re-analyze on regression (PLAN §12) when an analysis will run; otherwise keep a stored
         // analysis visible and record why none will be made.
@@ -354,16 +400,15 @@ final class DatabaseIssueRepository implements IssueRepository
             : $this->raw("CASE WHEN ai_status = '".AiStatus::Done->value."' THEN ai_status ELSE "
                 .($aiStatus === null ? 'NULL' : "'".$aiStatus->value."'").' END');
 
-        $affected = $this->issues()
+        $affected = $this->applyRepeat($this->issues()
             ->where('id', $id)
-            ->where('status', IssueStatus::Resolved->value)
-            ->update([
+            ->where('status', IssueStatus::Resolved->value), [
                 'status' => IssueStatus::Open->value,
                 'regressed_at' => $now,
                 'resolved_at' => null,
                 'ai_status' => $ai,
-                ...$this->repeatValues($finding, $context, $now),
-            ]);
+                ...$this->repeatValues($finding, $context, $now, $release),
+            ], $finding);
 
         return $affected > 0;
     }
@@ -371,7 +416,7 @@ final class DatabaseIssueRepository implements IssueRepository
     /**
      * @param  array<string, mixed>  $context
      */
-    private function recur(int|string $id, IssueStatus $status, Finding $finding, array $context, string $now): void
+    private function recur(int|string $id, IssueStatus $status, Finding $finding, array $context, string $now, ?string $release): void
     {
         $values = $status === IssueStatus::Ignored
             ? [
@@ -379,16 +424,35 @@ final class DatabaseIssueRepository implements IssueRepository
                 'occurrences' => $this->raw('occurrences + 1'),
                 'last_seen_at' => $now,
             ]
-            : $this->repeatValues($finding, $context, $now);
+            : $this->repeatValues($finding, $context, $now, $release);
 
-        $this->issues()->where('id', $id)->update($values);
+        if ($status === IssueStatus::Ignored) {
+            $this->issues()->where('id', $id)->update($values);
+
+            return;
+        }
+
+        $this->applyRepeat($this->issues()->where('id', $id), $values, $finding);
+    }
+
+    /**
+     * One atomic UPDATE: impact_ms = impact_ms + finding impact together with $values
+     * (increment() with extra columns), or a plain update when the finding has no impact.
+     *
+     * @param  array<string, mixed>  $values
+     */
+    private function applyRepeat(Builder $query, array $values, Finding $finding): int
+    {
+        $impact = round($finding->impactMs, 3);
+
+        return $impact > 0 ? $query->increment('impact_ms', $impact, $values) : $query->update($values);
     }
 
     /**
      * @param  array<string, mixed>  $context
      * @return array<string, mixed>
      */
-    private function repeatValues(Finding $finding, array $context, string $now): array
+    private function repeatValues(Finding $finding, array $context, string $now, ?string $release): array
     {
         $values = [
             'occurrences' => $this->raw('occurrences + 1'),
@@ -396,6 +460,10 @@ final class DatabaseIssueRepository implements IssueRepository
             'title' => (string) Values::truncate($finding->title, 255),
             'context' => Values::json($context),
         ];
+
+        if ($release !== null) {
+            $values['last_seen_release'] = $release;
+        }
 
         // Severity only escalates, evaluated atomically against the current row.
         match ($finding->severity) {
@@ -461,6 +529,9 @@ final class DatabaseIssueRepository implements IssueRepository
             Values::nullableString($row->ai_analysis ?? null),
             Values::nullableString($row->ai_model ?? null),
             Values::toDate($row->ai_analyzed_at ?? null),
+            Values::nullableString($row->first_seen_release ?? null),
+            Values::nullableString($row->last_seen_release ?? null),
+            Values::float($row->impact_ms ?? null),
         );
     }
 

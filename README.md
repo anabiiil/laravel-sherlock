@@ -7,7 +7,8 @@ Self-hosted **performance diagnosis** for Laravel 11, 12 and 13 (PHP 8.2+; Larav
 Laravel Sherlock does more than record what happened. For every request, queue job and artisan command it
 **finds the problem, decides where the time went, explains why and suggests a fix**: slow queries, N+1,
 duplicate queries, missing indexes (via a safe `EXPLAIN`), slow external calls, high memory, cache misses,
-exceptions. It groups them into deduplicated **issues**, can notify you on Slack / Telegram / Mail, and can
+exceptions, an overloaded server, queue backlogs and leaking queue workers. It tells you which deploy made
+things slower, ranks issues by the time they actually cost, and can fail your tests on an N+1. It groups them into deduplicated **issues**, can notify you on Slack / Telegram / Mail, and can
 ask an AI model (any provider, including free and local ones) for a root-cause analysis **once per issue**.
 
 Everything stays in your own database. Sensitive data is redacted **at capture time, in every mode**, and
@@ -26,6 +27,11 @@ passwords (plain or hashed) are never stored, not even locally.
 - [Header trigger](#header-trigger)
 - [What is detected](#what-is-detected)
 - [Verdicts: where did the time go?](#verdicts-where-did-the-time-go)
+- [Server signals: the query or the server?](#server-signals-the-query-or-the-server)
+- [Queue wait and worker memory leaks](#queue-wait-and-worker-memory-leaks)
+- [Lazy loading: exact N+1 relation names](#lazy-loading-exact-n1-relation-names)
+- [Releases and deploy comparison](#releases-and-deploy-comparison)
+- [Impact: issues ranked by time cost](#impact-issues-ranked-by-time-cost)
 - [EXPLAIN and its safety rules](#explain-and-its-safety-rules)
 - [Issues](#issues)
 - [Storage and a dedicated connection](#storage-and-a-dedicated-connection)
@@ -38,6 +44,8 @@ passwords (plain or hashed) are never stored, not even locally.
 - [Artisan commands](#artisan-commands)
 - [Production checklist](#production-checklist)
 - [Extending](#extending)
+- [Catch N+1 in your tests](#catch-n1-in-your-tests)
+- [Upgrading](#upgrading)
 - [Testing](#testing)
 - [License](#license)
 
@@ -51,7 +59,9 @@ passwords (plain or hashed) are never stored, not even locally.
 | Production use | Not recommended | No | Yes | **Yes**: thresholds + sampling, persistence after the response or on a queue |
 | Detects N+1, slow / duplicate queries | No (you read the list) | Partly, per page | Slow queries only | **Yes, with severity and source location** |
 | Missing indexes | No | No | No | **Yes, via read-only `EXPLAIN`** |
-| Bottleneck verdict per trace | No | No | No | **Database / Application / External / Cache / Bootstrap** |
+| Bottleneck verdict per trace | No | No | No | **Database / Application / External / Cache / Bootstrap / Server load / Queue backlog / Waiting** |
+| Before / after deploy comparison | No | No | No | **Per route / job / command, with new and regressed issues** |
+| N+1 assertions in your tests | No | No | No | **PHPUnit trait + Pest expectations** |
 | Deduplicated issues, regressions | No | No | No | **Yes, by fingerprint** |
 | Alerts | No | No | No | **Slack, Telegram, Mail, throttled** |
 | AI root-cause analysis | No | No | No | **Optional, once per issue, any provider** |
@@ -205,6 +215,9 @@ Each analyzer is one class (configured in `config('sherlock.analyzers')`; remove
 | `CacheMissRateAnalyzer` | A high cache miss ratio |
 | `ExceptionAnalyzer` | Exceptions and `Log::error()` (and above); the first occurrence is notified immediately, repeats are throttled |
 | `MissingIndexAnalyzer` | Full scans, filesort, temporary tables or no usable key in the `EXPLAIN` plan of slow queries |
+| `ServerLoadAnalyzer` | A slow entry that ran while the load average per CPU core was high (`server.load_per_core_warning` 1.5, critical 3.0); one issue per server |
+| `QueueWaitAnalyzer` | A job that waited too long in the queue before starting (`thresholds.queue_wait`: 30 s warning, 5 min critical); one issue per connection + queue |
+| `MemoryLeakAnalyzer` | A queue worker whose memory grew steadily across consecutive jobs (`memory_leak.*`); one issue per connection + queue |
 
 Every finding has a severity (`info`, `warning`, `critical`), the first application source location
 (`app/Http/...:42`, relative paths only), normalized SQL when relevant and a recommendation. Code in a
@@ -224,12 +237,132 @@ application (the remainder), then classified with ratio rules from `config('sher
 | `external_service` | external HTTP ≥ 40% |
 | `cache` | cache ≥ 30% |
 | `bootstrap` | bootstrap ≥ 40% |
-| `application` | application ≥ 60% |
+| `queue_backlog` | a job that waited in the queue at least `thresholds.queue_wait.warning_ms` **and** longer than it ran (checked first, even for very short jobs) |
+| `server_load` | load average per core ≥ `server.load_per_core_warning` while the time is not explained by the process's own CPU time (checked after database / external service) |
+| `application` | application ≥ 60% (with CPU time known: CPU time / application time ≥ `server.cpu_bound_ratio` 0.7) |
+| `waiting` | application ≥ 60% but CPU time / application time ≤ `server.waiting_ratio` 0.3: blocked on locks, sleep, I/O, a slow disk |
 | `mixed` | none of the above |
 | `unknown` | trace shorter than `bottleneck.min_duration_ms` (50 ms) |
 
 The verdict comes with a human-readable reason such as
-*"72% of 2.4s spent in 38 queries; top query 900ms on `orders`"*.
+*"72% of 2.4s spent in 38 queries; top query 900ms on `orders`"* or
+*"Server load 7.9 on 4 cores (198%) while this request ran"*. The server / queue signals it used are stored
+with it (`details.verdict.signals`). Without server signals the original share rules apply unchanged.
+
+---
+
+## Server signals: the query or the server?
+
+A request that took 2 s with 40 ms of SQL is not necessarily slow code: the server may be saturated.
+Every unit records, at almost no cost:
+
+| Signal | How | When |
+|---|---|---|
+| CPU time (user + system) | `getrusage()` at start and end | every unit (`server.cpu_time`) |
+| 1-minute load average | `sys_getloadavg()` when the unit ends | every unit (`server.load_average`) |
+| CPU cores | `server.cpu_cores` (`SHERLOCK_CPU_CORES`), else Linux `/proc/cpuinfo`, once per process | only when the load could matter, and for persisted traces |
+| Available memory | Linux `/proc/meminfo` (`MemAvailable`) | persisted traces only (`server.memory`) |
+
+Nothing shells out. On macOS or in containers with CPU limits, set `SHERLOCK_CPU_CORES`. The trace page shows
+CPU time vs wall time (a unit that used 10% CPU for its wall time mostly **waited**), the load average and
+load per core, free memory and, for jobs, the queue wait.
+
+---
+
+## Queue wait and worker memory leaks
+
+**Queue wait** is the time a job waited between becoming available (push + delay) and starting, read from
+data the worker already holds: the database driver's `available_at`, otherwise the payload's `pushedAt`
+(Horizon) or `createdAt` + `delay` (Laravel 12+), first attempt only. Laravel 11 without Horizon only
+reports it for the database driver. A long wait raises a `queue_wait` issue (impact: the wait) and the
+`queue_backlog` verdict: add workers, not indexes.
+
+**Memory leaks**: after each job, a worker records `memory_get_usage()` in a bounded ring buffer
+(`memory_leak.buffer`, 50). Once memory grows `memory_leak.growth_mb` (32 MB) over the baseline taken after
+`warmup_jobs` (5), steadily across at least `min_jobs` (20) jobs (`min_growing_ratio` 0.5 of them grew it), the
+job that crossed the step gets a `memory_leak` finding (critical from `critical_mb`, 128 MB), with the growth
+per job class. Once per worker process per step. Zero cost outside queue workers; disable with
+`SHERLOCK_MEMORY_LEAK=false`.
+
+---
+
+## Lazy loading: exact N+1 relation names
+
+N+1 detection works from SQL alone, so the relation name is a guess. With Eloquent's lazy-loading
+prevention, Sherlock knows the exact `Model::relation`:
+
+```dotenv
+SHERLOCK_LAZY_LOADING=true   # null (default) = local mode only; false = never
+```
+
+When enabled and the app did not set up `Model::preventLazyLoading()` itself, Sherlock enables it with a
+handler that records the violation in the trace and **never throws** (the relation still loads). N+1
+findings then carry `model`, `relation` and `relation_source` (`lazy_loading` or `guess`), the issue page
+shows the exact relation, and the trace page lists every lazy-loading violation.
+
+An app with its own handler keeps it; forward the violations to Sherlock:
+
+```php
+use Anabil\Sherlock\Facades\Sherlock;
+use Illuminate\Database\Eloquent\Model;
+
+Model::handleLazyLoadingViolationUsing(function (Model $model, string $relation) {
+    Sherlock::recordLazyLoad($model, $relation); // O(1), deduplicated per trace, never throws
+    // ... your own handling
+});
+```
+
+---
+
+## Releases and deploy comparison
+
+Every trace is stamped with a **release**, and issues remember the release they were first and last seen
+in. The release is, in order:
+
+1. `SHERLOCK_RELEASE` (e.g. your CI commit SHA or tag);
+2. the first line of a `.release` or `REVISION` file in the app root (Envoyer, Capistrano, Deployer...);
+3. the git HEAD of the app as a 7-character short SHA (read from `.git`, worktrees followed, no shell).
+
+Run **`php artisan config:cache` on every deploy**: the value is detected once and baked into the cached
+config, so there is no file read per request (without a config cache it costs a couple of tiny file reads per
+process). Releases are listed in `sherlock_releases` (first / last seen).
+
+The **Deploys** page (and `sherlock:report`, and the digest) compares the latest release with the previous
+one, or any two you pick: a headline such as *"3 routes slower, 2 new issues since deploy abc1234"*, then
+per route / job / command the status (**slower**, **faster**, **new**, **gone**, unchanged), the average
+duration before → after, the change in % and ms, and the DB time and query count deltas; then the issues
+first seen in the new release, the ones that came back (regressed) and the ones not seen since the previous
+release (maybe fixed).
+
+**Sampling bias matters.** In production only slow (threshold) traces and a `sample_rate` sample are
+stored, so the average of all stored traces leans towards slow executions. Per entry, the comparison uses
+**sampled traces only** (unbiased) when both releases have at least `releases.compare_min_samples` (20) of
+them; otherwise it falls back to every stored trace and marks the row **biased**. For fair numbers on
+low-traffic routes, raise `SHERLOCK_SAMPLE_RATE` (and give the new release time to collect samples). An
+entry counts as slower / faster when its average changes by at least `releases.compare_min_change` (10%)
+**and** `releases.compare_min_delta_ms` (5 ms). Local mode stores everything, so its numbers are exact.
+
+---
+
+## Impact: issues ranked by time cost
+
+Occurrences alone mislead: a 3 ms duplicate query seen 10,000 times and a 4 s report seen twice are not the
+same problem. Each issue accumulates `impact_ms`, the time every occurrence cost:
+
+| Issue | Impact per occurrence |
+|---|---|
+| N+1 | time of the repeated queries |
+| Slow query, slow external call | its duration |
+| Slow request / job / command | the excess over the slow threshold |
+| Excessive queries | DB time |
+| Queue wait | the wait |
+| Server load | the time not spent on the process's own CPU |
+| Exception | `impact.exception_ms` (0 by default) |
+
+The dashboard shows it on every issue, offers an **Impact** sort on the Issues page, and the Overview,
+`sherlock:report` and the digest list the **top issues by impact**. Impact is cumulative over the issue's life
+(issues recorded before upgrading start at 0), which is why the Issues page still sorts by last seen by
+default.
 
 ---
 
@@ -509,9 +642,11 @@ SHERLOCK_DIGEST_CHANNELS=mail    # comma separated; empty = every enabled notifi
 ```
 
 It contains the period summary (traces recorded, open issues by severity), new issues, regressed issues,
-the most frequent issues (each with an excerpt of its **stored** AI recommendation), the slowest routes /
-jobs / commands, the top query fingerprints (normalized SQL) and the bottleneck distribution. Each section
-holds at most `digest.limit` (10) items. Ignored issues are left out.
+the most frequent issues (each with an excerpt of its **stored** AI recommendation), the **top issues by
+impact**, the slowest routes / jobs / commands, the top query fingerprints (normalized SQL), the bottleneck
+distribution and, once at least two releases were recorded, **since last deploy** (the deploy headline, the
+slowest regressions and the issues the deploy introduced or brought back). Each section holds at most
+`digest.limit` (10) items. Ignored issues are left out. Stored data only: no AI call.
 
 How it is scheduled: a daily check at `digest.at` (registered only when the digest is enabled) queues a
 `SendDigestJob` when at least `every_days` calendar days have passed since the last digest. The period
@@ -566,9 +701,13 @@ Redaction happens **at capture time, before anything is stored, in every mode, i
 Served at `/sherlock` (`SHERLOCK_PATH`, optional `SHERLOCK_DOMAIN`), with the `web` middleware
 (`dashboard.middleware`) and the **`viewSherlock`** gate. Disable it with `SHERLOCK_DASHBOARD=false`.
 
-Pages: **Overview** (counts, bottleneck split, recent critical issues), **Issues** (filters; detail with
-verdict, metrics, example traces, EXPLAIN insights, AI analysis and resolve / ignore / reopen / re-analyze
-actions), **Traces** (list and timeline breakdown) and **Queries** (top fingerprints). Server-rendered Blade
+Pages: **Overview** (counts, bottleneck split, new / regressed issues, top issues by impact, latest deploy
+summary, slowest entries, top queries), **Issues** (filters incl. first-seen release, sort by impact; detail
+with impact, first / last seen release, verdict, server signals, the N+1 relation, metrics, example traces,
+EXPLAIN insights, AI analysis and resolve / ignore / reopen / re-analyze actions), **Traces** (filter by
+release; detail with timeline breakdown, server signals, lazy-loading violations, memory leak, queries),
+**Queries** (top fingerprints) and **Deploys** (release list and before / after comparison, see
+[Releases and deploy comparison](#releases-and-deploy-comparison)). Server-rendered Blade
 with Tailwind and Alpine from a CDN; no build step. `dashboard.per_page` defaults to 25.
 
 By default the gate allows the **`local` environment only**. Grant access elsewhere in
@@ -591,7 +730,7 @@ Gate::define('viewSherlock', function ($user = null) {
 | `sherlock:install {--force} {--migrate}` | Publish config and migrations, optionally migrate, print next steps |
 | `sherlock:watch {--minutes=30} {--route=} {--user=} {--stop}` | Temporary full tracing |
 | `sherlock:status` | Mode, sampling, header trigger, watch window, channels, AI driver, today's AI budget |
-| `sherlock:report {--days=7} {--type=} {--limit=10}` | Terminal summary: top open issues, slowest entries, top queries, bottleneck distribution. `--type` (`request`, `job`, `command`) filters the trace count and slowest entries |
+| `sherlock:report {--days=7} {--type=} {--limit=10} {--release=} {--compare=}` | Terminal summary: top open issues, top issues by impact, latest deploy, slowest entries, top queries, bottleneck distribution. `--type` (`request`, `job`, `command`) filters the trace count, slowest entries and deploy entries; `--release=abc1234` compares that release with the one before it; `--compare=after,before` compares any two |
 | `sherlock:analyze {issue} {--fresh}` | Run (or show) the AI analysis of an issue |
 | `sherlock:prune` | Retention cleanup (scheduled daily) |
 | `sherlock:clear {--older-than=} {--only=traces\|issues} {--force}` | Manual cleanup |
@@ -704,9 +843,121 @@ to the current trace) and `Sherlock::pause(fn () => ...)` (run code without reco
 
 ---
 
+## Catch N+1 in your tests
+
+Find N+1, duplicate, slow and excessive queries in CI, before production. The assertions record the
+queries of a callback on their own, so they work in **every mode, including `SHERLOCK_MODE=off`** (keep tracing
+off in tests), and fail with the normalized SQL, the count, the exact `file:line` and the fix.
+
+**PHPUnit** (or Pest with `uses()`): add the trait to your test case.
+
+```php
+use Anabil\Sherlock\Testing\InteractsWithSherlock;
+
+abstract class TestCase extends BaseTestCase
+{
+    use InteractsWithSherlock;
+}
+
+public function test_orders_page_has_no_n_plus_one(): void
+{
+    // Each assertion runs the callback once and returns its value.
+    $response = $this->assertNoNPlusOne(fn () => $this->get('/orders'));
+    $response->assertOk();
+
+    $this->assertNoDuplicateQueries(fn () => $this->get('/orders'));
+    $this->assertNoSlowQueries(fn () => $this->get('/reports'), ms: 50);
+    $this->assertQueryCountLessThan(10, fn () => $this->get('/orders'));
+    $this->assertQueryCount(2, fn () => Order::with('items')->get());
+    $this->assertNoQueryIssues(fn () => $this->get('/orders')); // all of the above, configured thresholds
+
+    $probe = $this->sherlockProbe(fn () => $this->get('/orders'));  // custom checks
+    $this->assertSame(3, $probe->count());
+}
+```
+
+**Pest**: register the expectations once in `tests/Pest.php`.
+
+```php
+// tests/Pest.php
+Anabil\Sherlock\Testing\Pest\Expectations::register();
+```
+
+```php
+it('lists orders without N+1', function () {
+    expect(fn () => $this->get('/orders'))->toHaveNoNPlusOne();
+    expect(fn () => $this->get('/orders'))->toHaveNoDuplicateQueries();
+    expect(fn () => $this->get('/reports'))->toHaveNoSlowQueries(50);
+    expect(fn () => $this->get('/orders'))->toRunQueriesLessThan(10);
+    expect(fn () => Order::with('items')->get())->toRunQueries(2);
+    expect(fn () => $this->get('/orders'))->toHaveNoQueryIssues();
+});
+```
+
+A failure reads:
+
+```text
+Failed asserting that the code ran no N+1 queries (the same query 2+ times from one line).
+
+Sherlock found 1 issue:
+
+1) N+1 query on `posts` (3×)
+   SQL:      select * from `posts` where `posts`.`author_id` = ? and `posts`.`author_id` is not null
+   Count:    3 times, 0.5ms in total
+   Location: app/Http/Controllers/AuthorController.php:24 (AuthorController::index)
+   Details:  The same query on `posts` ran 3 times from the same place (...). This usually means a relation is lazy loaded inside a loop.
+   Fix:      Eager load the relation with with(): `Author::with('posts')->get()` (or `$models->load('posts')` on an existing collection) turns these 3 queries into 1. ...
+```
+
+`assertQueryCountLessThan()` / `toRunQueriesLessThan()` failures list the queries grouped by statement and
+location, most frequent first, followed by the likely cause.
+
+Thresholds (`config/sherlock.php`, `testing` section; every assertion also takes its own):
+
+| Assertion | Config key | Default when `null` | Per-assertion override |
+|---|---|---|---|
+| N+1 | `testing.n_plus_one` (`SHERLOCK_TEST_N_PLUS_ONE`) | **2** (not the production 5: fixtures are small) | `assertNoNPlusOne($cb, threshold: 3)`, `toHaveNoNPlusOne(3)` |
+| Duplicate queries | `testing.duplicate_query` | `thresholds.duplicate_query.min_count` (2) | `assertNoDuplicateQueries($cb, minCount: 3)`, `toHaveNoDuplicateQueries(3)` |
+| Slow queries | `testing.slow_query_ms` | `thresholds.slow_query.warning_ms` (100) | `assertNoSlowQueries($cb, ms: 50)`, `toHaveNoSlowQueries(50)` |
+| Too many queries (`assertNoQueryIssues`) | `testing.max_queries` | `thresholds.excessive_queries.warning_count` (50) | `assertQueryCountLessThan($max, $cb)` |
+
+Notes:
+
+- A query repeated from the **same source line** is an N+1; the same query from two different lines is not.
+- `sherlock.ignore.queries` applies, so ignored statements never fail an assertion.
+- SQL in failure messages is normalized (placeholders only): binding values never appear in CI logs.
+- `->not` works with the Pest expectations as usual.
+- Nothing is stored or sent (no trace, no issue, no notification): assertions only observe the callback.
+
+---
+
+## Upgrading
+
+From a version without server signals / releases:
+
+1. Run `php artisan sherlock:install --migrate`: it publishes only the migrations your app is missing
+   (never a second copy of one you already have) and runs them. The new migration adds the server-signal,
+   queue-wait and release columns, `first_seen_release` / `last_seen_release` / `impact_ms` on issues, and
+   the `sherlock_releases` table. Avoid `vendor:publish --tag=sherlock-migrations --force`: it republishes
+   every migration with a new date.
+2. If you published `config/sherlock.php`, add the new analyzers to `analyzers`:
+
+   ```php
+   'Anabil\Sherlock\Analysis\Analyzers\ServerLoadAnalyzer',
+   'Anabil\Sherlock\Analysis\Analyzers\QueueWaitAnalyzer',
+   'Anabil\Sherlock\Analysis\Analyzers\MemoryLeakAnalyzer',
+   ```
+
+   and, optionally, the new sections: `release`, `server`, `thresholds.queue_wait`, `lazy_loading`,
+   `memory_leak`, `impact`, `releases`, `testing` (missing keys fall back to their defaults).
+3. Deploy with `php artisan config:cache` (or set `SHERLOCK_RELEASE`) so traces carry a release.
+
+---
+
 ## Testing
 
-In your application's test suite you will usually want tracing off:
+In your application's test suite you will usually want tracing off (the
+[test assertions](#catch-n1-in-your-tests) still work):
 
 ```xml
 <env name="SHERLOCK_MODE" value="off"/>

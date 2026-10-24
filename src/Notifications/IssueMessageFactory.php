@@ -40,8 +40,14 @@ final class IssueMessageFactory
     public function newIssue(IssueRecord $issue): NotificationMessage
     {
         $summary = $this->description($issue);
+        $summary = $summary !== '' ? $summary : $issue->type->label().' detected.';
 
-        return $this->make($issue, $issue->title, $summary !== '' ? $summary : $issue->type->label().' detected.', $issue->occurrences);
+        if ($issue->firstSeenRelease !== null) {
+            $summary = rtrim($summary).(preg_match('/[.!?]$/', rtrim($summary)) === 1 ? '' : '.')
+                .' First seen in release '.$issue->firstSeenRelease.'.';
+        }
+
+        return $this->make($issue, $issue->title, $summary, $issue->occurrences);
     }
 
     public function regression(IssueRecord $issue): NotificationMessage
@@ -141,6 +147,15 @@ final class IssueMessageFactory
         $exception = $this->exception(self::arr($context['exception'] ?? null));
         if ($exception !== null) {
             $fields['Exception'] = $exception;
+        }
+
+        $release = $issue->lastSeenRelease ?? self::str($trace['release'] ?? null);
+        if ($release !== null) {
+            $fields['Release'] = $release;
+        }
+
+        if ($issue->impactMs > 0) {
+            $fields['Total impact'] = self::ms($issue->impactMs);
         }
 
         $fields['Occurrences'] = (string) $issue->occurrences;

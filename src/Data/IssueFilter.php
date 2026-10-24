@@ -15,7 +15,8 @@ use DateTimeImmutable;
 final readonly class IssueFilter
 {
     /**
-     * @param  string  $sort  last_seen | first_seen | occurrences | severity
+     * @param  string  $sort  last_seen | first_seen | occurrences | severity | impact (cumulative impact_ms)
+     * @param  string|null  $release  only issues first seen in this release
      */
     public function __construct(
         public ?IssueType $type = null,
@@ -24,5 +25,6 @@ final readonly class IssueFilter
         public ?string $search = null,
         public ?DateTimeImmutable $since = null,
         public string $sort = 'last_seen',
+        public ?string $release = null,
     ) {}
 }

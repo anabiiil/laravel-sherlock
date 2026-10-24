@@ -134,3 +134,20 @@ it('provides a critical sample message', function (): void {
         ->and($sample->title)->toBe('Test notification')
         ->and($sample->kind)->toBe(NotificationMessage::KIND_TEST);
 });
+
+it('shows the release and, for a new issue, the release it first appeared in', function (): void {
+    $message = notifFactory()->newIssue(notifIssue(['firstSeenRelease' => 'abc1234', 'lastSeenRelease' => 'def5678', 'impactMs' => 61234.0]));
+
+    expect($message->summary)->toBe('Query took 912ms. First seen in release abc1234.')
+        ->and($message->fields['Release'])->toBe('def5678')
+        ->and($message->fields['Total impact'])->toBe('61.23 s');
+});
+
+it('falls back to the release of the latest trace and omits release fields without one', function (): void {
+    $context = notifIssue()->context;
+    $context['trace']['release'] = 'v9';
+
+    expect(notifFactory()->newIssue(notifIssue(['context' => $context]))->fields['Release'])->toBe('v9')
+        ->and(notifFactory()->newIssue(notifIssue())->fields)->not->toHaveKeys(['Release', 'Total impact'])
+        ->and(notifFactory()->newIssue(notifIssue())->summary)->toBe('Query took 912ms');
+});

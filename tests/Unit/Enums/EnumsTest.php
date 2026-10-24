@@ -69,7 +69,9 @@ it('classifies issue types', function (): void {
         ->and(IssueType::NPlusOne->isQueryRelated())->toBeTrue()
         ->and(IssueType::MissingIndex->isQueryRelated())->toBeTrue()
         ->and(IssueType::SlowRequest->isQueryRelated())->toBeFalse()
-        ->and(IssueType::cases())->toHaveCount(13);
+        ->and(IssueType::ServerLoad->isPerformance())->toBeTrue()
+        ->and(IssueType::MemoryLeak->isQueryRelated())->toBeFalse()
+        ->and(IssueType::cases())->toHaveCount(16);
 
     foreach (IssueType::cases() as $type) {
         expect($type->label())->not->toBe('');
@@ -81,8 +83,11 @@ it('has the issue statuses and bottlenecks from the plan', function (): void {
         ->and(IssueStatus::Open->isOpen())->toBeTrue()
         ->and(IssueStatus::Resolved->label())->toBe('Resolved')
         ->and(array_map(fn ($c) => $c->value, Bottleneck::cases()))
-        ->toBe(['database', 'application', 'external_service', 'cache', 'bootstrap', 'mixed', 'unknown'])
-        ->and(Bottleneck::Application->label())->toBe('Application / Server');
+        ->toBe(['database', 'application', 'external_service', 'cache', 'bootstrap', 'server_load', 'queue_backlog', 'waiting', 'mixed', 'unknown'])
+        ->and(Bottleneck::Application->label())->toBe('Application / Server')
+        ->and(Bottleneck::ServerLoad->label())->toBe('Server load')
+        ->and(Bottleneck::QueueBacklog->label())->toBe('Queue backlog')
+        ->and(Bottleneck::Waiting->label())->toBe('Waiting / blocked');
 });
 
 it('describes AI statuses', function (): void {

@@ -178,6 +178,21 @@ it('swallows failures and logs each distinct error once', function (): void {
         {
             return 0;
         }
+
+        public function releases(int $limit = 20): array
+        {
+            return [];
+        }
+
+        public function findRelease(string $release): ?Anabil\Sherlock\Data\ReleaseRecord
+        {
+            return null;
+        }
+
+        public function entryStatsForRelease(string $release, ?Anabil\Sherlock\Enums\EntryType $type = null, int $limit = 50, ?Anabil\Sherlock\Enums\RecordReason $reason = null): array
+        {
+            return [];
+        }
     };
     $logger = memoryLogger();
     $writer = new TraceWriter($repository, app(IssueService::class), app(Dispatcher::class), new RecordingPauser, new QuietReporter($logger));

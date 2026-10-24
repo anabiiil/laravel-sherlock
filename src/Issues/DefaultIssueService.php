@@ -66,6 +66,7 @@ final class DefaultIssueService implements IssueService
                 $seenAt,
                 $traceId,
                 $this->initialAiStatus($finding),
+                $trace->trace->release,
             );
 
             $outcomes[] = $outcome;

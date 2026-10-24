@@ -53,7 +53,7 @@ it('resolves every analyzer named in the config', function (): void {
     $classes = array_map(fn (Analyzer $a): string => $a::class, configuredAnalyzers());
 
     expect($classes)->toBe(config('sherlock.analyzers'))
-        ->and(config('sherlock.analyzers'))->toHaveCount(10);
+        ->and(config('sherlock.analyzers'))->toHaveCount(13);
 
     foreach (config('sherlock.analyzers') as $class) {
         expect(class_exists($class))->toBeTrue()

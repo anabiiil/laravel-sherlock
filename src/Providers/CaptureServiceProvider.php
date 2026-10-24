@@ -8,6 +8,7 @@ use Anabil\Sherlock\Collectors\CacheCollector;
 use Anabil\Sherlock\Collectors\CommandCollector;
 use Anabil\Sherlock\Collectors\HttpClientCollector;
 use Anabil\Sherlock\Collectors\JobCollector;
+use Anabil\Sherlock\Collectors\LazyLoadingCollector;
 use Anabil\Sherlock\Collectors\LogCollector;
 use Anabil\Sherlock\Collectors\QueryCollector;
 use Anabil\Sherlock\Collectors\RequestCollector;
@@ -16,10 +17,12 @@ use Anabil\Sherlock\Console\WatchCommand;
 use Anabil\Sherlock\Context\ContextManager;
 use Anabil\Sherlock\Context\FailureReporter;
 use Anabil\Sherlock\Context\UnitLifecycle;
+use Anabil\Sherlock\Context\WorkerMemoryMonitor;
 use Anabil\Sherlock\Contracts\Collector;
 use Anabil\Sherlock\Contracts\ContextManager as ContextManagerContract;
 use Anabil\Sherlock\Contracts\RecordingPolicy;
 use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\ServerProbe;
 use Anabil\Sherlock\Contracts\SourceLocator;
 use Anabil\Sherlock\Contracts\WatchWindow;
 use Anabil\Sherlock\Enums\SherlockMode;
@@ -31,6 +34,8 @@ use Anabil\Sherlock\Recording\Policies\LocalPolicy;
 use Anabil\Sherlock\Recording\Policies\OffPolicy;
 use Anabil\Sherlock\Recording\Policies\ProductionPolicy;
 use Anabil\Sherlock\Recording\Policies\WatchWindowPolicy;
+use Anabil\Sherlock\Support\ReleaseDetector;
+use Anabil\Sherlock\Support\SystemServerProbe;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -59,6 +64,7 @@ final class CaptureServiceProvider extends ServiceProvider
             return;
         }
 
+        $this->registerServerProbe();
         $this->registerContext();
         $this->registerPolicies();
         $this->registerCollectors();
@@ -71,6 +77,8 @@ final class CaptureServiceProvider extends ServiceProvider
         }
 
         if (! $this->enabled) {
+            self::uninstallLazyLoading();
+
             return;
         }
 
@@ -99,12 +107,40 @@ final class CaptureServiceProvider extends ServiceProvider
             $on('requests') ? RequestCollector::class : null,
             $on('jobs') ? JobCollector::class : null,
             $on('commands') ? CommandCollector::class : null,
+            $this->detectsLazyLoading() ? LazyLoadingCollector::class : null,
         ]));
+    }
+
+    /**
+     * A handler left by a previous app instance of this process (tests / Octane) never outlives
+     * detection. Free when the collector was never loaded (no autoload).
+     */
+    private static function uninstallLazyLoading(): void
+    {
+        if (class_exists(LazyLoadingCollector::class, false)) {
+            LazyLoadingCollector::uninstall();
+        }
+    }
+
+    /** lazy_loading.detect: true / false, null = local mode only. */
+    public function detectsLazyLoading(): bool
+    {
+        $detect = $this->config()->get('sherlock.lazy_loading.detect');
+
+        if ($detect === null || $detect === '') {
+            return SherlockMode::fromConfig($this->config()->get('sherlock.mode')) === SherlockMode::Local;
+        }
+
+        return filter_var($detect, FILTER_VALIDATE_BOOL);
     }
 
     private function bootCapture(): void
     {
         $collectors = $this->collectors();
+        if (! in_array(LazyLoadingCollector::class, $collectors, true)) {
+            self::uninstallLazyLoading();
+        }
+
         foreach ($collectors as $class) {
             $this->app->make($class)->register();
         }
@@ -156,13 +192,29 @@ final class CaptureServiceProvider extends ServiceProvider
         }
     }
 
+    private function registerServerProbe(): void
+    {
+        $this->app->singletonIf(ServerProbe::class, function (): SystemServerProbe {
+            $cores = $this->config()->get('sherlock.server.cpu_cores');
+
+            return new SystemServerProbe(
+                $this->bool('sherlock.server.cpu_time'),
+                $this->bool('sherlock.server.load_average'),
+                $this->bool('sherlock.server.memory'),
+                is_numeric($cores) && (int) $cores > 0 ? (int) $cores : null,
+            );
+        });
+    }
+
     private function registerContext(): void
     {
-        $this->app->singleton(ContextManager::class, function (): ContextManager {
+        $this->app->singleton(ContextManager::class, function (Application $app): ContextManager {
             return new ContextManager(
                 $this->int('sherlock.capture.max_queries', 1000),
                 $this->int('sherlock.capture.max_http_calls', 200),
                 $this->int('sherlock.capture.max_logs', 100),
+                $app->make(ServerProbe::class),
+                ReleaseDetector::normalize($this->config()->get('sherlock.release')),
             );
         });
         $this->app->singleton(ContextManagerContract::class, static fn (Application $app): ContextManager => $app->make(ContextManager::class));
@@ -299,8 +351,28 @@ final class CaptureServiceProvider extends ServiceProvider
                 $app->make(Dispatcher::class),
                 $app->make(UnitLifecycle::class),
                 in_array(LogCollector::class, $this->collectors(), true) ? $app->make(LogCollector::class) : null,
+                $this->bool('sherlock.memory_leak.enabled') ? $app->make(WorkerMemoryMonitor::class) : null,
             );
         });
+
+        // One per process: the ring buffer must survive across the jobs of a worker.
+        $this->app->singleton(WorkerMemoryMonitor::class, function (): WorkerMemoryMonitor {
+            $ratio = $this->config()->get('sherlock.memory_leak.min_growing_ratio', 0.5);
+
+            return new WorkerMemoryMonitor(
+                max(1, $this->int('sherlock.memory_leak.growth_mb', 32)) * 1_048_576,
+                $this->int('sherlock.memory_leak.min_jobs', 20),
+                min(1000, max(2, $this->int('sherlock.memory_leak.buffer', 50))),
+                $this->int('sherlock.memory_leak.warmup_jobs', 5),
+                is_numeric($ratio) ? (float) $ratio : 0.5,
+            );
+        });
+
+        $this->app->singleton(LazyLoadingCollector::class, static fn (Application $app): LazyLoadingCollector => new LazyLoadingCollector(
+            $app,
+            $app->make(ContextManager::class),
+            $app->make(FailureReporter::class),
+        ));
 
         $this->app->singleton(CommandCollector::class, static fn (Application $app): CommandCollector => new CommandCollector(
             $app->make(Dispatcher::class),
@@ -311,6 +383,13 @@ final class CaptureServiceProvider extends ServiceProvider
     private function config(): Repository
     {
         return $this->app->make(Repository::class);
+    }
+
+    private function bool(string $key, bool $default = true): bool
+    {
+        $value = $this->config()->get($key, $default);
+
+        return $value === null ? $default : filter_var($value, FILTER_VALIDATE_BOOL);
     }
 
     private function int(string $key, int $default): int

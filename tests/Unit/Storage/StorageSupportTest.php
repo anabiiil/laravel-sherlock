@@ -12,7 +12,7 @@ use Illuminate\Container\Container;
 use Psr\Log\AbstractLogger;
 
 it('names the tables with the prefix', function (): void {
-    expect((new Tables)->all())->toBe(['sherlock_traces', 'sherlock_queries', 'sherlock_issues', 'sherlock_issue_traces'])
+    expect((new Tables)->all())->toBe(['sherlock_traces', 'sherlock_queries', 'sherlock_issues', 'sherlock_issue_traces', 'sherlock_releases'])
         ->and((new Tables('perf_'))->issues())->toBe('perf_issues');
 });
 

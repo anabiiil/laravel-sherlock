@@ -87,6 +87,7 @@ final class DuplicateQueryAnalyzer implements Analyzer
 
         return new Finding(
             type: IssueType::DuplicateQuery,
+            impactMs: round($wasted, 3),
             severity: Severity::Warning,
             title: 'Duplicate query on '.Describe::table($table).' ('.$count.'× with identical bindings)'.Describe::where($trace, $location),
             description: sprintf(

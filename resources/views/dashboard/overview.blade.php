@@ -91,6 +91,59 @@
             @endif
         </section>
 
+        {{-- Top issues by impact --}}
+        <section class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <div class="mb-3 flex items-center justify-between">
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Top issues by impact</h2>
+                <a href="{{ route('sherlock.issues.index', ['sort' => 'impact', 'status' => 'all']) }}" class="text-xs text-sky-700 hover:underline dark:text-sky-400">All by impact</a>
+            </div>
+            @if ($impactIssues === [])
+                @include('sherlock::dashboard.partials.empty', ['message' => 'No issue cost measurable time in this period.', 'hint' => 'Impact is the time every occurrence cost (repeated N+1 queries, slow query time, excess over the slow threshold...), summed per issue.'])
+            @else
+                <ul class="divide-y divide-zinc-100 text-sm dark:divide-zinc-800">
+                    @foreach ($impactIssues as $issue)
+                        <li class="flex items-center justify-between gap-3 py-2">
+                            <span class="min-w-0">
+                                <a href="{{ route('sherlock.issues.show', ['issue' => $issue->id]) }}" class="block truncate hover:underline" title="{{ $issue->title }}">{{ $issue->title }}</a>
+                                <span class="text-xs text-zinc-500 dark:text-zinc-400">{{ $issue->type->label() }} · {{ Format::number($issue->occurrences) }}×</span>
+                            </span>
+                            <span class="flex shrink-0 items-center gap-2">
+                                <span class="font-medium tabular-nums" title="Cumulative time cost of every occurrence">{{ Format::human($issue->impactMs) }}</span>
+                                @include('sherlock::dashboard.partials.severity', ['severity' => $issue->severity])
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </section>
+
+        {{-- Latest deploy --}}
+        <section class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <div class="mb-3 flex items-center justify-between">
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Latest deploy</h2>
+                <a href="{{ route('sherlock.deploys.index') }}" class="text-xs text-sky-700 hover:underline dark:text-sky-400">Deploys</a>
+            </div>
+            @if ($deploy === null)
+                @include('sherlock::dashboard.partials.empty', ['message' => 'Not enough releases to compare yet.', 'hint' => 'Set SHERLOCK_RELEASE (or deploy from git) and run "php artisan config:cache" on deploy.'])
+            @else
+                <p @class(['text-sm font-medium', 'text-red-700 dark:text-red-400' => $deploy->hasRegressions(), 'text-emerald-700 dark:text-emerald-400' => ! $deploy->hasRegressions()])>{{ \Anabil\Sherlock\Digest\DeploySummary::headline($deploy) }}</p>
+                <p class="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span class="font-mono">{{ $deploy->current }}</span> vs <span class="font-mono">{{ $deploy->previous }}</span>@if ($deploy->currentRelease) · deployed {{ Format::ago($deploy->currentRelease->firstSeenAt) }}@endif
+                </p>
+                @php($slower = array_slice($deploy->slower(), 0, 3))
+                @if ($slower !== [])
+                    <ul class="mt-2 divide-y divide-zinc-100 text-sm dark:divide-zinc-800">
+                        @foreach ($slower as $delta)
+                            <li class="flex items-center justify-between gap-3 py-1.5">
+                                <span class="min-w-0 truncate font-mono text-xs" title="{{ $delta->name }}">{{ $delta->name }}</span>
+                                <span class="shrink-0 text-xs tabular-nums text-red-700 dark:text-red-400">{{ Format::signedRatio($delta->deltaRatio) }} ({{ Format::signedMs($delta->deltaAvgMs) }})</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            @endif
+        </section>
+
         {{-- Slowest entries --}}
         <section class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
             @include('sherlock::dashboard.partials.card-title', ['title' => 'Slowest routes, jobs & commands'])

@@ -33,6 +33,8 @@ final readonly class Verdict
      * @param  string  $reason  human readable, e.g. "72% of 2.4s spent in 38 queries; top query 900ms on `orders`"
      * @param  array<string, float>  $breakdownMs  segment => ms (keys from SEGMENTS)
      * @param  array<string, float>  $percentages  segment => 0..100
+     * @param  array<string, float|int>  $signals  server / queue signals the verdict used: cpu_ms, load_avg,
+     *                                             cpu_cores, load_per_core, queue_wait_ms (only the known ones)
      */
     public function __construct(
         public Bottleneck $bottleneck,
@@ -40,6 +42,7 @@ final readonly class Verdict
         public float $totalMs = 0.0,
         public array $breakdownMs = [],
         public array $percentages = [],
+        public array $signals = [],
     ) {}
 
     public static function unknown(string $reason = 'Not enough data to classify.'): self
@@ -58,16 +61,22 @@ final readonly class Verdict
     }
 
     /**
-     * @return array{bottleneck: string, reason: string, total_ms: float, breakdown_ms: array<string, float>, percentages: array<string, float>}
+     * @return array{bottleneck: string, reason: string, total_ms: float, breakdown_ms: array<string, float>, percentages: array<string, float>, signals?: array<string, float|int>}
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'bottleneck' => $this->bottleneck->value,
             'reason' => $this->reason,
             'total_ms' => $this->totalMs,
             'breakdown_ms' => $this->breakdownMs,
             'percentages' => $this->percentages,
         ];
+
+        if ($this->signals !== []) {
+            $data['signals'] = $this->signals;
+        }
+
+        return $data;
     }
 }

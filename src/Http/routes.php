@@ -7,6 +7,7 @@ declare(strict_types=1);
 | configured domain / path / middleware + the viewSherlock gate and the "sherlock." name prefix.
 */
 
+use Anabil\Sherlock\Http\Controllers\DeploysController;
 use Anabil\Sherlock\Http\Controllers\IssuesController;
 use Anabil\Sherlock\Http\Controllers\OverviewController;
 use Anabil\Sherlock\Http\Controllers\QueriesController;
@@ -28,3 +29,5 @@ Route::get('traces', [TracesController::class, 'index'])->name('traces.index');
 Route::get('traces/{trace}', [TracesController::class, 'show'])->name('traces.show')->where('trace', $id);
 
 Route::get('queries', QueriesController::class)->name('queries.index');
+
+Route::get('deploys', DeploysController::class)->name('deploys.index');

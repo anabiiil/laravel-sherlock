@@ -20,6 +20,7 @@ use Anabil\Sherlock\Contracts\PlanInterpreter;
 use Anabil\Sherlock\Contracts\QueryNormalizer;
 use Anabil\Sherlock\Contracts\RecordingPolicy;
 use Anabil\Sherlock\Contracts\Redactor as RedactorContract;
+use Anabil\Sherlock\Contracts\ServerProbe;
 use Anabil\Sherlock\Contracts\SourceLocator;
 use Anabil\Sherlock\Contracts\TraceAnalyzer;
 use Anabil\Sherlock\Contracts\TraceRecorder;
@@ -169,6 +170,8 @@ final class SherlockServiceProvider extends ServiceProvider
                 Severity::fromConfig($config->get('sherlock.persist_min_severity')),
                 is_string($storeBindings) ? $storeBindings : 'auto',
                 $app->bound(LoggerInterface::class) ? $app->make(LoggerInterface::class) : null,
+                $app->bound(ServerProbe::class) ? $app->make(ServerProbe::class) : null,
+                is_numeric($warning = $config->get('sherlock.server.load_per_core_warning')) ? (float) $warning : 1.5,
             );
         });
     }

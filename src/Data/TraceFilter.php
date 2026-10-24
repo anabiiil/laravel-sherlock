@@ -15,6 +15,7 @@ final readonly class TraceFilter
 {
     /**
      * @param  string  $sort  created_at | duration
+     * @param  string|null  $release  only traces of this release
      */
     public function __construct(
         public ?EntryType $type = null,
@@ -24,5 +25,6 @@ final readonly class TraceFilter
         public ?DateTimeImmutable $since = null,
         public int|string|null $issueId = null,
         public string $sort = 'created_at',
+        public ?string $release = null,
     ) {}
 }

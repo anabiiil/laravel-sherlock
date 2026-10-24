@@ -59,6 +59,7 @@ final class ExcessiveQueriesAnalyzer implements Analyzer
 
         return [new Finding(
             type: IssueType::ExcessiveQueries,
+            impactMs: round($trace->dbMs, 3),
             severity: $total >= $this->criticalCount ? Severity::Critical : Severity::Warning,
             title: 'Excessive queries: '.$total.' queries in '.$entry,
             description: sprintf(

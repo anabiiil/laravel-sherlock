@@ -15,6 +15,9 @@
     $tags = $presenter->tags();
     $metadata = $presenter->metadata();
     $findings = $presenter->findings();
+    $signals = $presenter->signals();
+    $lazyLoads = $presenter->lazyLoads();
+    $leak = $presenter->memoryLeak();
 @endphp
 
 @section('content')
@@ -27,6 +30,9 @@
                 <span class="flex items-center gap-1.5"><span class="{{ Badge::bottleneck($trace->bottleneck) }} inline-block h-2 w-2 rounded-full"></span>{{ $trace->bottleneck->label() }}</span>
                 @if ($presenter->failed())
                     <span class="rounded-md bg-red-100 px-2 py-0.5 font-medium text-red-800 dark:bg-red-500/15 dark:text-red-300">Failed</span>
+                @endif
+                @if ($trace->release)
+                    <a href="{{ route('sherlock.traces.index', ['release' => $trace->release]) }}" class="rounded-md bg-zinc-100 px-2 py-0.5 font-mono hover:underline dark:bg-zinc-800" title="Release">{{ $trace->release }}</a>
                 @endif
             </div>
             <h1 class="mt-2 break-all font-mono text-lg font-semibold">{{ $trace->name }}</h1>
@@ -66,6 +72,14 @@
                             </li>
                         @endforeach
                     </ul>
+                </section>
+            @endif
+
+            @if ($lazyLoads !== [])
+                <section class="{{ $card }}">
+                    @include('sherlock::dashboard.partials.card-title', ['title' => 'Lazy loading violations'])
+                    <p class="mb-2 text-xs text-zinc-500 dark:text-zinc-400">Relations Eloquent lazy loaded on a collection (Model::preventLazyLoading()): each one is an N+1 waiting to grow.</p>
+                    @include('sherlock::dashboard.partials.lazy-loads', ['lazyLoads' => $lazyLoads])
                 </section>
             @endif
 
@@ -199,6 +213,18 @@
                     @endforeach
                 </dl>
             </section>
+
+            <section class="{{ $card }}">
+                @include('sherlock::dashboard.partials.card-title', ['title' => 'Server signals'])
+                @include('sherlock::dashboard.partials.signals', ['signals' => $signals])
+            </section>
+
+            @if ($leak)
+                <section class="{{ $card }}">
+                    @include('sherlock::dashboard.partials.card-title', ['title' => 'Worker memory leak'])
+                    @include('sherlock::dashboard.partials.memory-leak', ['leak' => $leak])
+                </section>
+            @endif
 
             @if ($tags !== [] || $metadata !== [])
                 <section class="{{ $card }}">

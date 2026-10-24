@@ -7,6 +7,7 @@ namespace Anabil\Sherlock\Issues;
 use Anabil\Sherlock\Data\ExplainPlan;
 use Anabil\Sherlock\Data\Finding;
 use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Data\LazyLoadRecord;
 use Anabil\Sherlock\Data\LogRecord;
 use Anabil\Sherlock\Data\RecordedTrace;
 use Anabil\Sherlock\Data\TraceData;
@@ -54,6 +55,12 @@ final class IssueContextBuilder
                 'bootstrap_ms' => round($trace->bootstrapMs, 3),
                 'memory_peak' => $trace->memoryPeakBytes,
                 'started_at' => $trace->startedAt->format(DATE_ATOM),
+                'release' => $trace->release,
+                'cpu_ms' => $trace->cpuMs === null ? null : round($trace->cpuMs, 3),
+                'load_avg' => $trace->loadAvg,
+                'cpu_cores' => $trace->cpuCores,
+                'memory_free_mb' => $trace->memoryFreeMb,
+                'queue_wait_ms' => $trace->queueWaitMs === null ? null : round($trace->queueWaitMs, 1),
             ],
             'verdict' => $recorded->analysis->verdict->toArray(),
         ];
@@ -73,6 +80,17 @@ final class IssueContextBuilder
             if ($log !== null) {
                 $context['exception'] = $this->log($log);
             }
+        }
+
+        if ($finding->type === IssueType::NPlusOne && $trace->lazyLoads !== []) {
+            $context['lazy_loads'] = array_map(
+                static fn (LazyLoadRecord $record): array => $record->toArray(),
+                array_slice($trace->lazyLoads, 0, 10),
+            );
+        }
+
+        if ($finding->type === IssueType::MemoryLeak && $trace->memoryLeak !== null) {
+            $context['memory_leak'] = $trace->memoryLeak->toArray();
         }
 
         if ($finding->type === IssueType::SlowExternalCall) {

@@ -34,6 +34,14 @@ final readonly class TraceData
      * @param  array<string, scalar|null>  $metadata  e.g. queue, connection, attempts, route action
      * @param  int|null  $totalQueryCount  real count when capture caps dropped records; null = count($queries)
      * @param  float|null  $totalDbMs  real db time when capture caps dropped records; null = sum of $queries
+     * @param  string|null  $release  release / deploy identifier (config "sherlock.release")
+     * @param  float|null  $cpuMs  CPU time (user + system, getrusage) consumed by the process during the unit
+     * @param  float|null  $loadAvg  1-minute system load average when the unit ended
+     * @param  int|null  $cpuCores  CPU cores of the server (resolved lazily, only when needed)
+     * @param  int|null  $memoryFreeMb  available system memory (Linux MemAvailable), persisted traces only
+     * @param  float|null  $queueWaitMs  queue jobs: time between becoming available and starting
+     * @param  list<LazyLoadRecord>  $lazyLoads  relations lazy loaded on collections (Model::preventLazyLoading())
+     * @param  MemoryLeakSignal|null  $memoryLeak  queue workers: steady memory growth detected after this job
      */
     public function __construct(
         public string $id,
@@ -62,6 +70,14 @@ final readonly class TraceData
         public array $metadata = [],
         public ?int $totalQueryCount = null,
         public ?float $totalDbMs = null,
+        public ?string $release = null,
+        public ?float $cpuMs = null,
+        public ?float $loadAvg = null,
+        public ?int $cpuCores = null,
+        public ?int $memoryFreeMb = null,
+        public ?float $queueWaitMs = null,
+        public array $lazyLoads = [],
+        public ?MemoryLeakSignal $memoryLeak = null,
     ) {
         $db = 0.0;
         foreach ($queries as $query) {
@@ -122,6 +138,16 @@ final readonly class TraceData
         return array_values(array_filter($this->logs, static fn (LogRecord $log): bool => $log->isException()));
     }
 
+    /** Load average per CPU core (1.0 = every core busy), when both are known. */
+    public function loadPerCore(): ?float
+    {
+        if ($this->loadAvg === null || $this->cpuCores === null || $this->cpuCores < 1) {
+            return null;
+        }
+
+        return $this->loadAvg / $this->cpuCores;
+    }
+
     public function hasReason(RecordReason $reason): bool
     {
         return in_array($reason, $this->recordReasons, true);
@@ -133,6 +159,17 @@ final readonly class TraceData
     public function withQueries(array $queries): self
     {
         return $this->copy(['queries' => $queries]);
+    }
+
+    /**
+     * Server signals resolved after capture (core count, available memory); null keeps the current value.
+     */
+    public function withServerSignals(?int $cpuCores, ?int $memoryFreeMb = null): self
+    {
+        return $this->copy([
+            'cpuCores' => $cpuCores ?? $this->cpuCores,
+            'memoryFreeMb' => $memoryFreeMb ?? $this->memoryFreeMb,
+        ]);
     }
 
     public function withRecordReason(RecordReason $reason): self
@@ -176,6 +213,14 @@ final readonly class TraceData
             'metadata' => $this->metadata,
             'totalQueryCount' => $this->totalQueryCount,
             'totalDbMs' => $this->totalDbMs,
+            'release' => $this->release,
+            'cpuMs' => $this->cpuMs,
+            'loadAvg' => $this->loadAvg,
+            'cpuCores' => $this->cpuCores,
+            'memoryFreeMb' => $this->memoryFreeMb,
+            'queueWaitMs' => $this->queueWaitMs,
+            'lazyLoads' => $this->lazyLoads,
+            'memoryLeak' => $this->memoryLeak,
         ];
 
         return new self(...array_merge($args, $changes));
@@ -215,6 +260,14 @@ final readonly class TraceData
             'queries' => array_map(static fn (QueryRecord $q): array => $q->toArray(), $this->queries),
             'http_calls' => array_map(static fn (HttpCallRecord $c): array => $c->toArray(), $this->httpCalls),
             'logs' => array_map(static fn (LogRecord $l): array => $l->toArray(), $this->logs),
+            'release' => $this->release,
+            'cpu_ms' => $this->cpuMs,
+            'load_avg' => $this->loadAvg,
+            'cpu_cores' => $this->cpuCores,
+            'memory_free_mb' => $this->memoryFreeMb,
+            'queue_wait_ms' => $this->queueWaitMs,
+            'lazy_loads' => array_map(static fn (LazyLoadRecord $l): array => $l->toArray(), $this->lazyLoads),
+            'memory_leak' => $this->memoryLeak?->toArray(),
         ];
     }
 }

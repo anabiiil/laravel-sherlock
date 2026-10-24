@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static void stopWatching()
  * @method static \Anabil\Sherlock\Data\WatchState|null watching()
  * @method static mixed pause(\Closure $callback)
+ * @method static void recordLazyLoad(\Illuminate\Database\Eloquent\Model|string $model, string $relation)
  *
  * @see \Anabil\Sherlock\Sherlock
  */

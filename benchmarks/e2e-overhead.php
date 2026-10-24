@@ -216,10 +216,20 @@ Schema::create('bench_posts', static function (Blueprint $table): void {
 DB::table('bench_authors')->insert(array_map(static fn (int $i): array => ['id' => $i, 'name' => 'Author '.$i], range(1, 40)));
 DB::table('bench_posts')->insert(array_map(static fn (int $i): array => ['author_id' => $i, 'title' => 'Post '.$i], range(1, 40)));
 
-$migration = require __DIR__.'/../database/migrations/2026_01_01_000000_create_sherlock_tables.php';
-$migration->down();
+// Every package migration, in order (down in reverse).
+$migrationFiles = glob(__DIR__.'/../database/migrations/*.php') ?: [];
+sort($migrationFiles);
+$migrations = array_map(static fn (string $file): object => require $file, $migrationFiles);
+$down = static function () use ($migrations): void {
+    foreach (array_reverse($migrations) as $migration) {
+        $migration->down();
+    }
+};
+$down();
 if ($scenario !== 'none') {
-    $migration->up();
+    foreach ($migrations as $migration) {
+        $migration->up();
+    }
 }
 
 Route::get('/bench', static function (): JsonResponse {
@@ -278,7 +288,7 @@ $percentile = static function (array $values, float $p): float {
 $traces = $scenario === 'none' || ! Schema::hasTable('sherlock_traces') ? 0 : DB::table('sherlock_traces')->count();
 $issues = $scenario === 'none' || ! Schema::hasTable('sherlock_issues') ? 0 : DB::table('sherlock_issues')->count();
 
-$migration->down();
+$down();
 Schema::dropIfExists('bench_settle');
 Schema::dropIfExists('bench_posts');
 Schema::dropIfExists('bench_authors');

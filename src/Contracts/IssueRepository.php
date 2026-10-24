@@ -31,8 +31,11 @@ interface IssueRepository
      * @param  array<string, mixed>  $context  merged into the issue context (entry, verdict, explain...)
      * @param  AiStatus|null  $aiStatus  ai_status of a new issue and of a regression (null = not analyzed);
      *                                   a regression keeps a stored analysis unless it is set to pending
+     * @param  string|null  $release  release of the occurrence: first_seen_release of a new issue, last_seen_release always
+     *
+     * impact_ms is incremented by $finding->impactMs in the same atomic UPDATE (no extra query).
      */
-    public function recordOccurrence(Finding $finding, array $context, DateTimeImmutable $seenAt, ?string $traceId = null, ?AiStatus $aiStatus = AiStatus::Pending): IssueOutcome;
+    public function recordOccurrence(Finding $finding, array $context, DateTimeImmutable $seenAt, ?string $traceId = null, ?AiStatus $aiStatus = AiStatus::Pending, ?string $release = null): IssueOutcome;
 
     /** Link an example trace, keeping at most $cap most recent links. */
     public function attachTrace(int|string $issueId, string $traceId, int $cap = 10): void;
@@ -76,6 +79,35 @@ interface IssueRepository
      * @return list<IssueRecord>
      */
     public function mostFrequent(DateTimeImmutable $since, int $limit = 10): array;
+
+    /**
+     * Seen since $since, ordered by cumulative impact_ms (all-time total of the issue, not only
+     * the time since $since: per-occurrence history is not stored).
+     *
+     * @return list<IssueRecord>
+     */
+    public function topByImpact(DateTimeImmutable $since, int $limit = 10): array;
+
+    /**
+     * Issues first seen in $release (new in that deploy), most impactful first.
+     *
+     * @return list<IssueRecord>
+     */
+    public function firstSeenInRelease(string $release, int $limit = 50): array;
+
+    /**
+     * Issues that regressed (came back after being resolved) while $release was running.
+     *
+     * @return list<IssueRecord>
+     */
+    public function regressedInRelease(string $release, int $limit = 50): array;
+
+    /**
+     * Issues whose last occurrence was in $release (e.g. the previous release: not seen since, maybe fixed).
+     *
+     * @return list<IssueRecord>
+     */
+    public function lastSeenInRelease(string $release, int $limit = 50): array;
 
     /**
      * @return array<string, int> severity value => count

@@ -12,6 +12,7 @@ use Anabil\Sherlock\Contracts\TraceRepository;
 use Anabil\Sherlock\Digest\DefaultDigestService;
 use Anabil\Sherlock\Digest\DigestBuilder;
 use Anabil\Sherlock\Jobs\SendDigestJob;
+use Anabil\Sherlock\Releases\ReleaseComparator;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Bus\Dispatcher as Bus;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
@@ -43,6 +44,7 @@ final class DigestServiceProvider extends ServiceProvider
                 is_numeric($limit) ? max(1, (int) $limit) : 10,
                 self::dashboardUrl($config),
                 is_string($name) && $name !== '' ? $name : 'Laravel',
+                $app->make(ReleaseComparator::class),
             );
         });
 

@@ -6,9 +6,11 @@ namespace Anabil\Sherlock\Support\Null;
 
 use Anabil\Sherlock\Contracts\TraceRepository;
 use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Data\ReleaseRecord;
 use Anabil\Sherlock\Data\StoredTrace;
 use Anabil\Sherlock\Data\TraceFilter;
 use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\RecordReason;
 use DateTimeImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator as LengthAwarePaginatorContract;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -50,6 +52,21 @@ final class NullTraceRepository implements TraceRepository
     }
 
     public function bottleneckDistribution(DateTimeImmutable $since): array
+    {
+        return [];
+    }
+
+    public function releases(int $limit = 20): array
+    {
+        return [];
+    }
+
+    public function findRelease(string $release): ?ReleaseRecord
+    {
+        return null;
+    }
+
+    public function entryStatsForRelease(string $release, ?EntryType $type = null, int $limit = 50, ?RecordReason $reason = null): array
     {
         return [];
     }
