@@ -172,3 +172,41 @@ it('drives the watch window policy', function (): void {
     expect($decision->full)->toBeTrue()
         ->and($decision->reasons)->toBe([RecordReason::Watch]);
 });
+
+it('shares the last read between processes through APCu (one cache get per memo period per server)', function (): void {
+    $now = (float) time();
+    $clock = static function () use (&$now): float {
+        return $now;
+    };
+    $cache = new CaptureCountingCacheFactory;
+    $key = 'tracing:watch:apcu-'.bin2hex(random_bytes(4));
+    $make = static fn (): CacheWatchWindow => new CacheWatchWindow($cache, null, $key, 60, 5, $clock, true);
+
+    try {
+        // Each FPM request builds a fresh window object.
+        expect($make()->current())->toBeNull()
+            ->and($make()->current())->toBeNull()
+            ->and($cache->gets)->toBe(1);
+
+        $now += 5;
+        expect($make()->current())->toBeNull()
+            ->and($cache->gets)->toBe(2);
+
+        // start() / stop() in this process drop the shared read.
+        $make()->start(10);
+        expect($make()->current())->not->toBeNull()
+            ->and($cache->gets)->toBe(3);
+    } finally {
+        apcu_delete('tracing:watch-memo:::'.$key);
+    }
+})->skip(! CacheWatchWindow::sharedMemoAvailable(), 'APCu is not enabled (run with -d apc.enable_cli=1)');
+
+it('reads the cache on every new object without the shared memo', function (): void {
+    $now = (float) time();
+    $cache = new CaptureCountingCacheFactory;
+
+    captureWindow($cache, $now)->current();
+    captureWindow($cache, $now)->current();
+
+    expect($cache->gets)->toBe(2);
+});

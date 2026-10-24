@@ -426,7 +426,8 @@ final class PromptBuilder
 
     /**
      * ±$radius lines of a file inside base_path(), redacted. Null when the file is outside the
-     * base path (symlinks resolved), is a .env* file, too big or unreadable.
+     * base path (symlinks resolved), is a .env* file, not a .php file, under storage/ or vendor/,
+     * too big or unreadable.
      */
     public function snippet(string $file, int $line, int $radius): ?string
     {
@@ -480,6 +481,12 @@ final class PromptBuilder
             if (str_starts_with(strtolower($segment), '.env')) {
                 return null;
             }
+        }
+
+        // PHP source only, never runtime data (storage/: logs, sessions, cached config) or vendor code.
+        $relative = ltrim(str_replace(DIRECTORY_SEPARATOR, '/', substr($path, strlen($base))), '/');
+        if (! str_ends_with(strtolower($path), '.php') || str_starts_with($relative, 'storage/') || str_starts_with($relative, 'vendor/')) {
+            return null;
         }
 
         if (! is_file($path) || ! is_readable($path) || (int) filesize($path) > self::MAX_SNIPPET_FILE_BYTES) {

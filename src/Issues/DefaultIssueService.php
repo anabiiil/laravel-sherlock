@@ -31,6 +31,8 @@ final class DefaultIssueService implements IssueService
 {
     /**
      * @param  bool  $dispatchJobs  dispatch the AI/notification chain (false when both features are off: no wasted jobs)
+     * @param  bool  $analyze  include the AI job; false dispatches the notification job alone (e.g. a sync
+     *                         queue inside an HTTP request, where the AI call would hold the PHP worker)
      */
     public function __construct(
         private readonly IssueRepository $issues,
@@ -39,6 +41,8 @@ final class DefaultIssueService implements IssueService
         private readonly ?Bus $bus = null,
         private readonly int $traceCap = 10,
         private readonly bool $dispatchJobs = false,
+        private readonly bool $analyze = true,
+        private readonly bool $notify = true,
     ) {}
 
     public function recordFindings(string $traceId, RecordedTrace $trace): array
@@ -83,11 +87,17 @@ final class DefaultIssueService implements IssueService
             OccurrenceType::Recurring => new IssueRecurred($outcome),
         });
 
-        if ($outcome->occurrence->isNoteworthy() && $this->dispatchJobs && $this->bus !== null && $this->hasId($outcome)) {
+        if (! $outcome->occurrence->isNoteworthy() || ! $this->dispatchJobs || $this->bus === null || ! $this->hasId($outcome)) {
+            return;
+        }
+
+        if ($this->analyze) {
             $this->bus->dispatch(
                 (new AnalyzeIssueJob($outcome->issueId, $outcome->occurrence === OccurrenceType::Regressed))
                     ->chain([new NotifyIssueJob($outcome->issueId)])
             );
+        } elseif ($this->notify) {
+            $this->bus->dispatch(new NotifyIssueJob($outcome->issueId));
         }
     }
 

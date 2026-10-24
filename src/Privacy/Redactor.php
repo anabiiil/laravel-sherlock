@@ -36,6 +36,9 @@ final class Redactor implements RedactorContract
 
     private const CACHE_LIMIT = 500;
 
+    /** Longer statements (bulk inserts) are not memoized: 500 of them could hold megabytes in a worker. */
+    private const CACHEABLE_SQL_LENGTH = 4096;
+
     /** Headers never kept, whatever their value. */
     private const DROPPED_HEADERS = [
         'authorization',
@@ -193,19 +196,46 @@ final class Redactor implements RedactorContract
 
         $queryStart = strpos($url, '?');
         if ($queryStart === false) {
-            return $this->redactString($url);
+            return $this->redactUrlPart($url, false);
         }
 
-        $base = $this->redactString(substr($url, 0, $queryStart));
+        $base = $this->redactUrlPart(substr($url, 0, $queryStart), false);
         $query = substr($url, $queryStart + 1);
 
         $query = (string) preg_replace_callback('/([^&=]+)=([^&#]*)/', function (array $m): string {
             $key = rawurldecode($m[1]);
 
-            return $m[1].'='.($this->keys->matches($key) ? self::REDACTED : $this->redactString($m[2]));
+            return $m[1].'='.($this->keys->matches($key) ? self::REDACTED : $this->redactUrlPart($m[2], true));
         }, $query);
 
         return $base.'?'.$query;
+    }
+
+    /**
+     * Percent-encoded text is judged decoded too ("jane%40example.com" is an email). Clean
+     * values keep their encoding; a secret only visible once decoded drops the whole query
+     * value, or leaves the path decoded and redacted.
+     */
+    private function redactUrlPart(string $value, bool $queryValue): string
+    {
+        $redacted = $this->redactString($value);
+
+        if (! str_contains($value, '%') && ! ($queryValue && str_contains($value, '+'))) {
+            return $redacted;
+        }
+
+        $decoded = rawurldecode($queryValue ? str_replace('+', ' ', $value) : $value);
+        $decodedRedacted = $this->redactString($decoded);
+
+        if ($decodedRedacted === $decoded) {
+            return $redacted;
+        }
+
+        if (! $queryValue) {
+            return $decodedRedacted;
+        }
+
+        return $redacted !== $value ? $redacted : self::REDACTED;
     }
 
     /**
@@ -360,6 +390,10 @@ final class Redactor implements RedactorContract
                 }
             }
             $columns[] = $column;
+        }
+
+        if (strlen($sql) > self::CACHEABLE_SQL_LENGTH) {
+            return $columns;
         }
 
         if (count($this->columnCache) >= self::CACHE_LIMIT) {

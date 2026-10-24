@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Anabil\Tracing\Notifications\Mail\IssueNotificationMail;
 use Anabil\Tracing\Tests\Feature\Integration\Support\BootsTracing;
 use Anabil\Tracing\Tests\Feature\Integration\Support\Integration;
 use Illuminate\Database\Schema\Blueprint;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -21,7 +23,8 @@ use Illuminate\Support\Str;
 | calls an external API with a token in the URL and a bearer header, all through the real
 | HTTP kernel. Then EVERY column of EVERY row of EVERY tracing_* table (and, with queued
 | persistence, the serialized job payloads) is scanned: neither the plain passwords, nor
-| their bcrypt hashes, nor the tokens may appear anywhere.
+| their bcrypt hashes, nor the tokens may appear anywhere. The same holds for everything
+| the package sends out: Slack / Telegram / AI provider HTTP payloads and the mails.
 */
 
 uses(BootsTracing::class);
@@ -325,4 +328,73 @@ it('keeps queued job payloads and the stored rows clean with queued persistence'
     $values = privacyStoredValues();
     privacyAssertClean($values, $hashes);
     privacyAssertMarkers($values);
+});
+
+it('sends no password, hash or token to Slack, Telegram, the AI provider or by mail', function (): void {
+    config()->set('tracing.ai.enabled', true);
+    config()->set('tracing.ai.driver', 'anthropic');
+    config()->set('tracing.ai.api_key', 'test-ai-key');
+    config()->set('tracing.ai.min_severity', 'info');
+    config()->set('tracing.ai.analyze.exceptions', true);
+    config()->set('tracing.ai.daily_limit', -1);
+    config()->set('tracing.ai.send_code_snippet', true);
+    config()->set('tracing.notifications.enabled', true);
+    config()->set('tracing.notifications.channels', ['slack', 'telegram', 'mail']);
+    config()->set('tracing.notifications.min_severity', 'info');
+    config()->set('tracing.notifications.slack.webhook_url', 'https://hooks.slack.test/services/T0/B0/X');
+    config()->set('tracing.notifications.slack.min_severity', 'info');
+    config()->set('tracing.notifications.telegram.bot_token', '123:test-bot');
+    config()->set('tracing.notifications.telegram.chat_id', '-100');
+    config()->set('tracing.notifications.telegram.min_severity', 'info');
+    config()->set('tracing.notifications.mail.to', ['ops@example.test']);
+    config()->set('tracing.notifications.mail.min_severity', 'info');
+    config()->set('tracing.digest.channels', ['slack', 'telegram', 'mail']);
+    config()->set('queue.default', 'sync');
+    Mail::fake();
+    Http::fake([
+        'api.example.test/*' => Http::response(['ok' => true]),
+        'hooks.slack.test/*' => Http::response('ok'),
+        'api.telegram.org/*' => Http::response(['ok' => true]),
+        'api.anthropic.com/*' => Http::response(['model' => 'claude-test', 'content' => [['type' => 'text', 'text' => "## Root cause\nN+1"]]]),
+    ]);
+
+    $hashes = privacyScenario();
+    $this->artisan('tracing:digest', ['--force' => true])->assertSuccessful();
+
+    // Everything the package sent out (the application's own call to api.example.test is not ours).
+    $outbound = [];
+    foreach (Http::recorded() as [$request]) {
+        if (str_contains($request->url(), 'api.example.test')) {
+            continue;
+        }
+        $host = (string) parse_url($request->url(), PHP_URL_HOST);
+        $outbound[] = [$host, 'url', $request->url()];
+        $outbound[] = [$host, 'body', $request->body()];
+    }
+
+    $mails = Mail::sent(IssueNotificationMail::class);
+    foreach ($mails as $mail) {
+        $email = new Symfony\Component\Mime\Email;
+        $mail->build();
+        foreach ((new ReflectionProperty($mail, 'callbacks'))->getValue($mail) as $callback) {
+            $callback($email);
+        }
+        $outbound[] = ['mail', 'subject', $mail->subjectLine];
+        $outbound[] = ['mail', 'html', $mail->render()];
+        $outbound[] = ['mail', 'text', (string) $email->getTextBody()];
+    }
+
+    $hosts = array_unique(array_column($outbound, 0));
+    expect($hosts)->toContain('hooks.slack.test')
+        ->toContain('api.telegram.org')
+        ->toContain('api.anthropic.com')
+        ->toContain('mail');
+
+    privacyAssertClean($outbound, $hashes);
+
+    // The email is real data too: it must never leave the app.
+    $email = test()->secrets['email'];
+    foreach ($outbound as [$where, $column, $value]) {
+        expect($value)->not->toContain($email, "email found in {$where}.{$column}");
+    }
 });

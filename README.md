@@ -95,7 +95,7 @@ TRACING_MODE=production   # off | local | production (default: production)
 
 | Mode | What happens |
 |---|---|
-| `off` | Nothing is registered: no listeners, no middleware, no terminating callback. Zero overhead. |
+| `off` | Nothing is captured: no capture listeners, no middleware, no terminating callback, no cache reads. Zero overhead (only the dashboard routes, when enabled, and a few lazy container bindings). |
 | `local` | Every request, job and command is fully recorded (queries with redacted bindings, source locations). For dev machines. |
 | `production` | Lightweight in-memory metrics for every unit. A trace is **persisted only** when a finding reaches `persist_min_severity`, an exception / error log happens, or the trace is **sampled**. |
 
@@ -118,7 +118,9 @@ normalized SQL and fingerprints.
 
 `config('tracing.ignore')` lists paths, route names, job classes, artisan commands, SQL patterns and HTTP
 methods that are never traced (`Str::is()` wildcards). The package's own queries and dashboard routes are
-never recorded; its jobs (`Anabil\Tracing\Jobs\*`) and `tracing:*` commands are in the default ignore lists.
+never recorded. Its queue jobs (`Anabil\Tracing\Jobs\*`, `Anabil\Tracing\Notifications\Jobs\*`) and
+`tracing:*` commands are **always** ignored, whatever the ignore lists say, and capture is paused while its
+jobs run: their AI / webhook HTTP calls, warnings and failures never become traces or issues.
 
 ### Thresholds
 
@@ -153,7 +155,15 @@ php artisan tracing:watch --stop                            # end it early
 
 The window is stored in the cache and **expires on its own**. Use a shared store (Redis) so every server
 sees it: `TRACING_WATCH_STORE=redis`. Defaults: `watch.default_minutes` 30, `watch.max_minutes` 1440.
-Long-running workers re-read the window at most every `watch.memo_seconds` (5) seconds.
+
+Cost: in production the window is checked when a unit starts, i.e. **before the response**. Long-running
+workers (Octane, queue workers) re-read it at most every `watch.memo_seconds` (5) seconds. PHP-FPM rebuilds
+the application on every request, so the last read is shared between the FPM workers of a server through
+**APCu** when the extension is enabled (`watch.shared_memo`, default `true`): one cache read per 5 seconds per
+server. Without APCu, FPM does **one cache read per request** on the watch store (a Redis `GET`, or a
+query when the store is `database`). If you do not use `tracing:watch`, set `TRACING_WATCH_ENABLED=false`:
+nothing is read in the request path at all (the header trigger keeps working). A new or stopped window
+reaches other processes within `memo_seconds`.
 
 ---
 
@@ -237,7 +247,8 @@ SQLite `EXPLAIN QUERY PLAN`). It is designed so that a plan may be skipped, but 
 ## Issues
 
 Findings are grouped into **issues** by fingerprint: `type + query fingerprint + source location + entry
-name` (route / job / command). One issue is created per unique problem, then:
+name` (route / job / command). Exceptions use `class + source location` only (never the message, never the
+entry: the same bug reached from two routes is one issue). One issue is created per unique problem, then:
 
 - **new**: first occurrence, notified (and analyzed by AI, if enabled) once;
 - **recurring**: occurrences are counted; notifications are throttled;
@@ -292,7 +303,9 @@ php artisan tracing:clear --only=issues --force    # no confirmation
 ## Notifications
 
 Channels: **Slack** (incoming webhook), **Telegram** (Bot API) and **Mail**, in any combination. Delivery is
-queued; one failing channel never blocks the others; every outgoing payload is redacted again.
+queued; one failing channel never blocks the others; every outgoing payload is redacted again. With a
+`sync` queue the webhook / Bot API / mail calls run inline, after the response, in the process that
+recorded the trace (see [Overhead](#overhead-and-server-model)).
 
 ```dotenv
 TRACING_NOTIFICATIONS=true
@@ -368,6 +381,11 @@ Optional. When enabled, an issue that qualifies (`ai.analyze`, `ai.min_severity`
 issue fingerprint**; the result is stored on the issue and reused by notifications, the digest and the
 dashboard. The AI job runs before the notification job and never throws: a failure or timeout is recorded
 as `failed` and the notification is sent anyway.
+
+With a `sync` queue, an HTTP process (PHP-FPM, Octane) **skips the AI job** and sends the notification
+alone: the provider call (up to `ai.timeout`) would otherwise hold the PHP worker after the response. The
+issue keeps `ai_status = pending`; use a real queue, `tracing:analyze {issue}` or the dashboard *Re-analyze*
+button. Queue workers and artisan commands analyze normally.
 
 ```dotenv
 TRACING_AI_ENABLED=true
@@ -498,6 +516,10 @@ Redaction happens **at capture time, before anything is stored, in every mode, i
   (default), `always` or `never`).
 - **Exception messages and log context** (recursively): emails, phone numbers, JWT / bearer tokens, card
   numbers (Luhn-checked), IP addresses and long secrets are masked; sensitive keys removed.
+- **URLs**: only the path of incoming requests (never the query string); outgoing call URLs keep their query
+  string with sensitive parameters replaced. Paths and query values are also checked URL-decoded
+  (`jane%40example.com` is an email).
+  A request no route matched (404, 405) is named after its redacted path, never the raw one.
 - **Never stored or sent**: request bodies, headers (`Authorization`, `Cookie`, `X-Api-Key`...), cookies,
   session, `.env`, config.
 - **Stack traces**: relative paths only, no argument values.
@@ -506,8 +528,8 @@ Redaction happens **at capture time, before anything is stored, in every mode, i
 - **Code snippets** for the AI are opt-in, off by default, and redacted.
 - Extra patterns: `privacy.patterns` (regexes replaced with `[REDACTED]`).
 - A dedicated privacy test suite registers a user with a known password, changes it, triggers exceptions
-  and logs containing it, and scans every `tracing_*` table and every outgoing payload for the password and
-  its hash.
+  and logs containing it, and scans every `tracing_*` table, the queued job payloads and every outgoing
+  Slack / Telegram / AI provider request and mail for the password, its hash and the tokens.
 
 ---
 
@@ -558,11 +580,26 @@ Gate::define('viewTracing', function ($user = null) {
       `TRACING_QUEUE_CONNECTION=redis`.
 - [ ] A **dedicated connection** (`TRACING_DB_CONNECTION`) if your main database is busy, set before migrating.
 - [ ] The scheduler runs (`tracing:prune`, digest), and `retention` fits your disk.
-- [ ] A shared cache (Redis) for `tracing:watch` across servers (`TRACING_WATCH_STORE`).
+- [ ] A shared cache (Redis) for `tracing:watch` across servers (`TRACING_WATCH_STORE`), APCu enabled on
+      PHP-FPM servers, or `TRACING_WATCH_ENABLED=false` if you never use the watch window.
 - [ ] The `viewTracing` gate is defined for the people who need the dashboard.
 - [ ] `TRACING_HEADER_SECRET` is long and random, or the header trigger is disabled.
 - [ ] Notifications tested with `tracing:test-notification`; AI budget set (`TRACING_AI_DAILY_LIMIT`).
 - [ ] `EXPLAIN` restricted if needed (`TRACING_EXPLAIN_ENVIRONMENTS`) or disabled (`TRACING_EXPLAIN=false`).
+
+### Overhead and server model
+
+What runs while the user waits, in `production` mode: one array push per query / cache / log event, a
+backtrace for the first occurrence of each distinct SQL (and for slow queries), the recording decision when
+the unit starts (config only, plus the watch-window read described in
+[`tracing:watch`](#temporary-full-tracing-tracingwatch)). No network I/O of the package's own.
+
+Everything else (analysis, `EXPLAIN`, persistence, issue upserts, and with a `sync` queue the notification
+calls) runs in the **terminating callback, after the response is sent**. That relies on the server
+flushing the response before `terminate()`: true for **PHP-FPM** (`fastcgi_finish_request()`), **Octane**
+and LiteSpeed. Under Apache **mod_php** or `php artisan serve` the client waits for the terminating
+callback: there, use `TRACING_PERSISTENCE=queue` with a real queue. Even on FPM the worker stays busy until
+the callback ends, so a real queue keeps FPM workers free for requests.
 
 **Octane, Horizon and long-running workers** are supported: trace state is scoped to each request / job /
 command and reset in between; per-trace caps (`capture.max_*`) bound memory; the watch window is

@@ -319,10 +319,14 @@ final class RequestCollector implements Collector
 
         if ($this->request !== null) {
             $path = $this->request->path();
-            $context->setRequest(
-                $this->request->getMethod(),
-                $this->redactor->redactUrl($path === '/' ? '/' : '/'.$path),
-            );
+            $uri = $this->redactor->redactUrl($path === '/' ? '/' : '/'.$path);
+            $context->setRequest($this->request->getMethod(), $uri);
+
+            // No route matched (404, 405, an exception before routing): the name is still the
+            // raw path, which may carry identifiers / tokens. Redacted here, after the response.
+            if (! $this->routeResolved) {
+                $context->setName($this->request->getMethod().' '.$uri);
+            }
         }
 
         $userId = $this->resolvedUserId($app);

@@ -8,7 +8,7 @@ use Anabil\Tracing\Context\UnitLifecycle;
 use Anabil\Tracing\Contracts\Collector;
 use Anabil\Tracing\Data\EntryCandidate;
 use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Jobs\PersistTraceJob;
+use Anabil\Tracing\Recording\Policies\IgnorePolicy;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Queue\Job;
 use Illuminate\Queue\Events\JobExceptionOccurred;
@@ -26,13 +26,20 @@ use Throwable;
  * A job processed while another unit is active (sync queue inside a request / command)
  * is nested: it belongs to the outer trace and records nothing on its own.
  *
- * The package's own jobs (persist / AI / notify) are never units, whatever ignore.jobs says:
- * tracing a PersistTraceJob would persist a trace that queues another PersistTraceJob, forever.
+ * The package's own jobs (persist / AI / notify / digest / throttled summaries) are never units,
+ * whatever ignore.jobs says: tracing a PersistTraceJob would persist a trace that queues
+ * another PersistTraceJob, forever. Capture
+ * is also paused while they run, and their exceptions are never recorded, so nothing they do
+ * (provider / webhook HTTP calls, warnings, a failure reported by the worker) can become an
+ * orphan trace and an issue about the package itself.
  */
 final class JobCollector implements Collector
 {
     /** @var array<int, true> */
     private array $started = [];
+
+    /** @var array<int, true> package jobs in progress (capture held) */
+    private array $own = [];
 
     public function __construct(
         private readonly Dispatcher $events,
@@ -54,6 +61,12 @@ final class JobCollector implements Collector
             $job = $event->job;
             $name = self::name($job);
             if (self::isPackageJob($name)) {
+                $id = spl_object_id($job);
+                if (! isset($this->own[$id])) {
+                    $this->own[$id] = true;
+                    $this->lifecycle->manager()->hold();
+                }
+
                 return;
             }
             $this->started[spl_object_id($job)] = true;
@@ -89,6 +102,17 @@ final class JobCollector implements Collector
     {
         try {
             $id = spl_object_id($job);
+            if (isset($this->own[$id])) {
+                unset($this->own[$id]);
+                $this->lifecycle->manager()->resume();
+                if ($exception !== null) {
+                    // The worker reports it right after this event: never a trace of its own.
+                    $this->logs?->ignoreException($exception);
+                }
+
+                return;
+            }
+
             if (! isset($this->started[$id])) {
                 return;
             }
@@ -111,10 +135,7 @@ final class JobCollector implements Collector
 
     public static function isPackageJob(string $name): bool
     {
-        static $namespace = null;
-        $namespace ??= substr(PersistTraceJob::class, 0, (int) strrpos(PersistTraceJob::class, '\\') + 1);
-
-        return str_starts_with($name, $namespace);
+        return IgnorePolicy::isPackageJob($name);
     }
 
     private static function name(Job $job): string

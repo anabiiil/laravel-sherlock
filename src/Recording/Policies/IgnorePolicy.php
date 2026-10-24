@@ -14,9 +14,18 @@ use Anabil\Tracing\Recording\PatternList;
  * Ignore lists from config (paths, route names, HTTP methods, jobs, commands). Runs first
  * in the CompositeRecordingPolicy and short-circuits: an ignored unit records nothing.
  * Patterns are compiled once (PatternList).
+ *
+ * The package's own jobs (Anabil\Tracing\Jobs, Anabil\Tracing\Notifications\Jobs) and commands
+ * (tracing:...) are always ignored,
+ * whatever the config says: tracing them would make the package report on itself.
  */
 final class IgnorePolicy implements RecordingPolicy
 {
+    /** @var list<string> */
+    public const PACKAGE_JOB_PREFIXES = ['Anabil\\Tracing\\Jobs\\', 'Anabil\\Tracing\\Notifications\\Jobs\\'];
+
+    public const PACKAGE_COMMAND_PREFIX = 'tracing:';
+
     private readonly PatternList $paths;
 
     private readonly PatternList $routes;
@@ -76,9 +85,22 @@ final class IgnorePolicy implements RecordingPolicy
             EntryType::Request => ($candidate->method !== null && isset($this->methods[strtoupper($candidate->method)]))
                 || $this->paths->matches(self::path($candidate->path ?? $candidate->name))
                 || $this->routes->matches($candidate->routeName),
-            EntryType::Job => $this->jobs->matches($candidate->name),
-            EntryType::Command => $this->commands->matches($candidate->name),
+            EntryType::Job => self::isPackageJob($candidate->name) || $this->jobs->matches($candidate->name),
+            EntryType::Command => str_starts_with($candidate->name, self::PACKAGE_COMMAND_PREFIX)
+                || $this->commands->matches($candidate->name),
         };
+    }
+
+    public static function isPackageJob(string $name): bool
+    {
+        $name = ltrim($name, '\\');
+        foreach (self::PACKAGE_JOB_PREFIXES as $prefix) {
+            if (str_starts_with($name, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function ignoresRoute(?string $routeName): bool

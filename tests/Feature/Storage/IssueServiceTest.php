@@ -169,3 +169,64 @@ it('does not dispatch jobs when AI and notifications are disabled', function ():
 
     Bus::assertNothingDispatched();
 });
+
+/** Simulate a PHP-FPM process (the test runner is a console process). */
+function issueServiceInHttpWorker(bool $http): void
+{
+    $property = new ReflectionProperty(app(), 'isRunningInConsole');
+    $property->setValue(app(), ! $http);
+    app()->forgetInstance(IssueService::class);
+}
+
+it('skips the AI job on a sync queue inside an HTTP request (it would hold the PHP worker)', function (): void {
+    config()->set('tracing.ai.enabled', true);
+    config()->set('tracing.notifications.enabled', true);
+    config()->set('tracing.queue.connection', 'sync');
+    issueServiceInHttpWorker(true);
+    Bus::fake();
+
+    try {
+        issueService()->recordFindings('t1', F::recorded(findings: [F::finding()]));
+    } finally {
+        issueServiceInHttpWorker(false);
+    }
+
+    Bus::assertNotDispatched(AnalyzeIssueJob::class);
+    Bus::assertDispatched(NotifyIssueJob::class, 1);
+});
+
+it('keeps the AI chain on a real queue, or on a sync queue outside HTTP requests', function (bool $http, string $connection): void {
+    config()->set('tracing.ai.enabled', true);
+    config()->set('tracing.notifications.enabled', true);
+    config()->set('queue.connections.redis-like', ['driver' => 'database']);
+    config()->set('tracing.queue.connection', $connection);
+    issueServiceInHttpWorker($http);
+    Bus::fake();
+
+    try {
+        issueService()->recordFindings('t1', F::recorded(findings: [F::finding()]));
+    } finally {
+        issueServiceInHttpWorker(false);
+    }
+
+    Bus::assertChained([AnalyzeIssueJob::class, NotifyIssueJob::class]);
+})->with([
+    'http request, real queue' => [true, 'redis-like'],
+    'queue worker / command, sync queue' => [false, 'sync'],
+]);
+
+it('dispatches nothing on a sync queue inside an HTTP request when only AI is enabled', function (): void {
+    config()->set('tracing.ai.enabled', true);
+    config()->set('tracing.notifications.enabled', false);
+    config()->set('tracing.queue.connection', 'sync');
+    issueServiceInHttpWorker(true);
+    Bus::fake();
+
+    try {
+        issueService()->recordFindings('t1', F::recorded(findings: [F::finding()]));
+    } finally {
+        issueServiceInHttpWorker(false);
+    }
+
+    Bus::assertNothingDispatched();
+});

@@ -1,7 +1,15 @@
 {
     "name": "anabil/laravel-tracing",
     "description": "Self-hosted performance diagnosis for Laravel: detects slow queries, N+1, bottlenecks and explains why, with strict privacy.",
-    "keywords": ["laravel", "performance", "tracing", "n-plus-one", "slow-query", "apm", "diagnosis"],
+    "keywords": [
+        "laravel",
+        "performance",
+        "tracing",
+        "n-plus-one",
+        "slow-query",
+        "apm",
+        "diagnosis"
+    ],
     "type": "library",
     "license": "MIT",
     "require": {
@@ -61,5 +69,8 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "suggest": {
+        "ext-apcu": "Shares the tracing:watch window check between PHP-FPM workers (one cache read per 5s per server)"
+    }
 }

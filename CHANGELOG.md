@@ -6,6 +6,24 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- `watch.enabled` (`TRACING_WATCH_ENABLED`) to never read the cache in the request path, and
+  `watch.shared_memo`: on PHP-FPM the watch-window read is shared between workers through APCu.
+
+### Fixed
+
+- The package's own throttled-summary job (`Anabil\Tracing\Notifications\Jobs`) was traced as a unit;
+  logs, HTTP calls and reported failures of package jobs could become orphan traces and issues about the
+  package itself. Package jobs and `tracing:*` commands are now always ignored and capture is paused while
+  package jobs run.
+- With a `sync` queue, the AI provider call ran inside the terminating callback of PHP-FPM / Octane
+  workers; HTTP processes now skip the AI job on a sync queue (notifications are still sent).
+- Requests no route matched were stored and notified under their raw, unredacted path.
+- URL-encoded sensitive values in URLs (`email=a%40b.com`, `/users/jane%40example.com`) were kept.
+- The Redactor no longer memoizes the column map of huge statements (bounded memory in workers).
+- AI code snippets are limited to `.php` files outside `storage/` and `vendor/`.
+
 ## [0.1.0] - Unreleased
 
 First release.

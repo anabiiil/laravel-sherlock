@@ -191,6 +191,9 @@ final class CaptureServiceProvider extends ServiceProvider
                 is_string($key) && $key !== '' ? $key : 'tracing:watch',
                 $this->int('tracing.watch.max_minutes', 1440),
                 $this->int('tracing.watch.memo_seconds', 5),
+                null,
+                (bool) $this->config()->get('tracing.watch.shared_memo', true),
+                hash('xxh3', $app->basePath()),
             );
         });
 
@@ -216,11 +219,12 @@ final class CaptureServiceProvider extends ServiceProvider
             return match (TracingMode::fromConfig($this->config()->get('tracing.mode'))) {
                 TracingMode::Off => new OffPolicy,
                 TracingMode::Local => new CompositeRecordingPolicy([new LocalPolicy], $app->make(IgnorePolicy::class)),
-                TracingMode::Production => new CompositeRecordingPolicy([
+                TracingMode::Production => new CompositeRecordingPolicy(array_values(array_filter([
                     $app->make(HeaderTriggerPolicy::class),
-                    new WatchWindowPolicy($app->make(WatchWindow::class)),
+                    // watch.enabled=false: no cache read at all when a unit starts.
+                    $this->config()->get('tracing.watch.enabled', true) ? new WatchWindowPolicy($app->make(WatchWindow::class)) : null,
                     new ProductionPolicy(is_numeric($rate) ? (float) $rate : 0.0),
-                ], $app->make(IgnorePolicy::class)),
+                ])), $app->make(IgnorePolicy::class)),
             };
         });
     }

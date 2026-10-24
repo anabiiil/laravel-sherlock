@@ -65,6 +65,8 @@ final class StorageServiceProvider extends ServiceProvider
 
         $this->app->singleton(IssueService::class, static function (Application $app): DefaultIssueService {
             $config = $app->make(Repository::class);
+            $ai = (bool) $config->get('tracing.ai.enabled');
+            $notify = (bool) $config->get('tracing.notifications.enabled');
 
             return new DefaultIssueService(
                 $app->make(IssueRepository::class),
@@ -72,7 +74,13 @@ final class StorageServiceProvider extends ServiceProvider
                 new IssueContextBuilder,
                 $app->make(Bus::class),
                 self::int($config->get('tracing.storage.issue_traces_cap'), 10),
-                (bool) $config->get('tracing.ai.enabled') || (bool) $config->get('tracing.notifications.enabled'),
+                $ai || $notify,
+                // A sync queue runs the chain right here: inside an HTTP request that is the
+                // terminating callback of a PHP worker, which an AI call (up to ai.timeout) would
+                // hold. Skipped there (tracing:analyze / Re-analyze still work); queue workers
+                // and commands keep it.
+                ! (self::servesHttp($app) && self::queueIsSync($config)),
+                $notify,
             );
         });
 
@@ -106,6 +114,27 @@ final class StorageServiceProvider extends ServiceProvider
 
             $schedule->command(PruneCommand::class)->dailyAt(is_string($at) && $at !== '' ? $at : '03:00');
         });
+    }
+
+    /** PHP-FPM / mod_php / Octane: a process serving HTTP requests (not a queue worker or command). */
+    private static function servesHttp(Application $app): bool
+    {
+        return ! $app->runningInConsole() || isset($_SERVER['LARAVEL_OCTANE']);
+    }
+
+    /** Whether package jobs run inline (the tracing queue connection uses the sync driver). */
+    private static function queueIsSync(Repository $config): bool
+    {
+        $connection = $config->get('tracing.queue.connection');
+        if (! is_string($connection) || $connection === '') {
+            $connection = $config->get('queue.default', 'sync');
+        }
+
+        if (! is_string($connection)) {
+            return true;
+        }
+
+        return $config->get("queue.connections.{$connection}.driver", $connection) === 'sync';
     }
 
     private static function int(mixed $value, int $default): int

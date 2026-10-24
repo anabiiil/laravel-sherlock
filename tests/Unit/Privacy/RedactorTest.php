@@ -162,9 +162,29 @@ it('drops sensitive headers', function (): void {
 
 it('redacts URLs', function (): void {
     expect($this->redactor->redactUrl('https://user:pass@api.example.com/v1/users?token=abc&page=2&email=a%40b.com'))
-        ->toBe('https://'.RED.'@api.example.com/v1/users?token='.RED.'&page=2&email=a%40b.com')
+        ->toBe('https://'.RED.'@api.example.com/v1/users?token='.RED.'&page=2&email='.RED)
         ->and($this->redactor->redactUrl('https://api.example.com/reset/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b'))
         ->toBe('https://api.example.com/reset/'.RED);
+});
+
+it('keeps clean URL-encoded query values as they are', function (): void {
+    expect($this->redactor->redactUrl('https://api.example.com/search?q=red%20shoes&sort=price+asc&page=2'))
+        ->toBe('https://api.example.com/search?q=red%20shoes&sort=price+asc&page=2')
+        ->and($this->redactor->redactUrl('https://api.example.com/u?contact=jane.doe%40example.com&x=1'))
+        ->toBe('https://api.example.com/u?contact='.RED.'&x=1')
+        ->and($this->redactor->redactUrl('/users/jane.doe%40example.com/orders'))
+        ->toBe('/users/'.RED.'/orders')
+        ->and($this->redactor->redactUrl('/files/annual%20report'))
+        ->toBe('/files/annual%20report');
+});
+
+it('does not memoize the column map of huge statements (bulk inserts)', function (): void {
+    $sql = 'insert into t (a, b) values '.implode(', ', array_fill(0, 2000, '(?, ?)'));
+    $this->redactor->redactBindings($sql, array_fill(0, 4000, 'x'));
+
+    $cache = (new ReflectionProperty(Redactor::class, 'columnCache'))->getValue($this->redactor);
+
+    expect($cache)->not->toHaveKey($sql);
 });
 
 it('caches the column map per SQL and stays bounded', function (): void {

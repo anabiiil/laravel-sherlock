@@ -32,7 +32,7 @@ final class StatusCommand extends Command
         $this->components->twoColumnDetail('Mode', $mode->value);
         $this->components->twoColumnDetail('Sample rate', is_numeric($rate) ? rtrim(rtrim(number_format((float) $rate * 100, 2), '0'), '.').'%' : '-');
         $this->components->twoColumnDetail('Header trigger', $this->headerState($config));
-        $this->components->twoColumnDetail('Watch window', $mode->isOff() ? 'n/a (off)' : $this->watchState($window));
+        $this->components->twoColumnDetail('Watch window', $mode->isOff() ? 'n/a (off)' : (! $config->get('tracing.watch.enabled', true) ? 'disabled (watch.enabled)' : $this->watchState($window)));
 
         $this->newLine();
         $this->components->twoColumnDetail('<fg=green;options=bold>Notifications</>');

@@ -34,6 +34,10 @@ final class WatchCommand extends Command
             return self::FAILURE;
         }
 
+        if (! $config->get('tracing.watch.enabled', true) && ! $this->option('stop')) {
+            $this->components->warn('The watch window is disabled (TRACING_WATCH_ENABLED=false): production units ignore it.');
+        }
+
         if ($this->option('stop')) {
             $window->stop();
             $this->components->info('Watch window stopped.');

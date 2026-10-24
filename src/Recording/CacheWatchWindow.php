@@ -20,10 +20,14 @@ use Throwable;
  * The entry is written with a TTL equal to the window, so it expires on its own; the
  * expiry timestamp is also checked on read.
  *
- * Cost: one cache get() per memo period (memo_seconds, default 5) per process. On FPM that
- * is at most one get per request; Octane / queue workers / long commands reuse the last
- * read for a few seconds, so the check is effectively free. A failing cache store counts
- * as "no window" for the memo period (never throws into the request).
+ * Cost: one cache get() per memo period (memo_seconds, default 5) per process. Octane /
+ * queue workers / long commands reuse the last read for a few seconds. PHP-FPM rebuilds
+ * the application (and this object) on every request, so with $sharedMemo (APCu, when
+ * available) the last read is also shared by every worker of the pool for the memo
+ * period: one cache get per memo period per server instead of one per request. Without
+ * APCu, FPM pays one cache get per request (disable the window with watch.enabled=false
+ * to avoid it). A failing cache store counts as "no window" for the memo period (never
+ * throws into the request).
  */
 final class CacheWatchWindow implements WatchWindow
 {
@@ -36,6 +40,8 @@ final class CacheWatchWindow implements WatchWindow
 
     /**
      * @param  (Closure(): float)|null  $clock  unix time in seconds (injectable for tests)
+     * @param  bool  $sharedMemo  share the last read with the other processes of the server (APCu)
+     * @param  string  $sharedScope  distinguishes applications sharing one APCu segment (same FPM pool)
      */
     public function __construct(
         private readonly CacheFactory $cache,
@@ -44,6 +50,8 @@ final class CacheWatchWindow implements WatchWindow
         private readonly int $maxMinutes = 1440,
         private readonly int $memoSeconds = 5,
         ?Closure $clock = null,
+        private readonly bool $sharedMemo = false,
+        private readonly string $sharedScope = '',
     ) {
         $this->clock = $clock ?? static fn (): float => microtime(true);
     }
@@ -77,7 +85,7 @@ final class CacheWatchWindow implements WatchWindow
         $now = ($this->clock)();
 
         if ($this->memoAt === null || ($now - $this->memoAt) >= $this->memoSeconds) {
-            $this->memo = $this->fetch();
+            $this->memo = $this->sharedFetch($now);
             $this->memoAt = $now;
         }
 
@@ -110,6 +118,7 @@ final class CacheWatchWindow implements WatchWindow
     /** Forget the memoized read (tests / after external changes). */
     public function flushMemo(): void
     {
+        $this->forgetShared();
         $this->memo = null;
         $this->memoAt = null;
     }
@@ -123,6 +132,60 @@ final class CacheWatchWindow implements WatchWindow
             || ($candidate->routeName !== null && Str::is($pattern, $candidate->routeName));
     }
 
+    /** Whether the APCu cross-process memo can be used in this process. */
+    public static function sharedMemoAvailable(): bool
+    {
+        return function_exists('apcu_enabled') && apcu_enabled();
+    }
+
+    /**
+     * The last read of any process of this server, when still fresh; else a cache read
+     * published for the others. Never throws.
+     */
+    private function sharedFetch(float $now): ?WatchState
+    {
+        if (! $this->sharedMemo || $this->memoSeconds <= 0 || ! self::sharedMemoAvailable()) {
+            return $this->fetch();
+        }
+
+        $key = $this->sharedKey();
+
+        try {
+            $hit = apcu_fetch($key, $found);
+            if ($found && is_array($hit) && is_float($hit['at'] ?? null) && ($now - $hit['at']) >= 0 && ($now - $hit['at']) < $this->memoSeconds) {
+                return is_array($hit['state'] ?? null) ? self::state($hit['state']) : null;
+            }
+        } catch (Throwable) {
+            return $this->fetch();
+        }
+
+        $state = $this->fetch();
+
+        try {
+            apcu_store($key, ['at' => $now, 'state' => $state?->toArray()], max(1, $this->memoSeconds));
+        } catch (Throwable) {
+            // Best effort only.
+        }
+
+        return $state;
+    }
+
+    private function forgetShared(): void
+    {
+        if ($this->sharedMemo && self::sharedMemoAvailable()) {
+            try {
+                apcu_delete($this->sharedKey());
+            } catch (Throwable) {
+                // Expires on its own.
+            }
+        }
+    }
+
+    private function sharedKey(): string
+    {
+        return 'tracing:watch-memo:'.$this->sharedScope.':'.($this->store ?? '').':'.$this->key;
+    }
+
     private function fetch(): ?WatchState
     {
         try {
@@ -131,7 +194,15 @@ final class CacheWatchWindow implements WatchWindow
             return null;
         }
 
-        if (! is_array($value) || ! is_int($value['started_at'] ?? null) || ! is_int($value['expires_at'] ?? null)) {
+        return is_array($value) ? self::state($value) : null;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $value
+     */
+    private static function state(array $value): ?WatchState
+    {
+        if (! is_int($value['started_at'] ?? null) || ! is_int($value['expires_at'] ?? null)) {
             return null;
         }
 
@@ -148,6 +219,7 @@ final class CacheWatchWindow implements WatchWindow
 
     private function remember(?WatchState $state): void
     {
+        $this->forgetShared();
         $this->memo = $state;
         $this->memoAt = ($this->clock)();
     }

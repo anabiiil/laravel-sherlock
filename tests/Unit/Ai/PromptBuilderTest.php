@@ -57,6 +57,10 @@ beforeEach(function (): void {
     file_put_contents($this->base.'/.env', "APP_KEY=base64:supersecret\nDB_PASSWORD=dbsecret\n");
     file_put_contents($this->outside.'/secret.php', "<?php // outside-secret\n");
     @symlink($this->outside.'/secret.php', $this->base.'/app/linked.php');
+    mkdir($this->base.'/storage/logs', 0777, true);
+    file_put_contents($this->base.'/storage/logs/laravel.log', "dbsecret in a log line\n");
+    file_put_contents($this->base.'/storage/logs/cached.php', "<?php // dbsecret\n");
+    file_put_contents($this->base.'/app/notes.txt', "supersecret\n");
 
     $this->config = new Repository(['tracing' => ['ai' => [
         'language' => 'en', 'max_tokens' => 1200, 'timeout' => 25,
@@ -174,6 +178,9 @@ it('never reads .env files or anything outside the base path', function (string 
     'absolute outside path' => '/etc/hosts',
     'symlink pointing outside' => 'app/linked.php',
     'missing file' => 'app/Nope.php',
+    'runtime log under storage' => 'storage/logs/laravel.log',
+    'php file under storage' => 'storage/logs/cached.php',
+    'non-php file' => 'app/notes.txt',
 ]);
 
 it('rejects a traversal into a sibling directory', function (): void {

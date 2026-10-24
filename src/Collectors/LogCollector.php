@@ -109,6 +109,14 @@ final class LogCollector implements Collector
         }
     }
 
+    /**
+     * Never record this exception (one of the package's own jobs failed; the worker reports it next).
+     */
+    public function ignoreException(Throwable $exception): void
+    {
+        $this->captured[$exception] = true;
+    }
+
     private function target(): TraceContext
     {
         $context = $this->lifecycle->manager()->current();

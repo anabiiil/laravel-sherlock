@@ -212,9 +212,19 @@ return [
     | Temporary full tracing stored in cache. Use a shared store (redis) so all
     | servers see it. Expires automatically.
     |
+    | In production the window is checked when a unit starts (before the response):
+    | one cache "get" per memo_seconds per process. PHP-FPM rebuilds the app on every
+    | request, so the read is shared across FPM workers through APCu when the extension
+    | is enabled ("shared_memo"); without APCu it is one cache get per request. Set
+    | "enabled" to false to never read the cache in the request path (tracing:watch
+    | then has no effect).
+    |
     */
 
     'watch' => [
+        'enabled' => env('TRACING_WATCH_ENABLED', true),
+        // Share the last read between the PHP-FPM workers of a server (APCu, when available).
+        'shared_memo' => true,
         'cache_store' => env('TRACING_WATCH_STORE'),
         'cache_key' => 'tracing:watch',
         'default_minutes' => 30,

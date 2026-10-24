@@ -142,6 +142,22 @@ final class ContextManager implements ContextManagerContract
         }
     }
 
+    /**
+     * Pause capture until the paired resume() (a pause that spans two events, e.g. one of
+     * the package's own queue jobs, from JobProcessing to JobProcessed).
+     */
+    public function hold(): void
+    {
+        $this->paused++;
+    }
+
+    public function resume(): void
+    {
+        if ($this->paused > 0) {
+            $this->paused--;
+        }
+    }
+
     /** Standalone context for logs raised outside any unit (created on first use). */
     public function orphan(EntryType $type, string $name): TraceContext
     {
