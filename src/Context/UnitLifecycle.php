@@ -65,7 +65,8 @@ final class UnitLifecycle
             $this->end();
         }
 
-        if ($this->manager->depth() > 0) {
+        // Nested, or started by the package's own (paused) work: never a trace of its own.
+        if ($this->manager->depth() > 0 || $this->manager->isPaused()) {
             return $this->manager->startUnit($candidate->type, $candidate->name, RecordingDecision::skip());
         }
 

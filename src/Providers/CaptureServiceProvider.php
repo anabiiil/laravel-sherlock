@@ -269,6 +269,10 @@ final class CaptureServiceProvider extends ServiceProvider
                 (bool) $this->config()->get('tracing.capture.logs', true),
                 (bool) $this->config()->get('tracing.capture.exceptions', true),
                 $this->int('tracing.capture.max_stack_frames', 30),
+                // Error path only: values the request sent under sensitive keys are scrubbed.
+                in_array(RequestCollector::class, $this->collectors(), true)
+                    ? static fn (): array => $app->make(RequestCollector::class)->sensitiveInput()
+                    : null,
             );
         });
 

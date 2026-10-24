@@ -10,8 +10,11 @@ use Anabil\Tracing\Contracts\Redactor;
 use Anabil\Tracing\Contracts\SourceLocator;
 use Anabil\Tracing\Contracts\TraceContext;
 use Anabil\Tracing\Data\LogRecord;
+use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\QueryException;
 use Illuminate\Log\Events\MessageLogged;
+use Illuminate\Support\Str;
 use Throwable;
 use WeakMap;
 
@@ -19,6 +22,14 @@ use WeakMap;
  * MessageLogged at or above the configured level. Reported exceptions are covered too
  * (Laravel logs them with the exception in the context). Message is redacted, context is
  * redacted recursively, frames are relative paths without arguments.
+ *
+ * Plain logs (no exception) record their call site: the first application frame.
+ *
+ * Values the redactor cannot recognize by shape are scrubbed too, on this (rare) path only:
+ *  - a QueryException message has its bindings interpolated into the SQL ("values (a, s3cret)"):
+ *    the interpolated SQL is replaced with the placeholder SQL;
+ *  - values the current request sent under a sensitive key (password, token...) are removed
+ *    from the message and the context wherever they appear ("login failed with password s3cret").
  *
  * Logs raised outside any unit (scheduler closures, between worker jobs, inside an
  * ignored request) go to a standalone orphan trace, recorded before the next unit starts
@@ -41,6 +52,7 @@ final class LogCollector implements Collector
         private readonly bool $logs = true,
         private readonly bool $exceptions = true,
         private readonly int $maxFrames = 30,
+        private readonly ?Closure $knownSecrets = null,
     ) {
         $this->minWeight = max(1, LogRecord::levelWeight($minLevel));
         $this->captured = new WeakMap;
@@ -113,18 +125,79 @@ final class LogCollector implements Collector
 
         if ($exception !== null) {
             $this->captured[$exception] = true;
+            $file = $this->locator->relativePath($exception->getFile());
+            $line = $exception->getLine();
+        } else {
+            // Call site of Log::error() (first application frame). Error logs are rare, so one
+            // backtrace here is cheap, and it lets the same log line from two routes be one issue.
+            $site = $this->locator->locate();
+            $file = $site?->file;
+            $line = $site?->line;
+        }
+
+        if ($exception instanceof QueryException) {
+            $text = self::withoutBindings($exception, $text);
+        }
+
+        $secrets = $this->secrets();
+        $context = $context === [] ? [] : $this->redactor->redactArray($context);
+        if ($secrets !== []) {
+            $text = self::scrub($text, $secrets);
+            array_walk_recursive($context, static function (mixed &$value) use ($secrets): void {
+                if (is_string($value)) {
+                    $value = self::scrub($value, $secrets);
+                }
+            });
         }
 
         return new LogRecord(
             level: strtolower($level),
             message: $this->redactor->redactString($text),
             exceptionClass: $exception !== null ? $exception::class : null,
-            file: $exception !== null ? $this->locator->relativePath($exception->getFile()) : null,
-            line: $exception?->getLine(),
+            file: $file,
+            line: $line,
             frames: $exception !== null ? $this->frames($exception) : [],
-            context: $context === [] ? [] : $this->redactor->redactArray($context),
+            context: $context,
             offsetMs: round($this->lifecycle->manager()->current()->elapsedMs(), 3),
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function secrets(): array
+    {
+        if ($this->knownSecrets === null) {
+            return [];
+        }
+
+        $secrets = ($this->knownSecrets)();
+
+        return is_array($secrets) ? array_values(array_filter($secrets, 'is_string')) : [];
+    }
+
+    /**
+     * @param  list<string>  $secrets
+     */
+    private static function scrub(string $value, array $secrets): string
+    {
+        return str_replace($secrets, Redactor::REDACTED, $value);
+    }
+
+    /** Put the placeholders back where Laravel interpolated the bindings into the message. */
+    private static function withoutBindings(QueryException $exception, string $text): string
+    {
+        try {
+            $bindings = $exception->getBindings();
+            if ($bindings === []) {
+                return $text;
+            }
+
+            // Exactly how QueryException::formatMessage() interpolated them.
+            return str_replace(Str::replaceArray('?', $bindings, $exception->getSql()), $exception->getSql(), $text);
+        } catch (Throwable) {
+            return $text;
+        }
     }
 
     /**

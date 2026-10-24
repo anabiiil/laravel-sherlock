@@ -4,20 +4,23 @@ declare(strict_types=1);
 
 namespace Anabil\Tracing\Providers;
 
+use Anabil\Tracing\Console\InstallCommand;
+use Anabil\Tracing\Console\ReportCommand;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Owns artisan commands (tracing:install, watch, status, report, analyze, prune, clear, digest, test-notification).
+ * Owns the general artisan commands: tracing:install and tracing:report (console only).
+ * Feature commands are registered by their own providers: watch / status (capture),
+ * prune / clear (storage), analyze (AI), test-notification (notifications), digest (digest).
  */
 final class ConsoleServiceProvider extends ServiceProvider
 {
-    public function register(): void
-    {
-        //
-    }
-
     public function boot(): void
     {
-        //
+        if (! $this->app->runningInConsole()) {
+            return;
+        }
+
+        $this->commands([InstallCommand::class, ReportCommand::class]);
     }
 }

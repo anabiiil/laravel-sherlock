@@ -50,6 +50,12 @@ final class RequestCollector implements Collector
 
     private ?Request $request = null;
 
+    /** @var list<string>|null memoized sensitive input values of the request in flight */
+    private ?array $secrets = null;
+
+    /** Shortest input value scrubbed from messages (shorter values would mangle normal text). */
+    public const MIN_SECRET_LENGTH = 4;
+
     public function __construct(
         private readonly Dispatcher $events,
         private readonly UnitLifecycle $lifecycle,
@@ -93,6 +99,58 @@ final class RequestCollector implements Collector
             }
         } catch (Throwable $e) {
             $this->lifecycle->failures()->report($e);
+        }
+    }
+
+    /**
+     * Values the request in flight sent under a sensitive key (password, token, ...), at any
+     * depth of its query string / body. Computed lazily, only when an error log is captured,
+     * so a value the redactor cannot recognize by shape still never reaches storage.
+     *
+     * @return list<string>
+     */
+    public function sensitiveInput(): array
+    {
+        if (! $this->inFlight || $this->request === null) {
+            return [];
+        }
+
+        if ($this->secrets !== null) {
+            return $this->secrets;
+        }
+
+        $secrets = [];
+        try {
+            $this->collectSecrets($this->request->all(), false, $secrets);
+        } catch (Throwable) {
+            // Unreadable body: nothing to add.
+        }
+
+        // Longest first, so a secret containing another one is replaced whole.
+        $secrets = array_values(array_unique($secrets));
+        usort($secrets, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
+        return $this->secrets = $secrets;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $input
+     * @param  list<string>  $secrets
+     */
+    private function collectSecrets(array $input, bool $sensitive, array &$secrets, int $depth = 0): void
+    {
+        if ($depth > 8) {
+            return;
+        }
+
+        foreach ($input as $key => $value) {
+            $isSensitive = $sensitive || (is_string($key) && $this->redactor->isSensitiveKey($key));
+
+            if (is_array($value)) {
+                $this->collectSecrets($value, $isSensitive, $secrets, $depth + 1);
+            } elseif ($isSensitive && (is_string($value) || is_int($value)) && strlen((string) $value) >= self::MIN_SECRET_LENGTH) {
+                $secrets[] = (string) $value;
+            }
         }
     }
 
@@ -151,6 +209,7 @@ final class RequestCollector implements Collector
             $this->inFlight = false;
             $this->routeResolved = false;
             $this->request = null;
+            $this->secrets = null;
         }
 
         $this->lifecycle->end();
@@ -163,6 +222,7 @@ final class RequestCollector implements Collector
             $this->inFlight = false;
             $this->routeResolved = false;
             $this->request = null;
+            $this->secrets = null;
 
             $request = property_exists($event, 'request') ? $event->request : null;
             if ($request instanceof Request) {
@@ -208,6 +268,7 @@ final class RequestCollector implements Collector
             $this->inFlight = true;
             $this->routeResolved = false;
             $this->request = $request;
+            $this->secrets = null;
             $this->lifecycle->deferUntilTerminate();
 
             $context = $this->lifecycle->begin(new EntryCandidate(

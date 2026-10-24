@@ -8,6 +8,7 @@ use Anabil\Tracing\Context\UnitLifecycle;
 use Anabil\Tracing\Contracts\Collector;
 use Anabil\Tracing\Data\EntryCandidate;
 use Anabil\Tracing\Enums\EntryType;
+use Anabil\Tracing\Jobs\PersistTraceJob;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Queue\Job;
 use Illuminate\Queue\Events\JobExceptionOccurred;
@@ -24,6 +25,9 @@ use Throwable;
  *
  * A job processed while another unit is active (sync queue inside a request / command)
  * is nested: it belongs to the outer trace and records nothing on its own.
+ *
+ * The package's own jobs (persist / AI / notify) are never units, whatever ignore.jobs says:
+ * tracing a PersistTraceJob would persist a trace that queues another PersistTraceJob, forever.
  */
 final class JobCollector implements Collector
 {
@@ -49,6 +53,9 @@ final class JobCollector implements Collector
         try {
             $job = $event->job;
             $name = self::name($job);
+            if (self::isPackageJob($name)) {
+                return;
+            }
             $this->started[spl_object_id($job)] = true;
 
             $context = $this->lifecycle->begin(new EntryCandidate(EntryType::Job, $name));
@@ -100,6 +107,14 @@ final class JobCollector implements Collector
         } catch (Throwable $e) {
             $this->lifecycle->failures()->report($e);
         }
+    }
+
+    public static function isPackageJob(string $name): bool
+    {
+        static $namespace = null;
+        $namespace ??= substr(PersistTraceJob::class, 0, (int) strrpos(PersistTraceJob::class, '\\') + 1);
+
+        return str_starts_with($name, $namespace);
     }
 
     private static function name(Job $job): string

@@ -459,17 +459,23 @@ return [
             'exceptions' => false,
         ],
         'min_severity' => env('TRACING_AI_MIN_SEVERITY', 'critical'),
+        // AI calls per day (app timezone). 0 = no calls (fail-safe), negative (-1) = unlimited.
         'daily_limit' => (int) env('TRACING_AI_DAILY_LIMIT', 50),
         'max_tokens' => 1500,
         // HTTP timeout in seconds; bounds the wait before the notification is sent.
         'timeout' => 30,
+        'connect_timeout' => 10,
         // Opt-in: send ±snippet_lines of redacted source around the location.
         'send_code_snippet' => false,
         'snippet_lines' => 15,
-        // Cache store used for the daily budget counter; null = default store.
+        // Send column names/types and existing indexes of the tables in the SQL (never row data).
+        'include_schema' => true,
+        // Cache store used for the daily budget counter and the analysis lock; null = default store.
         'budget_store' => null,
 
         // Per-driver defaults / presets. OpenAI-compatible presets share one driver.
+        // Each preset may also override model / base_url / api_key for that driver only;
+        // the top-level model / base_url / api_key apply to the selected `driver` only.
         'drivers' => [
             'anthropic' => [
                 'base_url' => 'https://api.anthropic.com/v1',
@@ -499,6 +505,9 @@ return [
             'openrouter' => [
                 'base_url' => 'https://openrouter.ai/api/v1',
                 'model' => 'meta-llama/llama-3.3-70b-instruct:free',
+                // Optional attribution headers (HTTP-Referer / X-Title); null = not sent.
+                'referer' => null,
+                'title' => 'Laravel Tracing',
             ],
             'mistral' => [
                 'base_url' => 'https://api.mistral.ai/v1',
@@ -527,11 +536,18 @@ return [
 
     'digest' => [
         'enabled' => env('TRACING_DIGEST', false),
-        'every_days' => 1,
-        'at' => '09:00',
-        'channels' => ['mail'],
+        'every_days' => (int) env('TRACING_DIGEST_EVERY_DAYS', 1),
+        // Time of the daily check (scheduler timezone).
+        'at' => env('TRACING_DIGEST_AT', '09:00'),
+        // Notification channels (comma separated in env); empty = every enabled channel.
+        'channels' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('TRACING_DIGEST_CHANNELS', 'mail'))
+        ))),
         // Items per digest section.
         'limit' => 10,
+        // Cache store holding the last-sent time (kept forever); null = default store.
+        'cache_store' => env('TRACING_DIGEST_STORE'),
     ],
 
     /*
@@ -540,13 +556,21 @@ return [
     |--------------------------------------------------------------------------
     |
     | Access is guarded by the "viewTracing" gate (default: local env only).
+    | Override it in your AppServiceProvider::boot(), e.g.:
+    |
+    |     Gate::define('viewTracing', fn ($user) => in_array($user->email, [...]));
+    |
+    | When disabled, no route, view or gate is registered. Dashboard requests
+    | are never traced (their path and "tracing.*" route names are ignored).
     |
     */
 
     'dashboard' => [
         'enabled' => env('TRACING_DASHBOARD', true),
         'path' => env('TRACING_PATH', 'tracing'),
+        // Optional dedicated (sub)domain; the path is then relative to it.
         'domain' => env('TRACING_DOMAIN'),
+        // The viewTracing gate middleware is always appended.
         'middleware' => ['web'],
         'per_page' => 25,
     ],
