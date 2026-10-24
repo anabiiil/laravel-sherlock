@@ -2,32 +2,32 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Console;
+namespace Anabil\Sherlock\Console;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\TraceRepository;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\TraceRepository;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 
 /**
- * Retention cleanup (config "tracing.retention"), in chunks. Scheduled daily by default.
+ * Retention cleanup (config "sherlock.retention"), in chunks. Scheduled daily by default.
  */
 final class PruneCommand extends Command
 {
     /** @var string */
-    protected $signature = 'tracing:prune';
+    protected $signature = 'sherlock:prune';
 
     /** @var string */
     protected $description = 'Delete traces and issues older than the configured retention';
 
     public function handle(TraceRepository $traces, IssueRepository $issues, Repository $config): int
     {
-        $chunk = $config->get('tracing.retention.chunk_size', 1000);
+        $chunk = $config->get('sherlock.retention.chunk_size', 1000);
         $chunk = is_numeric($chunk) ? max(1, (int) $chunk) : 1000;
 
         foreach (['traces' => $traces, 'issues' => $issues] as $kind => $repository) {
-            $days = $config->get("tracing.retention.{$kind}");
+            $days = $config->get("sherlock.retention.{$kind}");
 
             if (! is_numeric($days)) {
                 $this->components->info(ucfirst($kind).': kept forever (retention is null).');

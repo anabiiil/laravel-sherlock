@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Middleware;
+namespace Anabil\Sherlock\Http\Middleware;
 
 use Closure;
 use Illuminate\Contracts\Auth\Access\Gate;
@@ -11,11 +11,11 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
- * Guards every dashboard route with the "viewTracing" gate (403 otherwise).
+ * Guards every dashboard route with the "viewSherlock" gate (403 otherwise).
  */
 final class Authorize
 {
-    public const ABILITY = 'viewTracing';
+    public const ABILITY = 'viewSherlock';
 
     public function __construct(
         private readonly Gate $gate,

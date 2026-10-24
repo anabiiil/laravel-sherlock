@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Console;
+namespace Anabil\Sherlock\Console;
 
-use Anabil\Tracing\Contracts\AiAnalyzer;
-use Anabil\Tracing\Enums\AiStatus;
+use Anabil\Sherlock\Contracts\AiAnalyzer;
+use Anabil\Sherlock\Enums\AiStatus;
 use Illuminate\Console\Command;
 
 /**
@@ -15,7 +15,7 @@ use Illuminate\Console\Command;
 final class AnalyzeCommand extends Command
 {
     /** @var string */
-    protected $signature = 'tracing:analyze {issue : The issue id} {--fresh : Re-analyze even if an analysis is stored}';
+    protected $signature = 'sherlock:analyze {issue : The issue id} {--fresh : Re-analyze even if an analysis is stored}';
 
     /** @var string */
     protected $description = 'Run (or show) the AI analysis of an issue';
@@ -53,9 +53,9 @@ final class AnalyzeCommand extends Command
         }
 
         $this->components->warn(match ($result->status) {
-            AiStatus::SkippedDisabled => 'Skipped: AI analysis is disabled for this kind of issue (tracing.ai.enabled / tracing.ai.analyze).',
-            AiStatus::SkippedSeverity => 'Skipped: the issue severity is below tracing.ai.min_severity.',
-            AiStatus::SkippedBudget => 'Skipped: the daily AI budget (tracing.ai.daily_limit) is exhausted.',
+            AiStatus::SkippedDisabled => 'Skipped: AI analysis is disabled for this kind of issue (sherlock.ai.enabled / sherlock.ai.analyze).',
+            AiStatus::SkippedSeverity => 'Skipped: the issue severity is below sherlock.ai.min_severity.',
+            AiStatus::SkippedBudget => 'Skipped: the daily AI budget (sherlock.ai.daily_limit) is exhausted.',
             AiStatus::Pending => 'Another worker is analyzing this issue right now; try again shortly.',
             default => 'Skipped: '.$result->status->label().'.',
         });

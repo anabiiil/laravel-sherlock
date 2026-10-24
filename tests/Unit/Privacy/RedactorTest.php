@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\Redactor as RedactorContract;
-use Anabil\Tracing\Privacy\Redactor;
+use Anabil\Sherlock\Contracts\Redactor as RedactorContract;
+use Anabil\Sherlock\Privacy\Redactor;
 
 const RED = RedactorContract::REDACTED;
 
@@ -148,7 +148,7 @@ it('drops sensitive headers', function (): void {
         'Authorization' => ['Bearer abc'],
         'Cookie' => ['laravel_session=abc'],
         'X-Api-Key' => ['k'],
-        'X-Tracing' => ['secret'],
+        'X-Sherlock' => ['secret'],
         'X-Custom-Token' => ['t'],
         'Accept' => ['application/json'],
         'X-Forwarded-For' => ['10.0.0.1'],

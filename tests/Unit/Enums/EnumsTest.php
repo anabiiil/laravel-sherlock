@@ -2,35 +2,35 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\OccurrenceType;
-use Anabil\Tracing\Enums\RecordReason;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Enums\TracingMode;
+use Anabil\Sherlock\Enums\AiStatus;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\OccurrenceType;
+use Anabil\Sherlock\Enums\RecordReason;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Enums\SherlockMode;
 
-it('resolves the tracing mode from config values', function (mixed $value, TracingMode $expected): void {
-    expect(TracingMode::fromConfig($value))->toBe($expected);
+it('resolves the Sherlock mode from config values', function (mixed $value, SherlockMode $expected): void {
+    expect(SherlockMode::fromConfig($value))->toBe($expected);
 })->with([
-    ['off', TracingMode::Off],
-    ['LOCAL', TracingMode::Local],
-    [' production ', TracingMode::Production],
-    ['nonsense', TracingMode::Production],
-    [null, TracingMode::Production],
-    [false, TracingMode::Off],
-    [true, TracingMode::Production],
-    [TracingMode::Local, TracingMode::Local],
+    ['off', SherlockMode::Off],
+    ['LOCAL', SherlockMode::Local],
+    [' production ', SherlockMode::Production],
+    ['nonsense', SherlockMode::Production],
+    [null, SherlockMode::Production],
+    [false, SherlockMode::Off],
+    [true, SherlockMode::Production],
+    [SherlockMode::Local, SherlockMode::Local],
 ]);
 
 it('knows which modes are enabled', function (): void {
-    expect(TracingMode::Off->isEnabled())->toBeFalse()
-        ->and(TracingMode::Off->isOff())->toBeTrue()
-        ->and(TracingMode::Local->isEnabled())->toBeTrue()
-        ->and(TracingMode::Local->recordsEverything())->toBeTrue()
-        ->and(TracingMode::Production->recordsEverything())->toBeFalse();
+    expect(SherlockMode::Off->isEnabled())->toBeFalse()
+        ->and(SherlockMode::Off->isOff())->toBeTrue()
+        ->and(SherlockMode::Local->isEnabled())->toBeTrue()
+        ->and(SherlockMode::Local->recordsEverything())->toBeTrue()
+        ->and(SherlockMode::Production->recordsEverything())->toBeFalse();
 });
 
 it('orders severities by weight', function (): void {

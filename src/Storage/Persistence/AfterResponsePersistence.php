@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Storage\Persistence;
+namespace Anabil\Sherlock\Storage\Persistence;
 
-use Anabil\Tracing\Contracts\PersistenceStrategy;
-use Anabil\Tracing\Data\RecordedTrace;
+use Anabil\Sherlock\Contracts\PersistenceStrategy;
+use Anabil\Sherlock\Data\RecordedTrace;
 
 /**
  * Writes synchronously. The recorder already runs in a terminating callback (after the

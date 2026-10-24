@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Ai;
+namespace Anabil\Sherlock\Ai;
 
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Data\AiRequest;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Enums\IssueType;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Data\AiRequest;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Enums\IssueType;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\Connection;
 use Illuminate\Database\ConnectionResolverInterface;
@@ -60,9 +60,9 @@ final class PromptBuilder
         return new AiRequest(
             $this->systemPrompt(),
             $this->userPrompt($issue),
-            $this->int('tracing.ai.max_tokens', 1500, 64),
+            $this->int('sherlock.ai.max_tokens', 1500, 64),
             null,
-            $this->int('tracing.ai.timeout', 30, 1),
+            $this->int('sherlock.ai.timeout', 30, 1),
             null,
             ['issue_id' => $issue->id, 'fingerprint' => $issue->fingerprint, 'type' => $issue->type->value],
         );
@@ -71,7 +71,7 @@ final class PromptBuilder
     public function systemPrompt(): string
     {
         $language = $this->language();
-        $maxTokens = $this->int('tracing.ai.max_tokens', 1500, 64);
+        $maxTokens = $this->int('sherlock.ai.max_tokens', 1500, 64);
 
         return implode("\n", [
             'You are a senior Laravel performance engineer. You receive a diagnosis report produced by a self-hosted tracing tool for one recurring problem in a Laravel application.',
@@ -268,7 +268,7 @@ final class PromptBuilder
      */
     private function schemaSection(array $context): string
     {
-        if (! $this->config->get('tracing.ai.include_schema', true) || $this->db === null) {
+        if (! $this->config->get('sherlock.ai.include_schema', true) || $this->db === null) {
             return '';
         }
 
@@ -407,7 +407,7 @@ final class PromptBuilder
      */
     private function snippetSection(array $context): string
     {
-        if (! $this->config->get('tracing.ai.send_code_snippet', false)) {
+        if (! $this->config->get('sherlock.ai.send_code_snippet', false)) {
             return '';
         }
 
@@ -419,7 +419,7 @@ final class PromptBuilder
             return '';
         }
 
-        $snippet = $this->snippet($file, $line, $this->int('tracing.ai.snippet_lines', 15, 1));
+        $snippet = $this->snippet($file, $line, $this->int('sherlock.ai.snippet_lines', 15, 1));
 
         return $snippet === null ? '' : $this->section("Code around {$file}:{$line} (redacted)", "```php\n{$snippet}\n```");
     }
@@ -586,7 +586,7 @@ final class PromptBuilder
 
     private function language(): string
     {
-        $code = $this->config->get('tracing.ai.language', 'en');
+        $code = $this->config->get('sherlock.ai.language', 'en');
         $code = is_string($code) && trim($code) !== '' ? trim($code) : 'en';
 
         return self::LANGUAGES[strtolower(substr($code, 0, 2))] ?? $code;

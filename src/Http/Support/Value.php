@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Support;
+namespace Anabil\Sherlock\Http\Support;
 
 /**
  * Typed reads from the loosely typed JSON arrays stored on traces / issues

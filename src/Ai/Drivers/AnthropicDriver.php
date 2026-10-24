@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Ai\Drivers;
+namespace Anabil\Sherlock\Ai\Drivers;
 
-use Anabil\Tracing\Ai\AiProviderException;
-use Anabil\Tracing\Data\AiRequest;
-use Anabil\Tracing\Data\AiResponse;
+use Anabil\Sherlock\Ai\AiProviderException;
+use Anabil\Sherlock\Data\AiRequest;
+use Anabil\Sherlock\Data\AiResponse;
 
 /**
  * Anthropic Messages API: POST {base}/messages. Sampling parameters (temperature...) are

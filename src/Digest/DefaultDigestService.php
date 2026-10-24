@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Digest;
+namespace Anabil\Sherlock\Digest;
 
-use Anabil\Tracing\Contracts\DigestService;
-use Anabil\Tracing\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Contracts\DigestService;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
 use Carbon\CarbonImmutable;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -23,9 +23,9 @@ use Illuminate\Contracts\Cache\Repository as Cache;
  */
 final class DefaultDigestService implements DigestService
 {
-    public const LAST_SENT_KEY = 'tracing:digest:last_sent_at';
+    public const LAST_SENT_KEY = 'sherlock:digest:last_sent_at';
 
-    public const LOCK_KEY = 'tracing:digest:sending';
+    public const LOCK_KEY = 'sherlock:digest:sending';
 
     private const LOCK_SECONDS = 600;
 

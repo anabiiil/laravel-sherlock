@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Console;
+namespace Anabil\Sherlock\Console;
 
-use Anabil\Tracing\Notifications\DefaultNotificationDispatcher;
-use Anabil\Tracing\Notifications\IssueMessageFactory;
+use Anabil\Sherlock\Notifications\DefaultNotificationDispatcher;
+use Anabil\Sherlock\Notifications\IssueMessageFactory;
 use Illuminate\Console\Command;
 
 /**
@@ -17,13 +17,13 @@ final class TestNotificationCommand extends Command
 {
     /** What each built-in channel needs, for "not configured" messages. */
     private const HINTS = [
-        'slack' => 'set TRACING_SLACK_WEBHOOK_URL (tracing.notifications.slack.webhook_url)',
-        'telegram' => 'set TRACING_TELEGRAM_BOT_TOKEN and TRACING_TELEGRAM_CHAT_ID (tracing.notifications.telegram)',
-        'mail' => 'set TRACING_MAIL_TO (tracing.notifications.mail.to)',
+        'slack' => 'set SHERLOCK_SLACK_WEBHOOK_URL (sherlock.notifications.slack.webhook_url)',
+        'telegram' => 'set SHERLOCK_TELEGRAM_BOT_TOKEN and SHERLOCK_TELEGRAM_CHAT_ID (sherlock.notifications.telegram)',
+        'mail' => 'set SHERLOCK_MAIL_TO (sherlock.notifications.mail.to)',
     ];
 
     /** @var string */
-    protected $signature = 'tracing:test-notification {channel? : slack, telegram or mail (default: every configured channel)}';
+    protected $signature = 'sherlock:test-notification {channel? : slack, telegram or mail (default: every configured channel)}';
 
     /** @var string */
     protected $description = 'Send a test notification to verify the Slack / Telegram / Mail setup';
@@ -64,14 +64,14 @@ final class TestNotificationCommand extends Command
         }
 
         if ($requested !== null && ! array_key_exists($requested, $results)) {
-            $hint = self::HINTS[$requested] ?? "set its credentials under tracing.notifications.{$requested}";
+            $hint = self::HINTS[$requested] ?? "set its credentials under sherlock.notifications.{$requested}";
             $this->components->warn("Channel [{$requested}] is not configured: {$hint}.");
 
             return self::FAILURE;
         }
 
         if ($results === []) {
-            $this->components->warn('No channel is configured. Set the credentials under tracing.notifications ('
+            $this->components->warn('No channel is configured. Set the credentials under sherlock.notifications ('
                 .implode(', ', array_values(self::HINTS)).').');
 
             return self::FAILURE;

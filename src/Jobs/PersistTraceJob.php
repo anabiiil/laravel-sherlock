@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Jobs;
+namespace Anabil\Sherlock\Jobs;
 
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Storage\Persistence\TraceWriter;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Storage\Persistence\TraceWriter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;

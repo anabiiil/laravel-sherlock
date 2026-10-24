@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\PersistenceStrategy;
-use Anabil\Tracing\Contracts\TraceAnalyzer;
-use Anabil\Tracing\Data\AnalysisResult;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Data\Verdict;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\RecordReason;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Pipeline\DefaultTraceRecorder;
+use Anabil\Sherlock\Contracts\PersistenceStrategy;
+use Anabil\Sherlock\Contracts\TraceAnalyzer;
+use Anabil\Sherlock\Data\AnalysisResult;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Data\Verdict;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\RecordReason;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Pipeline\DefaultTraceRecorder;
 
 function recorderWith(array $findings, ?Throwable $throw = null, string $bindings = 'auto'): array
 {

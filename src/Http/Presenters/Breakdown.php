@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Presenters;
+namespace Anabil\Sherlock\Http\Presenters;
 
-use Anabil\Tracing\Data\StoredTrace;
-use Anabil\Tracing\Data\Verdict;
-use Anabil\Tracing\Http\Support\Value;
+use Anabil\Sherlock\Data\StoredTrace;
+use Anabil\Sherlock\Data\Verdict;
+use Anabil\Sherlock\Http\Support\Value;
 
 /**
  * Time split of a trace (db / http / cache / bootstrap / app) as stacked-bar segments.

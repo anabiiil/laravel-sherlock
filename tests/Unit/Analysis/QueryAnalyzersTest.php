@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Analysis\Analyzers\DuplicateQueryAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\ExcessiveQueriesAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\NPlusOneAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\SlowQueryAnalyzer;
-use Anabil\Tracing\Analysis\Support\Describe;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Tests\Unit\Analysis\AnalysisFactory as F;
+use Anabil\Sherlock\Analysis\Analyzers\DuplicateQueryAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\ExcessiveQueriesAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\NPlusOneAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\SlowQueryAnalyzer;
+use Anabil\Sherlock\Analysis\Support\Describe;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Tests\Unit\Analysis\AnalysisFactory as F;
 
 // ---------------------------------------------------------------- SlowQueryAnalyzer
 

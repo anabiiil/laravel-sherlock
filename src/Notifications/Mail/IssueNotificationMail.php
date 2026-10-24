@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications\Mail;
+namespace Anabil\Sherlock\Notifications\Mail;
 
-use Anabil\Tracing\Notifications\Formatters\MailFormatter;
+use Anabil\Sherlock\Notifications\Formatters\MailFormatter;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Mail\Mailable;
@@ -15,7 +15,7 @@ use Symfony\Component\Mime\Email;
  * HTML + plain-text issue notification. Sent synchronously from inside the queued
  * notification job (never queued again).
  *
- * The package views ("tracing::mail.*", overridable via vendor:publish --tag=tracing-views)
+ * The package views ("sherlock::mail.*", overridable via vendor:publish --tag=sherlock-views)
  * are resolved through the view finder and rendered here, then attached as the HTML body
  * and the plain-text part.
  */

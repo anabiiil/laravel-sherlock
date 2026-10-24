@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Analysis\Analyzers\NPlusOneAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\SlowQueryAnalyzer;
-use Anabil\Tracing\Analysis\DefaultBottleneckClassifier;
-use Anabil\Tracing\Analysis\Explain\DefaultPlanInterpreter;
-use Anabil\Tracing\Analysis\Explain\ExplainService;
-use Anabil\Tracing\Analysis\Explain\MySqlExplainer;
-use Anabil\Tracing\Analysis\Explain\PostgresExplainer;
-use Anabil\Tracing\Analysis\Explain\SqliteExplainer;
-use Anabil\Tracing\Analysis\TraceAnalysisPipeline;
-use Anabil\Tracing\Contracts\Analyzer;
-use Anabil\Tracing\Contracts\BottleneckClassifier;
-use Anabil\Tracing\Contracts\PlanInterpreter;
-use Anabil\Tracing\Contracts\TraceAnalyzer;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Providers\AnalysisServiceProvider;
+use Anabil\Sherlock\Analysis\Analyzers\NPlusOneAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\SlowQueryAnalyzer;
+use Anabil\Sherlock\Analysis\DefaultBottleneckClassifier;
+use Anabil\Sherlock\Analysis\Explain\DefaultPlanInterpreter;
+use Anabil\Sherlock\Analysis\Explain\ExplainService;
+use Anabil\Sherlock\Analysis\Explain\MySqlExplainer;
+use Anabil\Sherlock\Analysis\Explain\PostgresExplainer;
+use Anabil\Sherlock\Analysis\Explain\SqliteExplainer;
+use Anabil\Sherlock\Analysis\TraceAnalysisPipeline;
+use Anabil\Sherlock\Contracts\Analyzer;
+use Anabil\Sherlock\Contracts\BottleneckClassifier;
+use Anabil\Sherlock\Contracts\PlanInterpreter;
+use Anabil\Sherlock\Contracts\TraceAnalyzer;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Providers\AnalysisServiceProvider;
 
 /**
  * @return list<Analyzer>
@@ -52,17 +52,17 @@ it('overrides the null defaults with the real analysis services', function (): v
 it('resolves every analyzer named in the config', function (): void {
     $classes = array_map(fn (Analyzer $a): string => $a::class, configuredAnalyzers());
 
-    expect($classes)->toBe(config('tracing.analyzers'))
-        ->and(config('tracing.analyzers'))->toHaveCount(10);
+    expect($classes)->toBe(config('sherlock.analyzers'))
+        ->and(config('sherlock.analyzers'))->toHaveCount(10);
 
-    foreach (config('tracing.analyzers') as $class) {
+    foreach (config('sherlock.analyzers') as $class) {
         expect(class_exists($class))->toBeTrue()
             ->and(app($class))->toBeInstanceOf(Analyzer::class);
     }
 });
 
 it('skips disabled, missing and invalid analyzers', function (): void {
-    config()->set('tracing.analyzers', [
+    config()->set('sherlock.analyzers', [
         SlowQueryAnalyzer::class => true,
         NPlusOneAnalyzer::class => false,
         'App\\Missing\\Analyzer',
@@ -74,8 +74,8 @@ it('skips disabled, missing and invalid analyzers', function (): void {
 });
 
 it('applies configured thresholds to the built-in analyzers', function (): void {
-    config()->set('tracing.thresholds.slow_query', ['warning_ms' => 10, 'critical_ms' => 20]);
-    config()->set('tracing.explain.enabled', false);
+    config()->set('sherlock.thresholds.slow_query', ['warning_ms' => 10, 'critical_ms' => 20]);
+    config()->set('sherlock.explain.enabled', false);
     freshAnalysisServices();
 
     $trace = new TraceData('01J', EntryType::Request, '/x', new DateTimeImmutable, 100, method: 'GET', queries: [
@@ -94,15 +94,15 @@ it('applies configured thresholds to the built-in analyzers', function (): void 
 it('honours explain.enabled and explain.environments', function (): void {
     expect(app(ExplainService::class)->enabled())->toBeTrue();
 
-    config()->set('tracing.explain.environments', ['production']);
+    config()->set('sherlock.explain.environments', ['production']);
     freshAnalysisServices();
     expect(app(ExplainService::class)->enabled())->toBeFalse();
 
-    config()->set('tracing.explain.environments', 'production, testing');
+    config()->set('sherlock.explain.environments', 'production, testing');
     freshAnalysisServices();
     expect(app(ExplainService::class)->enabled())->toBeTrue();
 
-    config()->set('tracing.explain.enabled', false);
+    config()->set('sherlock.explain.enabled', false);
     freshAnalysisServices();
     expect(app(ExplainService::class)->enabled())->toBeFalse();
 });

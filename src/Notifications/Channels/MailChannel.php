@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications\Channels;
+namespace Anabil\Sherlock\Notifications\Channels;
 
-use Anabil\Tracing\Contracts\NotificationChannel;
-use Anabil\Tracing\Data\NotificationMessage;
-use Anabil\Tracing\Notifications\Formatters\MailFormatter;
-use Anabil\Tracing\Notifications\Mail\IssueNotificationMail;
-use Anabil\Tracing\Notifications\NotificationFailed;
-use Anabil\Tracing\Notifications\NotificationPolicy;
+use Anabil\Sherlock\Contracts\NotificationChannel;
+use Anabil\Sherlock\Data\NotificationMessage;
+use Anabil\Sherlock\Notifications\Formatters\MailFormatter;
+use Anabil\Sherlock\Notifications\Mail\IssueNotificationMail;
+use Anabil\Sherlock\Notifications\NotificationFailed;
+use Anabil\Sherlock\Notifications\NotificationPolicy;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Mail;
 

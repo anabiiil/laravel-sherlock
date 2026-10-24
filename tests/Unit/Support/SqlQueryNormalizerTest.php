@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Support\SqlQueryNormalizer;
+use Anabil\Sherlock\Support\SqlQueryNormalizer;
 
 beforeEach(function (): void {
     $this->normalizer = new SqlQueryNormalizer;

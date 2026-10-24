@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Collectors;
+namespace Anabil\Sherlock\Collectors;
 
-use Anabil\Tracing\Context\UnitLifecycle;
-use Anabil\Tracing\Contracts\Collector;
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Enums\EntryType;
+use Anabil\Sherlock\Context\UnitLifecycle;
+use Anabil\Sherlock\Contracts\Collector;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Enums\EntryType;
 use Illuminate\Console\Events\CommandFinished;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Events\Dispatcher;

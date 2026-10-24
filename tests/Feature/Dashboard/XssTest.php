@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Tests\Feature\Dashboard\DashboardFixtures as D;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Tests\Feature\Dashboard\DashboardFixtures as D;
 
 beforeEach(fn () => D::allowAccess());
 
@@ -23,7 +23,7 @@ it('escapes issue titles, SQL, context and AI analysis on the issue page', funct
     ]);
     D::analyze($issue, "## Fix\n\n".XSS."\n\n<iframe src=\"https://evil.test\"></iframe>\n\n[click](javascript:alert(1))");
 
-    $response = $this->get('/tracing/issues/'.$issue->id)->assertOk();
+    $response = $this->get('/sherlock/issues/'.$issue->id)->assertOk();
     $html = $response->getContent();
 
     expect($html)->not->toContain('<script>alert')
@@ -34,14 +34,14 @@ it('escapes issue titles, SQL, context and AI analysis on the issue page', funct
         ->and($html)->toContain('&lt;script&gt;alert(')
         ->and($html)->toContain('<h2>Fix</h2>');
 
-    $this->get('/tracing/issues')->assertOk()->assertDontSee('<script>alert', false)->assertSee(XSS);
+    $this->get('/sherlock/issues')->assertOk()->assertDontSee('<script>alert', false)->assertSee(XSS);
 });
 
 it('escapes trace names, SQL, logs, tags and the query string in list pages', function (): void {
     D::trace('GET /'.XSS);
 
-    $this->get('/tracing/traces?name='.urlencode(XSS).'&search='.urlencode(XSS))->assertOk()->assertDontSee('<script>alert', false);
-    $this->get('/tracing/traces')->assertOk()->assertDontSee('<script>alert', false)->assertSee('GET /'.XSS);
-    $this->get('/tracing/issues?search='.urlencode('"><script>alert(1)</script>'))->assertOk()->assertDontSee('<script>alert', false);
-    $this->get('/tracing')->assertOk()->assertDontSee('<script>alert', false);
+    $this->get('/sherlock/traces?name='.urlencode(XSS).'&search='.urlencode(XSS))->assertOk()->assertDontSee('<script>alert', false);
+    $this->get('/sherlock/traces')->assertOk()->assertDontSee('<script>alert', false)->assertSee('GET /'.XSS);
+    $this->get('/sherlock/issues?search='.urlencode('"><script>alert(1)</script>'))->assertOk()->assertDontSee('<script>alert', false);
+    $this->get('/sherlock')->assertOk()->assertDontSee('<script>alert', false);
 });

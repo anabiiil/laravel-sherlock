@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications;
+namespace Anabil\Sherlock\Notifications;
 
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
 use Illuminate\Contracts\Config\Repository;
 
 /**
- * Reads config("tracing.notifications") on every call (so runtime config changes apply):
+ * Reads config("sherlock.notifications") on every call (so runtime config changes apply):
  * global switch, enabled channel names, severity thresholds, notify_on toggles, throttle window.
  */
 final class NotificationPolicy
@@ -26,7 +26,7 @@ final class NotificationPolicy
 
     public function enabled(): bool
     {
-        return (bool) $this->config->get('tracing.notifications.enabled', false);
+        return (bool) $this->config->get('sherlock.notifications.enabled', false);
     }
 
     /**
@@ -34,7 +34,7 @@ final class NotificationPolicy
      */
     public function channelNames(): array
     {
-        $channels = $this->config->get('tracing.notifications.channels', []);
+        $channels = $this->config->get('sherlock.notifications.channels', []);
 
         if (is_string($channels)) {
             $channels = explode(',', $channels);
@@ -56,14 +56,14 @@ final class NotificationPolicy
 
     public function minSeverity(): Severity
     {
-        return Severity::fromConfig($this->config->get('tracing.notifications.min_severity'));
+        return Severity::fromConfig($this->config->get('sherlock.notifications.min_severity'));
     }
 
     /** A channel may raise the global threshold, never lower it. */
     public function channelMinSeverity(string $channel): Severity
     {
         $global = $this->minSeverity();
-        $own = Severity::fromConfig($this->config->get("tracing.notifications.{$channel}.min_severity"), $global);
+        $own = Severity::fromConfig($this->config->get("sherlock.notifications.{$channel}.min_severity"), $global);
 
         return Severity::max($global, $own);
     }
@@ -76,7 +76,7 @@ final class NotificationPolicy
     /** notify_on toggle; missing keys default to true. */
     public function notifyOn(string $kind): bool
     {
-        return (bool) $this->config->get("tracing.notifications.notify_on.{$kind}", true);
+        return (bool) $this->config->get("sherlock.notifications.notify_on.{$kind}", true);
     }
 
     /**
@@ -94,28 +94,28 @@ final class NotificationPolicy
 
     public function throttleMinutes(): int
     {
-        $minutes = $this->config->get('tracing.notifications.throttle_minutes', 60);
+        $minutes = $this->config->get('sherlock.notifications.throttle_minutes', 60);
 
         return max(1, is_numeric($minutes) ? (int) $minutes : 60);
     }
 
     public function timeout(): int
     {
-        $timeout = $this->config->get('tracing.notifications.timeout', 10);
+        $timeout = $this->config->get('sherlock.notifications.timeout', 10);
 
         return max(1, min(30, is_numeric($timeout) ? (int) $timeout : 10));
     }
 
     public function dashboardBaseUrl(): ?string
     {
-        $url = $this->config->get('tracing.notifications.dashboard_url');
+        $url = $this->config->get('sherlock.notifications.dashboard_url');
 
         return is_string($url) && trim($url) !== '' ? rtrim(trim($url), '/') : null;
     }
 
     public function dashboardEnabled(): bool
     {
-        return (bool) $this->config->get('tracing.dashboard.enabled', true);
+        return (bool) $this->config->get('sherlock.dashboard.enabled', true);
     }
 
     /**
@@ -123,7 +123,7 @@ final class NotificationPolicy
      */
     public function channelConfig(string $channel): array
     {
-        $config = $this->config->get("tracing.notifications.{$channel}", []);
+        $config = $this->config->get("sherlock.notifications.{$channel}", []);
 
         return is_array($config) ? $config : [];
     }
@@ -131,7 +131,7 @@ final class NotificationPolicy
     /** Whether the package queue runs jobs synchronously (delayed jobs are then impossible). */
     public function queueIsSync(): bool
     {
-        $connection = $this->config->get('tracing.queue.connection');
+        $connection = $this->config->get('sherlock.queue.connection');
         if (! is_string($connection) || $connection === '') {
             $connection = $this->config->get('queue.default', 'sync');
         }

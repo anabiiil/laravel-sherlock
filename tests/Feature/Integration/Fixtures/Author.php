@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Integration\Fixtures;
+namespace Anabil\Sherlock\Tests\Feature\Integration\Fixtures;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;

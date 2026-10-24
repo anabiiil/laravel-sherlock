@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Context;
+namespace Anabil\Sherlock\Context;
 
-use Anabil\Tracing\Contracts\ContextManager as ContextManagerContract;
-use Anabil\Tracing\Contracts\TraceContext as TraceContextContract;
-use Anabil\Tracing\Data\RecordingDecision;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Support\Null\NullTraceContext;
+use Anabil\Sherlock\Contracts\ContextManager as ContextManagerContract;
+use Anabil\Sherlock\Contracts\TraceContext as TraceContextContract;
+use Anabil\Sherlock\Data\RecordingDecision;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Support\Null\NullTraceContext;
 use Closure;
 use Illuminate\Support\Str;
 
@@ -178,7 +178,7 @@ final class ContextManager implements ContextManagerContract
     }
 
     /**
-     * @param  list<\Anabil\Tracing\Enums\RecordReason>  $reasons
+     * @param  list<\Anabil\Sherlock\Enums\RecordReason>  $reasons
      */
     private function newContext(EntryType $type, string $name, bool $full, array $reasons, ?float $startedAt): TraceContext
     {

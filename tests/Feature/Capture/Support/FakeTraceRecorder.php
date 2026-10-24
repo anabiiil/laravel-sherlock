@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Capture\Support;
+namespace Anabil\Sherlock\Tests\Feature\Capture\Support;
 
-use Anabil\Tracing\Contracts\TraceRecorder;
-use Anabil\Tracing\Data\TraceData;
+use Anabil\Sherlock\Contracts\TraceRecorder;
+use Anabil\Sherlock\Data\TraceData;
 use RuntimeException;
 
 final class FakeTraceRecorder implements TraceRecorder

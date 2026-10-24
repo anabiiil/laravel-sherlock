@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Collectors;
+namespace Anabil\Sherlock\Collectors;
 
-use Anabil\Tracing\Context\ContextManager;
-use Anabil\Tracing\Context\FailureReporter;
-use Anabil\Tracing\Contracts\Collector;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Contracts\SourceLocator;
-use Anabil\Tracing\Data\HttpCallRecord;
-use Anabil\Tracing\Data\SourceLocation;
+use Anabil\Sherlock\Context\ContextManager;
+use Anabil\Sherlock\Context\FailureReporter;
+use Anabil\Sherlock\Contracts\Collector;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\SourceLocator;
+use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Data\SourceLocation;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Client\Events\ConnectionFailed;
 use Illuminate\Http\Client\Events\RequestSending;

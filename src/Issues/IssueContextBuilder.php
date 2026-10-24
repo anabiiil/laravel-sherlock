@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Issues;
+namespace Anabil\Sherlock\Issues;
 
-use Anabil\Tracing\Data\ExplainPlan;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\HttpCallRecord;
-use Anabil\Tracing\Data\LogRecord;
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\IssueType;
+use Anabil\Sherlock\Data\ExplainPlan;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Data\LogRecord;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\IssueType;
 
 /**
- * Builds the issue context stored on tracing_issues.context: the latest Finding::toArray()
+ * Builds the issue context stored on sherlock_issues.context: the latest Finding::toArray()
  * plus entry info, trace metrics, verdict, EXPLAIN plan / insights and exception details.
  * Everything here is already redacted at capture time; this is what notifications, the
  * dashboard and the AI prompt read.

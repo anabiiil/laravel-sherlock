@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\ExplainPlan;
-use Anabil\Tracing\Data\QueryRecord;
+use Anabil\Sherlock\Data\ExplainPlan;
+use Anabil\Sherlock\Data\QueryRecord;
 
 /**
  * Per-driver EXPLAIN strategy (mysql/mariadb, pgsql, sqlite). Read-only, SELECT only,

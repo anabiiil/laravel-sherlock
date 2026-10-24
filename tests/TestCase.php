@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests;
+namespace Anabil\Sherlock\Tests;
 
-use Anabil\Tracing\Facades\Tracing;
-use Anabil\Tracing\TracingServiceProvider;
+use Anabil\Sherlock\Facades\Sherlock;
+use Anabil\Sherlock\SherlockServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class TestCase extends Orchestra
 {
     protected function getPackageProviders($app): array
     {
-        return [TracingServiceProvider::class];
+        return [SherlockServiceProvider::class];
     }
 
     protected function getPackageAliases($app): array
     {
-        return ['Tracing' => Tracing::class];
+        return ['Sherlock' => Sherlock::class];
     }
 
     protected function defineEnvironment($app): void

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\NotificationDispatcher;
-use Anabil\Tracing\Data\NotificationMessage;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Data\NotificationMessage;
 
 final class NullNotificationDispatcher implements NotificationDispatcher
 {

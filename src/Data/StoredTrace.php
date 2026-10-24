@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\RecordReason;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\RecordReason;
 use DateTimeImmutable;
 
 /**
- * Read model of a row in tracing_traces.
+ * Read model of a row in sherlock_traces.
  */
 final readonly class StoredTrace
 {

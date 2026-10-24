@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
 /**
  * One executed query, captured cheaply. Bindings are already redacted (or null when

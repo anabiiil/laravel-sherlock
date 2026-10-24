@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Privacy\Rules;
+namespace Anabil\Sherlock\Privacy\Rules;
 
-use Anabil\Tracing\Contracts\RedactionRule;
-use Anabil\Tracing\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\RedactionRule;
+use Anabil\Sherlock\Contracts\Redactor;
 
 /**
- * User-defined regexes from config("tracing.privacy.patterns"). Invalid patterns are ignored.
+ * User-defined regexes from config("sherlock.privacy.patterns"). Invalid patterns are ignored.
  */
 final class CustomPatternRule implements RedactionRule
 {

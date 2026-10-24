@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Console;
+namespace Anabil\Sherlock\Console;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\TraceRepository;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\TraceRepository;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
@@ -16,7 +16,7 @@ use Illuminate\Contracts\Config\Repository;
 final class ClearCommand extends Command
 {
     /** @var string */
-    protected $signature = 'tracing:clear
+    protected $signature = 'sherlock:clear
         {--older-than= : Only delete data older than this many days}
         {--only= : Only clear "traces" or "issues"}
         {--force : Skip the confirmation}';
@@ -57,7 +57,7 @@ final class ClearCommand extends Command
             return self::SUCCESS;
         }
 
-        $chunk = $config->get('tracing.retention.chunk_size', 1000);
+        $chunk = $config->get('sherlock.retention.chunk_size', 1000);
         $chunk = is_numeric($chunk) ? max(1, (int) $chunk) : 1000;
 
         if ($only === null || $only === 'traces') {

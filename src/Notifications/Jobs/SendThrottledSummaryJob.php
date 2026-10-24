@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications\Jobs;
+namespace Anabil\Sherlock\Notifications\Jobs;
 
-use Anabil\Tracing\Jobs\QueueTarget;
-use Anabil\Tracing\Notifications\Throttler;
+use Anabil\Sherlock\Jobs\QueueTarget;
+use Anabil\Sherlock\Notifications\Throttler;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -37,7 +37,7 @@ final class SendThrottledSummaryJob implements ShouldQueue
         try {
             $throttler->flush($this->issueId, $this->canWait());
         } catch (Throwable $e) {
-            Log::warning('[tracing] Throttled notification summary failed: '.$e::class, ['issue_id' => $this->issueId]);
+            Log::warning('[sherlock] Throttled notification summary failed: '.$e::class, ['issue_id' => $this->issueId]);
         }
     }
 

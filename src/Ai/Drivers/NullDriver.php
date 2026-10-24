@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Ai\Drivers;
+namespace Anabil\Sherlock\Ai\Drivers;
 
-use Anabil\Tracing\Contracts\AiProvider;
-use Anabil\Tracing\Data\AiRequest;
-use Anabil\Tracing\Data\AiResponse;
+use Anabil\Sherlock\Contracts\AiProvider;
+use Anabil\Sherlock\Data\AiRequest;
+use Anabil\Sherlock\Data\AiResponse;
 
 /**
  * driver = "null": never calls anything. Its empty completion is recorded as a failed

@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Data\AiAnalysisResult;
-use Anabil\Tracing\Data\AnalysisResult;
-use Anabil\Tracing\Data\ExplainInsight;
-use Anabil\Tracing\Data\ExplainPlan;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\HttpCallRecord;
-use Anabil\Tracing\Data\LogRecord;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\RecordingDecision;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Data\Verdict;
-use Anabil\Tracing\Data\WatchState;
-use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\ExplainInsightType;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\RecordReason;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Data\AiAnalysisResult;
+use Anabil\Sherlock\Data\AnalysisResult;
+use Anabil\Sherlock\Data\ExplainInsight;
+use Anabil\Sherlock\Data\ExplainPlan;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Data\LogRecord;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\RecordingDecision;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Data\Verdict;
+use Anabil\Sherlock\Data\WatchState;
+use Anabil\Sherlock\Enums\AiStatus;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\ExplainInsightType;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\RecordReason;
+use Anabil\Sherlock\Enums\Severity;
 
 function makeTrace(array $overrides = []): TraceData
 {
@@ -133,7 +133,7 @@ it('round-trips findings', function (): void {
 });
 
 it('describes verdicts and explain plans', function (): void {
-    $verdict = new Verdict(Anabil\Tracing\Enums\Bottleneck::Database, '72% in db', 1000.0, ['db' => 720.0], ['db' => 72.0]);
+    $verdict = new Verdict(Anabil\Sherlock\Enums\Bottleneck::Database, '72% in db', 1000.0, ['db' => 720.0], ['db' => 72.0]);
     $plan = new ExplainPlan('mysql', 'mysql', 'select ...', [], [
         new ExplainInsight(ExplainInsightType::FullTableScan, Severity::Warning, 'scan'),
         new ExplainInsight(ExplainInsightType::Filesort, Severity::Critical, 'sort'),

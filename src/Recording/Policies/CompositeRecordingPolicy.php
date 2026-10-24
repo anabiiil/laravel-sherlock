@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Recording\Policies;
+namespace Anabil\Sherlock\Recording\Policies;
 
-use Anabil\Tracing\Contracts\RecordingPolicy;
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Data\RecordingDecision;
+use Anabil\Sherlock\Contracts\RecordingPolicy;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Data\RecordingDecision;
 
 /**
  * Composite: the IgnorePolicy runs first and short-circuits; the remaining policies are

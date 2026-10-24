@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Ai\AiManager;
-use Anabil\Tracing\Ai\Drivers\AnthropicDriver;
-use Anabil\Tracing\Ai\Drivers\GeminiDriver;
-use Anabil\Tracing\Ai\Drivers\NullDriver;
-use Anabil\Tracing\Ai\Drivers\OllamaDriver;
-use Anabil\Tracing\Ai\Drivers\OpenAiCompatibleDriver;
-use Anabil\Tracing\Ai\RedactingAiProvider;
-use Anabil\Tracing\Contracts\AiProvider;
-use Anabil\Tracing\Contracts\AiProviderFactory;
-use Anabil\Tracing\Data\AiRequest;
-use Anabil\Tracing\Data\AiResponse;
-use Anabil\Tracing\Facades\Tracing;
+use Anabil\Sherlock\Ai\AiManager;
+use Anabil\Sherlock\Ai\Drivers\AnthropicDriver;
+use Anabil\Sherlock\Ai\Drivers\GeminiDriver;
+use Anabil\Sherlock\Ai\Drivers\NullDriver;
+use Anabil\Sherlock\Ai\Drivers\OllamaDriver;
+use Anabil\Sherlock\Ai\Drivers\OpenAiCompatibleDriver;
+use Anabil\Sherlock\Ai\RedactingAiProvider;
+use Anabil\Sherlock\Contracts\AiProvider;
+use Anabil\Sherlock\Contracts\AiProviderFactory;
+use Anabil\Sherlock\Data\AiRequest;
+use Anabil\Sherlock\Data\AiResponse;
+use Anabil\Sherlock\Facades\Sherlock;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -26,7 +26,7 @@ function aiManager(): AiManager
 }
 
 it('binds the manager as the provider factory and wraps the default provider', function (): void {
-    config()->set('tracing.ai.driver', 'deepseek');
+    config()->set('sherlock.ai.driver', 'deepseek');
 
     expect(app(AiProviderFactory::class))->toBe(app(AiManager::class))
         ->and(app(AiProvider::class))->toBeInstanceOf(RedactingAiProvider::class)
@@ -55,7 +55,7 @@ it('resolves every built-in driver, wrapped by redaction', function (string $nam
 ]);
 
 it('resolves preset base urls and models', function (string $name, ?string $baseUrl, ?string $model): void {
-    config()->set('tracing.ai.driver', 'something-else');
+    config()->set('sherlock.ai.driver', 'something-else');
 
     $config = aiManager()->configFor($name);
 
@@ -76,10 +76,10 @@ it('resolves preset base urls and models', function (string $name, ?string $base
 ]);
 
 it('lets the user override model, base url and key of the selected driver only', function (): void {
-    config()->set('tracing.ai.driver', 'qwen');
-    config()->set('tracing.ai.model', 'qwen-max');
-    config()->set('tracing.ai.base_url', 'https://dashscope.aliyuncs.com/compatible-mode/v1');
-    config()->set('tracing.ai.api_key', 'qwen-key');
+    config()->set('sherlock.ai.driver', 'qwen');
+    config()->set('sherlock.ai.model', 'qwen-max');
+    config()->set('sherlock.ai.base_url', 'https://dashscope.aliyuncs.com/compatible-mode/v1');
+    config()->set('sherlock.ai.api_key', 'qwen-key');
 
     $qwen = aiManager()->configFor('qwen');
     $anthropic = aiManager()->configFor('anthropic');
@@ -92,15 +92,15 @@ it('lets the user override model, base url and key of the selected driver only',
 });
 
 it('accepts per-driver overrides in the preset', function (): void {
-    config()->set('tracing.ai.drivers.ollama.model', 'llama3.2');
+    config()->set('sherlock.ai.drivers.ollama.model', 'llama3.2');
 
     expect(aiManager()->configFor('ollama')['model'])->toBe('llama3.2');
 });
 
 it('sends the request to the overridden endpoint and model', function (): void {
-    config()->set('tracing.ai.driver', 'openai_compatible');
-    config()->set('tracing.ai.base_url', 'http://vllm.test/v1');
-    config()->set('tracing.ai.model', 'my-local-model');
+    config()->set('sherlock.ai.driver', 'openai_compatible');
+    config()->set('sherlock.ai.base_url', 'http://vllm.test/v1');
+    config()->set('sherlock.ai.model', 'my-local-model');
     Http::fake(['vllm.test/*' => Http::response(['choices' => [['message' => ['content' => 'ok']]]])]);
 
     aiManager()->driver()->complete(new AiRequest('s', 'u'));
@@ -112,11 +112,11 @@ it('fails clearly on an unknown driver', function (): void {
     aiManager()->driver('watsonx');
 })->throws(InvalidArgumentException::class, 'AI driver [watsonx] is not supported');
 
-it('wraps custom drivers registered with Tracing::extendAi in redaction', function (): void {
-    config()->set('tracing.ai.drivers.custom', ['model' => 'custom-1', 'endpoint' => 'x']);
+it('wraps custom drivers registered with Sherlock::extendAi in redaction', function (): void {
+    config()->set('sherlock.ai.drivers.custom', ['model' => 'custom-1', 'endpoint' => 'x']);
     $captured = new ArrayObject;
 
-    Tracing::extendAi('custom', function ($app, array $config) use ($captured): AiProvider {
+    Sherlock::extendAi('custom', function ($app, array $config) use ($captured): AiProvider {
         $captured['config'] = $config;
 
         return new class($captured) implements AiProvider
@@ -149,7 +149,7 @@ it('wraps custom drivers registered with Tracing::extendAi in redaction', functi
 });
 
 it('can make a custom driver the default', function (): void {
-    config()->set('tracing.ai.driver', 'mine');
+    config()->set('sherlock.ai.driver', 'mine');
     aiManager()->extend('mine', fn () => new NullDriver);
 
     expect(app(AiProvider::class))->toBeInstanceOf(RedactingAiProvider::class)

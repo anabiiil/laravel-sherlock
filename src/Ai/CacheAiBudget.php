@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Ai;
+namespace Anabil\Sherlock\Ai;
 
-use Anabil\Tracing\Contracts\AiBudget;
+use Anabil\Sherlock\Contracts\AiBudget;
 use Closure;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -21,7 +21,7 @@ use Illuminate\Contracts\Cache\Repository as Cache;
  */
 final class CacheAiBudget implements AiBudget
 {
-    private const KEY = 'tracing:ai:budget:';
+    private const KEY = 'sherlock:ai:budget:';
 
     /** Two days: the key outlives its day whatever the store's clock skew. */
     private const TTL = 172800;

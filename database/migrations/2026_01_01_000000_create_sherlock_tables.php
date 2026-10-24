@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Storage\Tables;
+use Anabil\Sherlock\Storage\Tables;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Tracing storage on the configured tracing connection (config "tracing.storage.connection").
+ * Sherlock storage on the configured connection (config "sherlock.storage.connection").
  * No foreign keys on purpose: the tables may live on another connection, inserts stay cheap
- * and tracing:prune removes child rows itself, in chunks.
+ * and sherlock:prune removes child rows itself, in chunks.
  */
 return new class extends Migration
 {

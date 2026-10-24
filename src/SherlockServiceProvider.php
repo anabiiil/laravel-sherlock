@@ -2,59 +2,59 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing;
+namespace Anabil\Sherlock;
 
-use Anabil\Tracing\Contracts\AiAnalyzer;
-use Anabil\Tracing\Contracts\AiBudget;
-use Anabil\Tracing\Contracts\AiProvider;
-use Anabil\Tracing\Contracts\AiProviderFactory;
-use Anabil\Tracing\Contracts\BottleneckClassifier;
-use Anabil\Tracing\Contracts\ContextManager;
-use Anabil\Tracing\Contracts\DigestService;
-use Anabil\Tracing\Contracts\Fingerprinter;
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\IssueService;
-use Anabil\Tracing\Contracts\NotificationDispatcher;
-use Anabil\Tracing\Contracts\PersistenceStrategy;
-use Anabil\Tracing\Contracts\PlanInterpreter;
-use Anabil\Tracing\Contracts\QueryNormalizer;
-use Anabil\Tracing\Contracts\RecordingPolicy;
-use Anabil\Tracing\Contracts\Redactor as RedactorContract;
-use Anabil\Tracing\Contracts\SourceLocator;
-use Anabil\Tracing\Contracts\TraceAnalyzer;
-use Anabil\Tracing\Contracts\TraceRecorder;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Contracts\WatchWindow;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Pipeline\DefaultTraceRecorder;
-use Anabil\Tracing\Privacy\Redactor;
-use Anabil\Tracing\Providers\AiServiceProvider;
-use Anabil\Tracing\Providers\AnalysisServiceProvider;
-use Anabil\Tracing\Providers\CaptureServiceProvider;
-use Anabil\Tracing\Providers\ConsoleServiceProvider;
-use Anabil\Tracing\Providers\DashboardServiceProvider;
-use Anabil\Tracing\Providers\DigestServiceProvider;
-use Anabil\Tracing\Providers\NotificationServiceProvider;
-use Anabil\Tracing\Providers\StorageServiceProvider;
-use Anabil\Tracing\Support\BacktraceSourceLocator;
-use Anabil\Tracing\Support\HashFingerprinter;
-use Anabil\Tracing\Support\Null\NullAiAnalyzer;
-use Anabil\Tracing\Support\Null\NullAiBudget;
-use Anabil\Tracing\Support\Null\NullAiProvider;
-use Anabil\Tracing\Support\Null\NullAiProviderFactory;
-use Anabil\Tracing\Support\Null\NullBottleneckClassifier;
-use Anabil\Tracing\Support\Null\NullContextManager;
-use Anabil\Tracing\Support\Null\NullDigestService;
-use Anabil\Tracing\Support\Null\NullIssueRepository;
-use Anabil\Tracing\Support\Null\NullIssueService;
-use Anabil\Tracing\Support\Null\NullNotificationDispatcher;
-use Anabil\Tracing\Support\Null\NullPersistenceStrategy;
-use Anabil\Tracing\Support\Null\NullPlanInterpreter;
-use Anabil\Tracing\Support\Null\NullRecordingPolicy;
-use Anabil\Tracing\Support\Null\NullTraceAnalyzer;
-use Anabil\Tracing\Support\Null\NullTraceRepository;
-use Anabil\Tracing\Support\Null\NullWatchWindow;
-use Anabil\Tracing\Support\SqlQueryNormalizer;
+use Anabil\Sherlock\Contracts\AiAnalyzer;
+use Anabil\Sherlock\Contracts\AiBudget;
+use Anabil\Sherlock\Contracts\AiProvider;
+use Anabil\Sherlock\Contracts\AiProviderFactory;
+use Anabil\Sherlock\Contracts\BottleneckClassifier;
+use Anabil\Sherlock\Contracts\ContextManager;
+use Anabil\Sherlock\Contracts\DigestService;
+use Anabil\Sherlock\Contracts\Fingerprinter;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\IssueService;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Contracts\PersistenceStrategy;
+use Anabil\Sherlock\Contracts\PlanInterpreter;
+use Anabil\Sherlock\Contracts\QueryNormalizer;
+use Anabil\Sherlock\Contracts\RecordingPolicy;
+use Anabil\Sherlock\Contracts\Redactor as RedactorContract;
+use Anabil\Sherlock\Contracts\SourceLocator;
+use Anabil\Sherlock\Contracts\TraceAnalyzer;
+use Anabil\Sherlock\Contracts\TraceRecorder;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Contracts\WatchWindow;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Pipeline\DefaultTraceRecorder;
+use Anabil\Sherlock\Privacy\Redactor;
+use Anabil\Sherlock\Providers\AiServiceProvider;
+use Anabil\Sherlock\Providers\AnalysisServiceProvider;
+use Anabil\Sherlock\Providers\CaptureServiceProvider;
+use Anabil\Sherlock\Providers\ConsoleServiceProvider;
+use Anabil\Sherlock\Providers\DashboardServiceProvider;
+use Anabil\Sherlock\Providers\DigestServiceProvider;
+use Anabil\Sherlock\Providers\NotificationServiceProvider;
+use Anabil\Sherlock\Providers\StorageServiceProvider;
+use Anabil\Sherlock\Support\BacktraceSourceLocator;
+use Anabil\Sherlock\Support\HashFingerprinter;
+use Anabil\Sherlock\Support\Null\NullAiAnalyzer;
+use Anabil\Sherlock\Support\Null\NullAiBudget;
+use Anabil\Sherlock\Support\Null\NullAiProvider;
+use Anabil\Sherlock\Support\Null\NullAiProviderFactory;
+use Anabil\Sherlock\Support\Null\NullBottleneckClassifier;
+use Anabil\Sherlock\Support\Null\NullContextManager;
+use Anabil\Sherlock\Support\Null\NullDigestService;
+use Anabil\Sherlock\Support\Null\NullIssueRepository;
+use Anabil\Sherlock\Support\Null\NullIssueService;
+use Anabil\Sherlock\Support\Null\NullNotificationDispatcher;
+use Anabil\Sherlock\Support\Null\NullPersistenceStrategy;
+use Anabil\Sherlock\Support\Null\NullPlanInterpreter;
+use Anabil\Sherlock\Support\Null\NullRecordingPolicy;
+use Anabil\Sherlock\Support\Null\NullTraceAnalyzer;
+use Anabil\Sherlock\Support\Null\NullTraceRepository;
+use Anabil\Sherlock\Support\Null\NullWatchWindow;
+use Anabil\Sherlock\Support\SqlQueryNormalizer;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -65,7 +65,7 @@ use Psr\Log\LoggerInterface;
  * Every feature lives in its own sub-provider (src/Providers), which rebinds the
  * contracts it implements.
  */
-final class TracingServiceProvider extends ServiceProvider
+final class SherlockServiceProvider extends ServiceProvider
 {
     /** @var list<class-string<ServiceProvider>> */
     public const FEATURE_PROVIDERS = [
@@ -105,7 +105,7 @@ final class TracingServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/tracing.php', 'tracing');
+        $this->mergeConfigFrom(__DIR__.'/../config/sherlock.php', 'sherlock');
 
         $this->registerCoreServices();
 
@@ -125,28 +125,28 @@ final class TracingServiceProvider extends ServiceProvider
         }
 
         $this->publishes([
-            __DIR__.'/../config/tracing.php' => $this->app->configPath('tracing.php'),
-        ], 'tracing-config');
+            __DIR__.'/../config/sherlock.php' => $this->app->configPath('sherlock.php'),
+        ], 'sherlock-config');
 
         $this->publishesMigrations([
             __DIR__.'/../database/migrations' => $this->app->databasePath('migrations'),
-        ], 'tracing-migrations');
+        ], 'sherlock-migrations');
 
         $this->publishes([
-            __DIR__.'/../resources/views' => $this->app->resourcePath('views/vendor/tracing'),
-        ], 'tracing-views');
+            __DIR__.'/../resources/views' => $this->app->resourcePath('views/vendor/sherlock'),
+        ], 'sherlock-views');
     }
 
     private function registerCoreServices(): void
     {
-        $this->app->singleton(Tracing::class);
+        $this->app->singleton(Sherlock::class);
 
         $this->app->singleton(RedactorContract::class, static function (Application $app): Redactor {
             $config = $app->make(Repository::class);
 
             return Redactor::make(
-                self::iterable($config->get('tracing.privacy.sensitive_keys')),
-                self::iterable($config->get('tracing.privacy.patterns')),
+                self::iterable($config->get('sherlock.privacy.sensitive_keys')),
+                self::iterable($config->get('sherlock.privacy.patterns')),
             );
         });
 
@@ -154,19 +154,19 @@ final class TracingServiceProvider extends ServiceProvider
         $this->app->singleton(Fingerprinter::class, HashFingerprinter::class);
 
         $this->app->singleton(SourceLocator::class, static function (Application $app): BacktraceSourceLocator {
-            $limit = $app->make(Repository::class)->get('tracing.capture.backtrace_limit', 30);
+            $limit = $app->make(Repository::class)->get('sherlock.capture.backtrace_limit', 30);
 
             return new BacktraceSourceLocator($app->basePath(), is_numeric($limit) ? (int) $limit : 30);
         });
 
         $this->app->singleton(TraceRecorder::class, static function (Application $app): DefaultTraceRecorder {
             $config = $app->make(Repository::class);
-            $storeBindings = $config->get('tracing.privacy.store_bindings', 'auto');
+            $storeBindings = $config->get('sherlock.privacy.store_bindings', 'auto');
 
             return new DefaultTraceRecorder(
                 $app->make(TraceAnalyzer::class),
                 $app->make(PersistenceStrategy::class),
-                Severity::fromConfig($config->get('tracing.persist_min_severity')),
+                Severity::fromConfig($config->get('sherlock.persist_min_severity')),
                 is_string($storeBindings) ? $storeBindings : 'auto',
                 $app->bound(LoggerInterface::class) ? $app->make(LoggerInterface::class) : null,
             );

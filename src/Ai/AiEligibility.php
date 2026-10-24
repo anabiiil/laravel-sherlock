@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Ai;
+namespace Anabil\Sherlock\Ai;
 
-use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Enums\AiStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
 use Illuminate\Contracts\Config\Repository;
 
 /**
@@ -26,16 +26,16 @@ final class AiEligibility
 
     public function skipReason(IssueType $type, Severity $severity): ?AiStatus
     {
-        if (! $this->config->get('tracing.ai.enabled', false)) {
+        if (! $this->config->get('sherlock.ai.enabled', false)) {
             return AiStatus::SkippedDisabled;
         }
 
         $toggle = $type->isError() ? 'exceptions' : 'performance';
-        if (! $this->config->get("tracing.ai.analyze.{$toggle}", $toggle === 'performance')) {
+        if (! $this->config->get("sherlock.ai.analyze.{$toggle}", $toggle === 'performance')) {
             return AiStatus::SkippedDisabled;
         }
 
-        $min = Severity::fromConfig($this->config->get('tracing.ai.min_severity'), Severity::Critical);
+        $min = Severity::fromConfig($this->config->get('sherlock.ai.min_severity'), Severity::Critical);
 
         return $severity->isAtLeast($min) ? null : AiStatus::SkippedSeverity;
     }

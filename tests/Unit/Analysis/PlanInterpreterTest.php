@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Analysis\Explain\DefaultPlanInterpreter;
-use Anabil\Tracing\Analysis\Explain\IndexSuggester;
-use Anabil\Tracing\Data\ExplainInsight;
-use Anabil\Tracing\Enums\ExplainInsightType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Support\SqlQueryNormalizer;
-use Anabil\Tracing\Tests\Unit\Analysis\AnalysisFactory as F;
+use Anabil\Sherlock\Analysis\Explain\DefaultPlanInterpreter;
+use Anabil\Sherlock\Analysis\Explain\IndexSuggester;
+use Anabil\Sherlock\Data\ExplainInsight;
+use Anabil\Sherlock\Enums\ExplainInsightType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Support\SqlQueryNormalizer;
+use Anabil\Sherlock\Tests\Unit\Analysis\AnalysisFactory as F;
 
 /**
  * @return list<ExplainInsight>

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Capture\Support;
+namespace Anabil\Sherlock\Tests\Feature\Capture\Support;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

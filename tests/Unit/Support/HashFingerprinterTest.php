@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Support\HashFingerprinter;
-use Anabil\Tracing\Support\SqlQueryNormalizer;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Support\HashFingerprinter;
+use Anabil\Sherlock\Support\SqlQueryNormalizer;
 
 beforeEach(function (): void {
     $this->fp = new HashFingerprinter(new SqlQueryNormalizer);

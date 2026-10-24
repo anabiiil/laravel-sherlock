@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Console;
+namespace Anabil\Sherlock\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Foundation\Application;
@@ -15,63 +15,63 @@ use Illuminate\Filesystem\Filesystem;
  */
 final class InstallCommand extends Command
 {
-    private const MIGRATION_SUFFIX = '_create_tracing_tables.php';
+    private const MIGRATION_SUFFIX = '_create_sherlock_tables.php';
 
     private const NEXT_STEPS = [
         <<<'TEXT'
           1. Choose a recording mode in .env:
 
-               TRACING_MODE=local         # dev machines: record everything
-               TRACING_MODE=production    # thresholds + sampling (default)
-               TRACING_SAMPLE_RATE=0.05   # baseline sample of healthy traces in production
-               TRACING_MODE=off           # nothing is registered at all
+               SHERLOCK_MODE=local         # dev machines: record everything
+               SHERLOCK_MODE=production    # thresholds + sampling (default)
+               SHERLOCK_SAMPLE_RATE=0.05   # baseline sample of healthy traces in production
+               SHERLOCK_MODE=off           # nothing is registered at all
         TEXT,
         <<<'TEXT'
-          2. Run the migrations if you have not yet (php artisan migrate). To keep tracing data
-             away from your main database, set TRACING_DB_CONNECTION to a dedicated connection
+          2. Run the migrations if you have not yet (php artisan migrate). To keep trace data
+             away from your main database, set SHERLOCK_DB_CONNECTION to a dedicated connection
              before migrating.
         TEXT,
         <<<'TEXT'
           3. Use a real queue in production (redis / database / sqs) and run a worker; persistence
-             (TRACING_PERSISTENCE=queue), notifications, AI analysis and the digest are queued.
-             Optional: TRACING_QUEUE=tracing to keep them on their own queue.
+             (SHERLOCK_PERSISTENCE=queue), notifications, AI analysis and the digest are queued.
+             Optional: SHERLOCK_QUEUE=sherlock to keep them on their own queue.
         TEXT,
         <<<'TEXT'
           4. Make sure the scheduler runs (php artisan schedule:work, or a cron entry for
-             schedule:run): tracing:prune and the digest are scheduled automatically.
+             schedule:run): sherlock:prune and the digest are scheduled automatically.
         TEXT,
         <<<'TEXT'
-          5. Open the dashboard at /tracing (TRACING_PATH). Outside the local environment, grant
+          5. Open the dashboard at /sherlock (SHERLOCK_PATH). Outside the local environment, grant
              access in App\Providers\AppServiceProvider::boot():
 
                use Illuminate\Support\Facades\Gate;
 
-               Gate::define('viewTracing', function ($user = null) {
+               Gate::define('viewSherlock', function ($user = null) {
                    return in_array($user?->email, ['you@example.com'], true);
                });
         TEXT,
         <<<'TEXT'
-          6. Optional: notifications (TRACING_NOTIFICATIONS=true), AI analysis (TRACING_AI_ENABLED=true)
-             and the digest (TRACING_DIGEST=true). Check everything with: php artisan tracing:status
+          6. Optional: notifications (SHERLOCK_NOTIFICATIONS=true), AI analysis (SHERLOCK_AI_ENABLED=true)
+             and the digest (SHERLOCK_DIGEST=true). Check everything with: php artisan sherlock:status
         TEXT,
     ];
 
     /** @var string */
-    protected $signature = 'tracing:install
+    protected $signature = 'sherlock:install
         {--force : Overwrite an already published config file}
         {--migrate : Run the migrations without asking}';
 
     /** @var string */
-    protected $description = 'Install Laravel Tracing: publish the config and migrations, then print the next steps';
+    protected $description = 'Install Laravel Sherlock: publish the config and migrations, then print the next steps';
 
     public function handle(Application $app, Filesystem $files): int
     {
-        $this->components->info('Installing Laravel Tracing.');
+        $this->components->info('Installing Laravel Sherlock.');
 
-        $configExists = $files->exists($app->configPath('tracing.php'));
-        $this->callSilently('vendor:publish', ['--tag' => 'tracing-config', '--force' => (bool) $this->option('force')]);
+        $configExists = $files->exists($app->configPath('sherlock.php'));
+        $this->callSilently('vendor:publish', ['--tag' => 'sherlock-config', '--force' => (bool) $this->option('force')]);
         $this->components->twoColumnDetail(
-            'config/tracing.php',
+            'config/sherlock.php',
             $configExists && ! $this->option('force') ? '<fg=yellow;options=bold>KEPT (use --force to overwrite)</>' : '<fg=green;options=bold>PUBLISHED</>',
         );
 
@@ -79,7 +79,7 @@ final class InstallCommand extends Command
         if ($this->publishedMigration($files, $migrationsPath) !== null) {
             $this->components->twoColumnDetail('database/migrations/*'.self::MIGRATION_SUFFIX, '<fg=yellow;options=bold>ALREADY PUBLISHED</>');
         } else {
-            $this->callSilently('vendor:publish', ['--tag' => 'tracing-migrations']);
+            $this->callSilently('vendor:publish', ['--tag' => 'sherlock-migrations']);
             $published = $this->publishedMigration($files, $migrationsPath);
             $this->components->twoColumnDetail(
                 'database/migrations/'.($published === null ? '*'.self::MIGRATION_SUFFIX : basename($published)),

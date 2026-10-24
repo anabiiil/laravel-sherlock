@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Data\QueryStat;
-use Anabil\Tracing\Data\StoredQuery;
-use Anabil\Tracing\Data\StoredTrace;
-use Anabil\Tracing\Data\TraceFilter;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\RecordReason;
-use Anabil\Tracing\Storage\Repositories\DatabaseTraceRepository;
-use Anabil\Tracing\Tests\Feature\Storage\StorageFixtures as F;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\QueryStat;
+use Anabil\Sherlock\Data\StoredQuery;
+use Anabil\Sherlock\Data\StoredTrace;
+use Anabil\Sherlock\Data\TraceFilter;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\RecordReason;
+use Anabil\Sherlock\Storage\Repositories\DatabaseTraceRepository;
+use Anabil\Sherlock\Tests\Feature\Storage\StorageFixtures as F;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -32,7 +32,7 @@ it('stores a trace with one insert plus one multi-row insert per 100 queries, in
     for ($i = 0; $i < 150; $i++) {
         $queries[] = F::query(timeMs: 1.0 + $i / 100, offsetMs: (float) $i);
     }
-    config()->set('tracing.storage.max_queries_per_trace', 500);
+    config()->set('sherlock.storage.max_queries_per_trace', 500);
     app()->forgetInstance(TraceRepository::class);
 
     $statements = [];
@@ -45,9 +45,9 @@ it('stores a trace with one insert plus one multi-row insert per 100 queries, in
     $inserts = array_values(array_filter($statements, static fn (string $sql): bool => str_starts_with(strtolower($sql), 'insert')));
 
     expect($inserts)->toHaveCount(3)
-        ->and($inserts[0])->toContain('tracing_traces')
-        ->and($inserts[1])->toContain('tracing_queries')
-        ->and(DB::table('tracing_queries')->where('trace_id', $id)->count())->toBe(150);
+        ->and($inserts[0])->toContain('sherlock_traces')
+        ->and($inserts[1])->toContain('sherlock_queries')
+        ->and(DB::table('sherlock_queries')->where('trace_id', $id)->count())->toBe(150);
 });
 
 it('round-trips a stored trace into a StoredTrace', function (): void {
@@ -88,7 +88,7 @@ it('stores redacted bindings only when storeBindings is true', function (): void
 
     expect(storageTraces()->queries($with)[0]->bindings)->toBe(['[REDACTED]', 7])
         ->and(storageTraces()->queries($without)[0]->bindings)->toBeNull()
-        ->and(DB::table('tracing_queries')->where('trace_id', $without)->value('bindings'))->toBeNull();
+        ->and(DB::table('sherlock_queries')->where('trace_id', $without)->value('bindings'))->toBeNull();
 });
 
 it('returns the queries of a trace in execution order', function (): void {
@@ -121,7 +121,7 @@ it('normalizes and fingerprints queries the analysis did not normalize', functio
 });
 
 it('caps stored queries per trace keeping every fingerprint and the slowest ones', function (): void {
-    config()->set('tracing.storage.max_queries_per_trace', 3);
+    config()->set('sherlock.storage.max_queries_per_trace', 3);
     app()->forgetInstance(TraceRepository::class);
 
     $id = storageTraces()->store(F::recorded(F::traceData([
@@ -164,7 +164,7 @@ it('paginates traces with filters and sorting', function (): void {
 it('filters traces by issue through the issue links', function (): void {
     $a = storageTraces()->store(F::recorded());
     storageTraces()->store(F::recorded());
-    DB::table('tracing_issue_traces')->insert(['issue_id' => 9, 'trace_id' => $a, 'created_at' => now()]);
+    DB::table('sherlock_issue_traces')->insert(['issue_id' => 9, 'trace_id' => $a, 'created_at' => now()]);
 
     $page = storageTraces()->paginate(new TraceFilter(issueId: 9));
 
@@ -242,7 +242,7 @@ it('prunes old traces with their queries and issue links in chunks', function ()
         $old[] = storageTraces()->store(F::recorded(F::traceData([F::query(), F::query()], startedAt: CarbonImmutable::now()->subDays(10))));
     }
     $fresh = storageTraces()->store(F::recorded(F::traceData([F::query()])));
-    DB::table('tracing_issue_traces')->insert([
+    DB::table('sherlock_issue_traces')->insert([
         ['issue_id' => 1, 'trace_id' => $old[0], 'created_at' => now()],
         ['issue_id' => 1, 'trace_id' => $fresh, 'created_at' => now()],
     ]);
@@ -250,8 +250,8 @@ it('prunes old traces with their queries and issue links in chunks', function ()
     $deleted = storageTraces()->pruneOlderThan(CarbonImmutable::now()->subDays(7), 2);
 
     expect($deleted)->toBe(5)
-        ->and(DB::table('tracing_traces')->pluck('id')->all())->toBe([$fresh])
-        ->and(DB::table('tracing_queries')->count())->toBe(1)
-        ->and(DB::table('tracing_issue_traces')->pluck('trace_id')->all())->toBe([$fresh])
+        ->and(DB::table('sherlock_traces')->pluck('id')->all())->toBe([$fresh])
+        ->and(DB::table('sherlock_queries')->count())->toBe(1)
+        ->and(DB::table('sherlock_issue_traces')->pluck('trace_id')->all())->toBe([$fresh])
         ->and(storageTraces()->pruneOlderThan(CarbonImmutable::now()->subDays(7)))->toBe(0);
 });

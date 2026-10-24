@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Tests\Feature\Storage\StorageFixtures as F;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Tests\Feature\Storage\StorageFixtures as F;
 use Carbon\CarbonImmutable;
 
 function seedReportData(): void
@@ -39,8 +39,8 @@ beforeEach(function (): void {
 it('prints the issues, slowest entries, top queries and bottlenecks of the period', function (): void {
     seedReportData();
 
-    $this->artisan('tracing:report')
-        ->expectsOutputToContain('Tracing report')
+    $this->artisan('sherlock:report')
+        ->expectsOutputToContain('Sherlock report')
         ->expectsOutputToContain('2026-10-13 12:00 to 2026-10-20 12:00')
         ->expectsOutputToContain('Top open issues')
         ->expectsOutputToContain('N+1 queries on orders')
@@ -62,26 +62,26 @@ it('prints the issues, slowest entries, top queries and bottlenecks of the perio
 it('filters traces and slowest entries by --type and widens the period with --days', function (): void {
     seedReportData();
 
-    $this->artisan('tracing:report', ['--type' => 'job'])
+    $this->artisan('sherlock:report', ['--type' => 'job'])
         ->expectsOutputToContain('Traces (job)')
         ->expectsOutputToContain('2.40 s')
         ->doesntExpectOutputToContain('GET /users')
         ->assertSuccessful();
 
-    $this->artisan('tracing:report', ['--days' => 30])
+    $this->artisan('sherlock:report', ['--days' => 30])
         ->expectsOutputToContain('GET /legacy')
         ->expectsOutputToContain('legacy_reports')
         ->assertSuccessful();
 });
 
 it('handles an empty database', function (): void {
-    $this->artisan('tracing:report')
+    $this->artisan('sherlock:report')
         ->expectsOutputToContain('No data for this period.')
         ->assertSuccessful();
 });
 
 it('rejects invalid options', function (): void {
-    $this->artisan('tracing:report', ['--type' => 'cron'])->assertFailed();
-    $this->artisan('tracing:report', ['--days' => 0])->assertFailed();
-    $this->artisan('tracing:report', ['--limit' => 'many'])->assertFailed();
+    $this->artisan('sherlock:report', ['--type' => 'cron'])->assertFailed();
+    $this->artisan('sherlock:report', ['--days' => 0])->assertFailed();
+    $this->artisan('sherlock:report', ['--limit' => 'many'])->assertFailed();
 });

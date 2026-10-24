@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
 /**
  * Aggregated statistics of one query fingerprint over a period.

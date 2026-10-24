@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Digest;
+namespace Anabil\Sherlock\Tests\Feature\Digest;
 
-use Anabil\Tracing\Contracts\NotificationDispatcher;
-use Anabil\Tracing\Data\NotificationMessage;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Data\NotificationMessage;
 use RuntimeException;
 
 /**

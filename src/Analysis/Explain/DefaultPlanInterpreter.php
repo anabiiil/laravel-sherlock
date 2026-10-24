@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Explain;
+namespace Anabil\Sherlock\Analysis\Explain;
 
-use Anabil\Tracing\Analysis\Support\Describe;
-use Anabil\Tracing\Analysis\Support\Sql;
-use Anabil\Tracing\Data\ExplainInsight;
-use Anabil\Tracing\Enums\ExplainInsightType;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Analysis\Support\Describe;
+use Anabil\Sherlock\Analysis\Support\Sql;
+use Anabil\Sherlock\Data\ExplainInsight;
+use Anabil\Sherlock\Enums\ExplainInsightType;
+use Anabil\Sherlock\Enums\Severity;
 
 /**
  * Turns raw EXPLAIN output into insights.

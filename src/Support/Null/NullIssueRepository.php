@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Data\AiAnalysisResult;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\IssueFilter;
-use Anabil\Tracing\Data\IssueOutcome;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\OccurrenceType;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Data\AiAnalysisResult;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\IssueFilter;
+use Anabil\Sherlock\Data\IssueOutcome;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Enums\AiStatus;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\OccurrenceType;
 use DateTimeImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator as LengthAwarePaginatorContract;
 use Illuminate\Pagination\LengthAwarePaginator;

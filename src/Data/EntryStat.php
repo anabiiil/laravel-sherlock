@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
-use Anabil\Tracing\Enums\EntryType;
+use Anabil\Sherlock\Enums\EntryType;
 
 /**
  * Aggregated statistics of one route / job / command over a period.

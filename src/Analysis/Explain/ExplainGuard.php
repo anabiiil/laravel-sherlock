@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Explain;
+namespace Anabil\Sherlock\Analysis\Explain;
 
-use Anabil\Tracing\Analysis\Support\Sql;
-use Anabil\Tracing\Data\QueryRecord;
+use Anabil\Sherlock\Analysis\Support\Sql;
+use Anabil\Sherlock\Data\QueryRecord;
 
 /**
  * Safety rules for EXPLAIN. Conservative by design: anything not clearly a plain,

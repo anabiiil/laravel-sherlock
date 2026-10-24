@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Analyzers;
+namespace Anabil\Sherlock\Analysis\Analyzers;
 
-use Anabil\Tracing\Analysis\Support\Describe;
-use Anabil\Tracing\Contracts\Analyzer;
-use Anabil\Tracing\Contracts\Fingerprinter;
-use Anabil\Tracing\Contracts\SourceLocator;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\LogRecord;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Analysis\Support\Describe;
+use Anabil\Sherlock\Contracts\Analyzer;
+use Anabil\Sherlock\Contracts\Fingerprinter;
+use Anabil\Sherlock\Contracts\SourceLocator;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\LogRecord;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
 
 /**
  * Exceptions and error logs. One finding per distinct exception class + location
@@ -22,7 +22,7 @@ use Anabil\Tracing\Enums\Severity;
  * Issue fingerprints never include the message of an exception: class + relative
  * file + line of the first application frame (falling back to the throw site).
  * Exceptions are always critical; log levels map to severities via $logLevels
- * (tracing.thresholds.log_levels), levels not in the map are ignored.
+ * (sherlock.thresholds.log_levels), levels not in the map are ignored.
  */
 final class ExceptionAnalyzer implements Analyzer
 {

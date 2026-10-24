@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
 /**
  * Listens to framework events and pushes cheap records into the current TraceContext.

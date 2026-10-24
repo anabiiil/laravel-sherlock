@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Context\UnitLifecycle;
-use Anabil\Tracing\Contracts\ContextManager;
-use Anabil\Tracing\Contracts\WatchWindow;
-use Anabil\Tracing\Facades\Tracing;
-use Anabil\Tracing\Providers\CaptureServiceProvider;
-use Anabil\Tracing\Support\Null\NullContextManager;
-use Anabil\Tracing\Support\Null\NullWatchWindow;
+use Anabil\Sherlock\Context\UnitLifecycle;
+use Anabil\Sherlock\Contracts\ContextManager;
+use Anabil\Sherlock\Contracts\WatchWindow;
+use Anabil\Sherlock\Facades\Sherlock;
+use Anabil\Sherlock\Providers\CaptureServiceProvider;
+use Anabil\Sherlock\Support\Null\NullContextManager;
+use Anabil\Sherlock\Support\Null\NullWatchWindow;
 use Illuminate\Cache\Events\CacheHit;
 use Illuminate\Cache\Events\CacheMissed;
 use Illuminate\Cache\Events\KeyWritten;
@@ -50,7 +50,7 @@ function captureTerminatingCallbacks(): int
 }
 
 /**
- * Listeners registered by this package (closures scoped to / bound on an Anabil\Tracing class).
+ * Listeners registered by this package (closures scoped to / bound on an Anabil\Sherlock class).
  *
  * @return list<string>
  */
@@ -73,7 +73,7 @@ function capturePackageListeners(): array
                 $owner = $listener;
             }
 
-            if (is_string($owner) && str_starts_with($owner, 'Anabil\\Tracing\\')) {
+            if (is_string($owner) && str_starts_with($owner, 'Anabil\\Sherlock\\')) {
                 $found[] = $event.' => '.$owner;
             }
         }
@@ -84,20 +84,20 @@ function capturePackageListeners(): array
 
 function captureBootWithMode(string $mode): void
 {
-    $_ENV['TRACING_MODE'] = $_SERVER['TRACING_MODE'] = $mode;
-    putenv('TRACING_MODE='.$mode);
+    $_ENV['SHERLOCK_MODE'] = $_SERVER['SHERLOCK_MODE'] = $mode;
+    putenv('SHERLOCK_MODE='.$mode);
     test()->refreshApplication();
 }
 
 afterEach(function (): void {
-    unset($_ENV['TRACING_MODE'], $_SERVER['TRACING_MODE']);
-    putenv('TRACING_MODE');
+    unset($_ENV['SHERLOCK_MODE'], $_SERVER['SHERLOCK_MODE']);
+    putenv('SHERLOCK_MODE');
 });
 
 it('registers no listener, binding or terminating callback when mode is off', function (): void {
     captureBootWithMode('off');
 
-    expect(config('tracing.mode'))->toBe('off');
+    expect(config('sherlock.mode'))->toBe('off');
 
     // The framework itself listens to some of these events; none of the listeners may be ours.
     expect(capturePackageListeners())->toBe([])
@@ -108,8 +108,8 @@ it('registers no listener, binding or terminating callback when mode is off', fu
         ->and(app(ContextManager::class))->toBeInstanceOf(NullContextManager::class)
         ->and(app(WatchWindow::class))->toBeInstanceOf(NullWatchWindow::class)
         ->and(app()->bound(UnitLifecycle::class))->toBeFalse()
-        ->and(Tracing::isRecording())->toBeFalse()
-        ->and(Tracing::pause(fn () => DB::select('select 7 as n')[0]->n))->toBe(7);
+        ->and(Sherlock::isRecording())->toBeFalse()
+        ->and(Sherlock::pause(fn () => DB::select('select 7 as n')[0]->n))->toBe(7);
 });
 
 it('registers the collectors when enabled', function (): void {
@@ -123,9 +123,9 @@ it('registers the collectors when enabled', function (): void {
     expect(captureTerminatingCallbacks())->toBe(1);
 });
 
-it('keeps tracing:status usable when off', function (): void {
+it('keeps sherlock:status usable when off', function (): void {
     captureBootWithMode('off');
 
-    $this->artisan('tracing:status')->expectsOutputToContain('off')->assertSuccessful();
-    $this->artisan('tracing:watch')->assertFailed();
+    $this->artisan('sherlock:status')->expectsOutputToContain('off')->assertSuccessful();
+    $this->artisan('sherlock:watch')->assertFailed();
 });

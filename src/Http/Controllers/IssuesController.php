@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Controllers;
+namespace Anabil\Sherlock\Http\Controllers;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\IssueService;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Data\TraceFilter;
-use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Http\Filters\Input;
-use Anabil\Tracing\Http\Filters\IssueFilters;
-use Anabil\Tracing\Http\Presenters\IssuePresenter;
-use Anabil\Tracing\Http\Support\Views;
-use Anabil\Tracing\Jobs\AnalyzeIssueJob;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\IssueService;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Data\TraceFilter;
+use Anabil\Sherlock\Enums\AiStatus;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Http\Filters\Input;
+use Anabil\Sherlock\Http\Filters\IssueFilters;
+use Anabil\Sherlock\Http\Presenters\IssuePresenter;
+use Anabil\Sherlock\Http\Support\Views;
+use Anabil\Sherlock\Jobs\AnalyzeIssueJob;
 use Illuminate\Contracts\Bus\Dispatcher as Bus;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\View\View;
@@ -46,13 +46,13 @@ final class IssuesController
     public function index(Request $request): View
     {
         $filters = IssueFilters::fromRequest($request);
-        $perPage = $this->config->get('tracing.dashboard.per_page', 25);
+        $perPage = $this->config->get('sherlock.dashboard.per_page', 25);
 
         $issues = $this->issues
             ->paginate($filters->toFilter(), is_numeric($perPage) ? max(1, (int) $perPage) : 25, Input::page($request))
             ->appends($filters->query());
 
-        return $this->views->make('tracing::dashboard.issues.index', [
+        return $this->views->make('sherlock::dashboard.issues.index', [
             'issues' => $issues,
             'filters' => $filters,
             'types' => IssueType::cases(),
@@ -66,11 +66,11 @@ final class IssuesController
     {
         $record = $this->findOrFail($issue);
 
-        return $this->views->make('tracing::dashboard.issues.show', [
+        return $this->views->make('sherlock::dashboard.issues.show', [
             'issue' => $record,
             'presenter' => new IssuePresenter($record),
             'traces' => $this->traces->paginate(new TraceFilter(issueId: $record->id), self::EXAMPLE_TRACES, 1),
-            'aiEnabled' => (bool) $this->config->get('tracing.ai.enabled', false),
+            'aiEnabled' => (bool) $this->config->get('sherlock.ai.enabled', false),
         ]);
     }
 
@@ -117,8 +117,8 @@ final class IssuesController
     private function backTo(IssueRecord $record, string $message): RedirectResponse
     {
         return $this->redirect
-            ->route('tracing.issues.show', ['issue' => $record->id])
-            ->with('tracing.status', $message);
+            ->route('sherlock.issues.show', ['issue' => $record->id])
+            ->with('sherlock.status', $message);
     }
 
     private function findOrFail(string $issue): IssueRecord

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Storage\Support;
+namespace Anabil\Sherlock\Storage\Support;
 
-use Anabil\Tracing\Contracts\ContextManager;
-use Anabil\Tracing\Tracing;
+use Anabil\Sherlock\Contracts\ContextManager;
+use Anabil\Sherlock\Sherlock;
 use Closure;
 use Illuminate\Contracts\Container\Container;
 use Throwable;
 
 /**
  * Runs the package's own storage work with capture paused, so tracing never records
- * its own queries. Delegates to a pause(Closure) method on Tracing or the ContextManager
+ * its own queries. Delegates to a pause(Closure) method on Sherlock or the ContextManager
  * when the capture layer provides one; otherwise runs the callback directly.
  */
 final class RecordingPauser
@@ -62,7 +62,7 @@ final class RecordingPauser
             return false;
         }
 
-        foreach ([Tracing::class, ContextManager::class] as $abstract) {
+        foreach ([Sherlock::class, ContextManager::class] as $abstract) {
             try {
                 $target = $this->container->bound($abstract) ? $this->container->make($abstract) : null;
             } catch (Throwable) {

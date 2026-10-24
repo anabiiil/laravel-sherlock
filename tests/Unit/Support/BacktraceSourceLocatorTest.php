@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Support\BacktraceSourceLocator;
+use Anabil\Sherlock\Support\BacktraceSourceLocator;
 
 beforeEach(function (): void {
-    $this->locator = new BacktraceSourceLocator('/var/www/app', 30, ['app/Support/Ignored'], '/var/www/app/vendor/anabil/laravel-tracing/src');
+    $this->locator = new BacktraceSourceLocator('/var/www/app', 30, ['app/Support/Ignored'], '/var/www/app/vendor/anabiiil/laravel-sherlock/src');
 });
 
 it('returns the first application frame with a relative path', function (): void {
     $frames = [
         ['file' => '/var/www/app/vendor/laravel/framework/src/Illuminate/Database/Connection.php', 'line' => 800, 'function' => 'run'],
-        ['file' => '/var/www/app/vendor/anabil/laravel-tracing/src/Collectors/QueryCollector.php', 'line' => 10, 'function' => 'handle'],
+        ['file' => '/var/www/app/vendor/anabiiil/laravel-sherlock/src/Collectors/QueryCollector.php', 'line' => 10, 'function' => 'handle'],
         ['file' => '/var/www/app/app/Http/Controllers/OrderController.php', 'line' => 42, 'function' => 'get', 'class' => 'Illuminate\Database\Eloquent\Builder'],
         ['file' => '/var/www/app/vendor/laravel/framework/src/Illuminate/Routing/Controller.php', 'line' => 54, 'function' => 'index', 'class' => 'App\Http\Controllers\OrderController'],
     ];

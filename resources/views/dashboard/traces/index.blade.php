@@ -1,7 +1,7 @@
-@extends('tracing::dashboard.layout')
+@extends('sherlock::dashboard.layout')
 
-@use('Anabil\Tracing\Http\Support\Badge')
-@use('Anabil\Tracing\Http\Support\Format')
+@use('Anabil\Sherlock\Http\Support\Badge')
+@use('Anabil\Sherlock\Http\Support\Format')
 
 @section('title', 'Traces')
 
@@ -12,16 +12,16 @@
             <p class="text-sm text-zinc-600 dark:text-zinc-400">
                 Example traces of
                 @if ($issue)
-                    <a href="{{ route('tracing.issues.show', ['issue' => $issue->id]) }}" class="font-medium hover:underline">{{ $issue->title }}</a>
+                    <a href="{{ route('sherlock.issues.show', ['issue' => $issue->id]) }}" class="font-medium hover:underline">{{ $issue->title }}</a>
                 @else
                     issue #{{ $filters->issueId }}
                 @endif
-                · <a href="{{ route('tracing.traces.index') }}" class="text-sky-700 hover:underline dark:text-sky-400">clear</a>
+                · <a href="{{ route('sherlock.traces.index') }}" class="text-sky-700 hover:underline dark:text-sky-400">clear</a>
             </p>
         @endif
     </div>
 
-    <form method="GET" action="{{ route('tracing.traces.index') }}" class="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm sm:grid-cols-3 lg:grid-cols-6 dark:border-zinc-800 dark:bg-zinc-900">
+    <form method="GET" action="{{ route('sherlock.traces.index') }}" class="mb-4 grid grid-cols-2 gap-2 rounded-xl border border-zinc-200 bg-white p-3 text-sm sm:grid-cols-3 lg:grid-cols-6 dark:border-zinc-800 dark:bg-zinc-900">
         @if ($filters->issueId !== null)
             <input type="hidden" name="issue" value="{{ $filters->issueId }}">
         @endif
@@ -67,9 +67,9 @@
     </form>
 
     @if ($traces->total() === 0)
-        @include('tracing::dashboard.partials.empty', [
+        @include('sherlock::dashboard.partials.empty', [
             'message' => 'No traces match these filters.',
-            'hint' => 'In production mode only problematic or sampled units are stored; use "php artisan tracing:watch" for full tracing.',
+            'hint' => 'In production mode only problematic or sampled units are stored; use "php artisan sherlock:watch" for full tracing.',
         ])
     @else
         <div class="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -87,7 +87,7 @@
                     @foreach ($traces as $trace)
                         <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                             <td class="max-w-[11rem] px-4 py-2.5 sm:max-w-md">
-                                <a href="{{ route('tracing.traces.show', ['trace' => $trace->id]) }}" class="block truncate font-mono text-xs font-medium hover:underline" title="{{ $trace->name }}">{{ $trace->name }}</a>
+                                <a href="{{ route('sherlock.traces.show', ['trace' => $trace->id]) }}" class="block truncate font-mono text-xs font-medium hover:underline" title="{{ $trace->name }}">{{ $trace->name }}</a>
                                 <span class="text-xs text-zinc-500 dark:text-zinc-400">
                                     {{ $trace->type->label() }}@if ($trace->statusCode) · <span class="{{ Badge::tone($trace->statusCode >= 500) }}">{{ $trace->statusCode }}</span>@endif · {{ $trace->recordReason->value }}
                                 </span>
@@ -105,5 +105,5 @@
         </div>
     @endif
 
-    @include('tracing::dashboard.partials.pagination', ['paginator' => $traces])
+    @include('sherlock::dashboard.partials.pagination', ['paginator' => $traces])
 @endsection

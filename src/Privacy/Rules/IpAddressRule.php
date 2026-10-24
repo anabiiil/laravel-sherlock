@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Privacy\Rules;
+namespace Anabil\Sherlock\Privacy\Rules;
 
-use Anabil\Tracing\Contracts\RedactionRule;
-use Anabil\Tracing\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\RedactionRule;
+use Anabil\Sherlock\Contracts\Redactor;
 
 /**
  * IPv4 and IPv6 addresses. IPv6 candidates must be full (8 groups) or compressed ("::")

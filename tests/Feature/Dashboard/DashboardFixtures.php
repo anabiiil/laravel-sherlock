@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Dashboard;
+namespace Anabil\Sherlock\Tests\Feature\Dashboard;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\IssueService;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Data\AiAnalysisResult;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Http\Middleware\Authorize;
-use Anabil\Tracing\Tests\Feature\Storage\StorageFixtures as F;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\IssueService;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\AiAnalysisResult;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Http\Middleware\Authorize;
+use Anabil\Sherlock\Tests\Feature\Storage\StorageFixtures as F;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Gate;
 use RuntimeException;

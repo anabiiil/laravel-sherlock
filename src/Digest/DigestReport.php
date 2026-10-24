@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Digest;
+namespace Anabil\Sherlock\Digest;
 
-use Anabil\Tracing\Data\EntryStat;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Data\QueryStat;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Data\EntryStat;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Data\QueryStat;
+use Anabil\Sherlock\Enums\Severity;
 use DateTimeImmutable;
 
 /**

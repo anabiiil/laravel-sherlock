@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\AiRequest;
-use Anabil\Tracing\Data\AiResponse;
+use Anabil\Sherlock\Data\AiRequest;
+use Anabil\Sherlock\Data\AiResponse;
 
 interface AiProvider
 {

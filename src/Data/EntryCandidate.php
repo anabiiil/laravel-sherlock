@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
-use Anabil\Tracing\Enums\EntryType;
+use Anabil\Sherlock\Enums\EntryType;
 
 /**
  * What is known about a unit when it starts, used by recording policies.
@@ -14,7 +14,7 @@ final readonly class EntryCandidate
 {
     /**
      * @param  string  $name  URI path (requests), job class, command name
-     * @param  string|null  $triggerHeader  raw value of the X-Tracing header, compared with hash_equals()
+     * @param  string|null  $triggerHeader  raw value of the X-Sherlock header, compared with hash_equals()
      */
     public function __construct(
         public EntryType $type,

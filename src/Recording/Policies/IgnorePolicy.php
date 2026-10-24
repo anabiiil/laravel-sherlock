@@ -2,29 +2,29 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Recording\Policies;
+namespace Anabil\Sherlock\Recording\Policies;
 
-use Anabil\Tracing\Contracts\RecordingPolicy;
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Data\RecordingDecision;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Recording\PatternList;
+use Anabil\Sherlock\Contracts\RecordingPolicy;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Data\RecordingDecision;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Recording\PatternList;
 
 /**
  * Ignore lists from config (paths, route names, HTTP methods, jobs, commands). Runs first
  * in the CompositeRecordingPolicy and short-circuits: an ignored unit records nothing.
  * Patterns are compiled once (PatternList).
  *
- * The package's own jobs (Anabil\Tracing\Jobs, Anabil\Tracing\Notifications\Jobs) and commands
- * (tracing:...) are always ignored,
+ * The package's own jobs (Anabil\Sherlock\Jobs, Anabil\Sherlock\Notifications\Jobs) and commands
+ * (sherlock:...) are always ignored,
  * whatever the config says: tracing them would make the package report on itself.
  */
 final class IgnorePolicy implements RecordingPolicy
 {
     /** @var list<string> */
-    public const PACKAGE_JOB_PREFIXES = ['Anabil\\Tracing\\Jobs\\', 'Anabil\\Tracing\\Notifications\\Jobs\\'];
+    public const PACKAGE_JOB_PREFIXES = ['Anabil\\Sherlock\\Jobs\\', 'Anabil\\Sherlock\\Notifications\\Jobs\\'];
 
-    public const PACKAGE_COMMAND_PREFIX = 'tracing:';
+    public const PACKAGE_COMMAND_PREFIX = 'sherlock:';
 
     private readonly PatternList $paths;
 
@@ -66,7 +66,7 @@ final class IgnorePolicy implements RecordingPolicy
     }
 
     /**
-     * @param  array<string, mixed>  $config  the "tracing.ignore" config array
+     * @param  array<string, mixed>  $config  the "sherlock.ignore" config array
      */
     public static function fromConfig(array $config): self
     {

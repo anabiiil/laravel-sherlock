@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Explain;
+namespace Anabil\Sherlock\Analysis\Explain;
 
 use Illuminate\Database\Connection;
 use PDO;

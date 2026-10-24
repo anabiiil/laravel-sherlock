@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Data\RecordingDecision;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Data\RecordingDecision;
 
 /**
  * Decides at unit start whether / how to capture (Strategy; combined by CompositeRecordingPolicy).

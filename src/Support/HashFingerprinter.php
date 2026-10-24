@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support;
+namespace Anabil\Sherlock\Support;
 
-use Anabil\Tracing\Contracts\Fingerprinter;
-use Anabil\Tracing\Contracts\QueryNormalizer;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Enums\IssueType;
+use Anabil\Sherlock\Contracts\Fingerprinter;
+use Anabil\Sherlock\Contracts\QueryNormalizer;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Enums\IssueType;
 
 /**
  * xxh128 hashes (32 hex chars): fast, stable across PHP versions and processes.

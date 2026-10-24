@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Ai;
+namespace Anabil\Sherlock\Ai;
 
-use Anabil\Tracing\Ai\Drivers\AnthropicDriver;
-use Anabil\Tracing\Ai\Drivers\GeminiDriver;
-use Anabil\Tracing\Ai\Drivers\NullDriver;
-use Anabil\Tracing\Ai\Drivers\OllamaDriver;
-use Anabil\Tracing\Ai\Drivers\OpenAiCompatibleDriver;
-use Anabil\Tracing\Contracts\AiProvider;
-use Anabil\Tracing\Contracts\AiProviderFactory;
-use Anabil\Tracing\Contracts\Redactor;
+use Anabil\Sherlock\Ai\Drivers\AnthropicDriver;
+use Anabil\Sherlock\Ai\Drivers\GeminiDriver;
+use Anabil\Sherlock\Ai\Drivers\NullDriver;
+use Anabil\Sherlock\Ai\Drivers\OllamaDriver;
+use Anabil\Sherlock\Ai\Drivers\OpenAiCompatibleDriver;
+use Anabil\Sherlock\Contracts\AiProvider;
+use Anabil\Sherlock\Contracts\AiProviderFactory;
+use Anabil\Sherlock\Contracts\Redactor;
 use Closure;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
@@ -19,9 +19,9 @@ use Illuminate\Http\Client\Factory as HttpFactory;
 use InvalidArgumentException;
 
 /**
- * AI driver manager (Factory + Strategy). Driver config = preset (tracing.ai.drivers.<name>)
+ * AI driver manager (Factory + Strategy). Driver config = preset (sherlock.ai.drivers.<name>)
  * <- user overrides: the top-level model / base_url / api_key apply to the selected driver
- * (tracing.ai.driver) only, so resolving another driver explicitly never inherits a model
+ * (sherlock.ai.driver) only, so resolving another driver explicitly never inherits a model
  * meant for a different provider. Every resolved provider, custom ones included, is wrapped
  * in RedactingAiProvider.
  */
@@ -61,7 +61,7 @@ final class AiManager implements AiProviderFactory
 
     public function defaultDriver(): string
     {
-        $driver = $this->config->get('tracing.ai.driver');
+        $driver = $this->config->get('sherlock.ai.driver');
 
         return is_string($driver) && trim($driver) !== '' ? trim($driver) : 'anthropic';
     }
@@ -73,7 +73,7 @@ final class AiManager implements AiProviderFactory
      */
     public function configFor(string $name): array
     {
-        $ai = $this->config->get('tracing.ai', []);
+        $ai = $this->config->get('sherlock.ai', []);
         $ai = is_array($ai) ? $ai : [];
         $drivers = is_array($ai['drivers'] ?? null) ? $ai['drivers'] : [];
         $preset = is_array($drivers[$name] ?? null) ? $drivers[$name] : [];
@@ -121,7 +121,7 @@ final class AiManager implements AiProviderFactory
             $name === 'null' => new NullDriver,
             in_array($name, self::OPENAI_COMPATIBLE, true) => new OpenAiCompatibleDriver($name, $config, $http),
             default => throw new InvalidArgumentException(sprintf(
-                'AI driver [%s] is not supported. Use one of: %s, or register it with Tracing::extendAi().',
+                'AI driver [%s] is not supported. Use one of: %s, or register it with Sherlock::extendAi().',
                 $name,
                 implode(', ', [...self::DRIVERS, ...array_keys($this->customCreators)]),
             )),

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\IssueOutcome;
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Enums\IssueStatus;
+use Anabil\Sherlock\Data\IssueOutcome;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Enums\IssueStatus;
 
 /**
  * Turns findings into issues (new / recurring / regressed), fires IssueDetected / IssueRegressed

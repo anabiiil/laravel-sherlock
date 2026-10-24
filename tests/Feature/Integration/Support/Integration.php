@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Integration\Support;
+namespace Anabil\Sherlock\Tests\Feature\Integration\Support;
 
-use Anabil\Tracing\Collectors\QueryCollector;
-use Anabil\Tracing\Storage\Support\QuietReporter;
-use Anabil\Tracing\Tests\Feature\Integration\Fixtures\IntegrationController;
+use Anabil\Sherlock\Collectors\QueryCollector;
+use Anabil\Sherlock\Storage\Support\QuietReporter;
+use Anabil\Sherlock\Tests\Feature\Integration\Fixtures\IntegrationController;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -65,12 +65,12 @@ final class Integration
     {
         QuietReporter::flush();
 
-        config()->set('tracing.mode', $mode);
-        config()->set('tracing.sample_rate', 0.0);
-        config()->set('tracing.thresholds.slow_query.warning_ms', self::SLOW_QUERY_MS);
-        config()->set('tracing.header.secret', 'integration-header-secret');
+        config()->set('sherlock.mode', $mode);
+        config()->set('sherlock.sample_rate', 0.0);
+        config()->set('sherlock.thresholds.slow_query.warning_ms', self::SLOW_QUERY_MS);
+        config()->set('sherlock.header.secret', 'integration-header-secret');
         // EXPLAIN runs on slow SELECTs; sleep() has no table, keep the suites deterministic.
-        config()->set('tracing.explain.enabled', false);
+        config()->set('sherlock.explain.enabled', false);
 
         self::createSchema();
         self::truncateStorage();
@@ -131,13 +131,13 @@ final class Integration
         Route::get('/integration/nested', [IntegrationController::class, 'nested'])->name('integration.nested');
     }
 
-    /** @return list<string> every tracing_* table that exists on the tracing connection */
+    /** @return list<string> every sherlock_* table that exists on the Sherlock connection */
     public static function storageTables(?string $connection = null): array
     {
         $db = DB::connection($connection);
         $rows = $db->select(
             'select table_name as name from information_schema.tables where table_schema = ? and table_name like ?',
-            [$db->getDatabaseName(), 'tracing\_%'],
+            [$db->getDatabaseName(), 'sherlock\_%'],
         );
 
         return array_values(array_map(static fn (object $row): string => (string) $row->name, $rows));

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Ai\PromptBuilder;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Privacy\Redactor;
+use Anabil\Sherlock\Ai\PromptBuilder;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Privacy\Redactor;
 use Illuminate\Config\Repository;
 
 function aiPromptIssue(IssueType $type = IssueType::SlowQuery, array $context = []): IssueRecord
@@ -41,7 +41,7 @@ function aiPromptIssue(IssueType $type = IssueType::SlowQuery, array $context = 
 }
 
 beforeEach(function (): void {
-    $this->base = sys_get_temp_dir().'/tracing-ai-'.bin2hex(random_bytes(4));
+    $this->base = sys_get_temp_dir().'/sherlock-ai-'.bin2hex(random_bytes(4));
     $this->outside = $this->base.'-outside';
     mkdir($this->base.'/app/Http/Controllers', 0777, true);
     mkdir($this->outside, 0777, true);
@@ -62,7 +62,7 @@ beforeEach(function (): void {
     file_put_contents($this->base.'/storage/logs/cached.php', "<?php // dbsecret\n");
     file_put_contents($this->base.'/app/notes.txt', "supersecret\n");
 
-    $this->config = new Repository(['tracing' => ['ai' => [
+    $this->config = new Repository(['sherlock' => ['ai' => [
         'language' => 'en', 'max_tokens' => 1200, 'timeout' => 25,
         'send_code_snippet' => false, 'snippet_lines' => 2, 'include_schema' => true,
     ]]]);
@@ -96,7 +96,7 @@ it('builds a request with config limits and a structured system prompt', functio
 });
 
 it('answers in the configured language', function (): void {
-    $this->config->set('tracing.ai.language', 'ar');
+    $this->config->set('sherlock.ai.language', 'ar');
 
     expect($this->builder->systemPrompt())->toContain('in Arabic');
 });
@@ -147,7 +147,7 @@ it('finds the tables referenced by the SQL and the insights', function (): void 
 });
 
 it('includes a redacted snippet only when send_code_snippet is enabled', function (): void {
-    $this->config->set('tracing.ai.send_code_snippet', true);
+    $this->config->set('sherlock.ai.send_code_snippet', true);
 
     $prompt = $this->builder->userPrompt(aiPromptIssue());
 
@@ -164,7 +164,7 @@ it('includes a redacted snippet only when send_code_snippet is enabled', functio
 it('never reads .env files or anything outside the base path', function (string $file): void {
     expect($this->builder->snippet($file, 1, 5))->toBeNull();
 
-    $this->config->set('tracing.ai.send_code_snippet', true);
+    $this->config->set('sherlock.ai.send_code_snippet', true);
     $prompt = $this->builder->userPrompt(aiPromptIssue(context: ['location' => ['file' => $file, 'line' => 1]]));
 
     expect($prompt)->not->toContain('supersecret')
@@ -174,7 +174,7 @@ it('never reads .env files or anything outside the base path', function (string 
 })->with([
     '.env' => '.env',
     'traversal to .env' => 'app/../.env',
-    'outside base path' => '../'.'tracing-outside-does-not-matter.php',
+    'outside base path' => '../'.'sherlock-outside-does-not-matter.php',
     'absolute outside path' => '/etc/hosts',
     'symlink pointing outside' => 'app/linked.php',
     'missing file' => 'app/Nope.php',

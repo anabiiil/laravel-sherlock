@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Tests\Feature\Capture\Support\Capture;
-use Anabil\Tracing\Tests\Feature\Capture\Support\CaptureJob;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Tests\Feature\Capture\Support\Capture;
+use Anabil\Sherlock\Tests\Feature\Capture\Support\CaptureJob;
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 beforeEach(function (): void {
-    config()->set('tracing.mode', 'production');
-    config()->set('tracing.sample_rate', 0.0);
+    config()->set('sherlock.mode', 'production');
+    config()->set('sherlock.sample_rate', 0.0);
 
     $this->recorder = Capture::fakeRecorder();
 });
@@ -71,7 +71,7 @@ it('does not record a reported job exception twice', function (): void {
 });
 
 it('ignores the package\'s own jobs', function (): void {
-    config()->set('tracing.ignore.jobs', [CaptureJob::class]);
+    config()->set('sherlock.ignore.jobs', [CaptureJob::class]);
 
     dispatch(new CaptureJob(2));
 
@@ -145,7 +145,7 @@ it('attributes nested Artisan::call() to the outer command', function (): void {
 it('records nothing for ignored commands', function (): void {
     captureRerouteCommandEvents();
 
-    Artisan::call('tracing:status');
+    Artisan::call('sherlock:status');
     app()->terminate();
 
     expect($this->recorder->traces)->toBe([]);

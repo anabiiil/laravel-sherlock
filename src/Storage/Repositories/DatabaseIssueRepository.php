@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Storage\Repositories;
+namespace Anabil\Sherlock\Storage\Repositories;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Data\AiAnalysisResult;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\IssueFilter;
-use Anabil\Tracing\Data\IssueOutcome;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\OccurrenceType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Storage\Support\Values;
-use Anabil\Tracing\Storage\Tables;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Data\AiAnalysisResult;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\IssueFilter;
+use Anabil\Sherlock\Data\IssueOutcome;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Enums\AiStatus;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\OccurrenceType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Storage\Support\Values;
+use Anabil\Sherlock\Storage\Tables;
 use Carbon\CarbonImmutable;
 use DateTimeImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator as LengthAwarePaginatorContract;
@@ -27,7 +27,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 
 /**
- * tracing_issues + tracing_issue_traces through the query builder.
+ * sherlock_issues + sherlock_issue_traces through the query builder.
  *
  * recordOccurrence() is race-safe without locks: the unique fingerprint + insertOrIgnore
  * decides who creates an issue, a conditional UPDATE ... WHERE status = 'resolved' decides

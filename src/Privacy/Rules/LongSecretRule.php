@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Privacy\Rules;
+namespace Anabil\Sherlock\Privacy\Rules;
 
-use Anabil\Tracing\Contracts\RedactionRule;
-use Anabil\Tracing\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\RedactionRule;
+use Anabil\Sherlock\Contracts\Redactor;
 
 /**
  * Well-known API key shapes, long hex strings (>= 32) and long high-entropy

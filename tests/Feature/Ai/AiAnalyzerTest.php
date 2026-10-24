@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Ai\AiManager;
-use Anabil\Tracing\Ai\DefaultAiAnalyzer;
-use Anabil\Tracing\Contracts\AiAnalyzer;
-use Anabil\Tracing\Contracts\AiBudget;
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\IssueService;
-use Anabil\Tracing\Contracts\NotificationDispatcher;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\NotificationMessage;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Issues\IssueContextBuilder;
-use Anabil\Tracing\Jobs\AnalyzeIssueJob;
-use Anabil\Tracing\Jobs\NotifyIssueJob;
-use Anabil\Tracing\Tests\Feature\Storage\StorageFixtures as F;
+use Anabil\Sherlock\Ai\AiManager;
+use Anabil\Sherlock\Ai\DefaultAiAnalyzer;
+use Anabil\Sherlock\Contracts\AiAnalyzer;
+use Anabil\Sherlock\Contracts\AiBudget;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\IssueService;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\NotificationMessage;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Enums\AiStatus;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Issues\IssueContextBuilder;
+use Anabil\Sherlock\Jobs\AnalyzeIssueJob;
+use Anabil\Sherlock\Jobs\NotifyIssueJob;
+use Anabil\Sherlock\Tests\Feature\Storage\StorageFixtures as F;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
-const AI_SQL = 'select * from `tracing_issues` where `fingerprint` = ? and `status` = ?';
+const AI_SQL = 'select * from `sherlock_issues` where `fingerprint` = ? and `status` = ?';
 
 function aiFinding(
     string $fingerprint = 'ai-issue-1',
@@ -74,19 +74,19 @@ function aiAnalyzer(): DefaultAiAnalyzer
     return app(AiAnalyzer::class);
 }
 
-function aiIssueRecord(int|string $id): Anabil\Tracing\Data\IssueRecord
+function aiIssueRecord(int|string $id): Anabil\Sherlock\Data\IssueRecord
 {
     return app(IssueRepository::class)->find($id);
 }
 
 beforeEach(function (): void {
-    config()->set('tracing.ai.enabled', true);
-    config()->set('tracing.ai.driver', 'anthropic');
-    config()->set('tracing.ai.api_key', 'sk-ant-test-key');
-    config()->set('tracing.ai.min_severity', 'warning');
-    config()->set('tracing.ai.daily_limit', 10);
-    config()->set('tracing.ai.analyze', ['performance' => true, 'exceptions' => false]);
-    config()->set('tracing.queue.connection', 'sync');
+    config()->set('sherlock.ai.enabled', true);
+    config()->set('sherlock.ai.driver', 'anthropic');
+    config()->set('sherlock.ai.api_key', 'sk-ant-test-key');
+    config()->set('sherlock.ai.min_severity', 'warning');
+    config()->set('sherlock.ai.daily_limit', 10);
+    config()->set('sherlock.ai.analyze', ['performance' => true, 'exceptions' => false]);
+    config()->set('sherlock.queue.connection', 'sync');
     config()->set('queue.default', 'sync');
     app(AiManager::class)->forgetDrivers();
     app()->forgetInstance(AiBudget::class);
@@ -187,7 +187,7 @@ it('analyzes a regressed issue (ai_status pending) even without fresh', function
 });
 
 it('skips with skipped_budget and no HTTP call when the budget is exhausted', function (): void {
-    config()->set('tracing.ai.daily_limit', 1);
+    config()->set('sherlock.ai.daily_limit', 1);
     app()->forgetInstance(AiBudget::class);
     app()->forgetInstance(AiAnalyzer::class);
 
@@ -204,7 +204,7 @@ it('skips with skipped_budget and no HTTP call when the budget is exhausted', fu
 });
 
 it('makes no call at all with daily_limit = 0', function (): void {
-    config()->set('tracing.ai.daily_limit', 0);
+    config()->set('sherlock.ai.daily_limit', 0);
     app()->forgetInstance(AiBudget::class);
     app()->forgetInstance(AiAnalyzer::class);
 
@@ -257,12 +257,12 @@ it('still sends the notification when the analyzer itself blows up', function ()
     $notified = aiFakeDispatcher();
     app()->instance(AiAnalyzer::class, new class implements AiAnalyzer
     {
-        public function analyze(int|string $issueId, bool $fresh = false): Anabil\Tracing\Data\AiAnalysisResult
+        public function analyze(int|string $issueId, bool $fresh = false): Anabil\Sherlock\Data\AiAnalysisResult
         {
             throw new RuntimeException('boom');
         }
 
-        public function shouldAnalyze(Anabil\Tracing\Data\IssueRecord $issue, bool $fresh = false): bool
+        public function shouldAnalyze(Anabil\Sherlock\Data\IssueRecord $issue, bool $fresh = false): bool
         {
             return true;
         }
@@ -282,21 +282,21 @@ it('honours the exceptions toggle (default off)', function (): void {
         ->and(aiIssueRecord($id)->aiStatus)->toBe(AiStatus::SkippedDisabled);
     Http::assertNothingSent();
 
-    config()->set('tracing.ai.analyze.exceptions', true);
+    config()->set('sherlock.ai.analyze.exceptions', true);
 
     expect(aiAnalyzer()->analyze($id)->isDone())->toBeTrue();
     Http::assertSent(fn (Request $r): bool => str_contains($r->data()['messages'][0]['content'], 'Class: RuntimeException'));
 });
 
 it('skips performance issues when the performance toggle is off', function (): void {
-    config()->set('tracing.ai.analyze.performance', false);
+    config()->set('sherlock.ai.analyze.performance', false);
 
     expect(aiAnalyzer()->analyze(aiIssue())->status)->toBe(AiStatus::SkippedDisabled);
     Http::assertNothingSent();
 });
 
 it('skips when AI is disabled', function (): void {
-    config()->set('tracing.ai.enabled', false);
+    config()->set('sherlock.ai.enabled', false);
     $id = aiIssue();
 
     expect(aiAnalyzer()->analyze($id)->status)->toBe(AiStatus::SkippedDisabled)
@@ -305,7 +305,7 @@ it('skips when AI is disabled', function (): void {
 });
 
 it('skips issues below min_severity', function (): void {
-    config()->set('tracing.ai.min_severity', 'critical');
+    config()->set('sherlock.ai.min_severity', 'critical');
     $id = aiIssue(aiFinding('ai-warning', severity: Severity::Warning));
 
     expect(aiAnalyzer()->analyze($id)->status)->toBe(AiStatus::SkippedSeverity)
@@ -325,16 +325,16 @@ it('decides shouldAnalyze from enabled, type, severity and stored analysis', fun
     expect(aiAnalyzer()->shouldAnalyze($analyzed))->toBeFalse()
         ->and(aiAnalyzer()->shouldAnalyze($analyzed, fresh: true))->toBeTrue();
 
-    config()->set('tracing.ai.min_severity', 'critical');
+    config()->set('sherlock.ai.min_severity', 'critical');
     expect(aiAnalyzer()->shouldAnalyze(aiIssueRecord(aiIssue(aiFinding('w', severity: Severity::Warning)))))->toBeFalse();
 
-    config()->set('tracing.ai.enabled', false);
+    config()->set('sherlock.ai.enabled', false);
     expect(aiAnalyzer()->shouldAnalyze($issue))->toBeFalse();
 });
 
 it('does not pay twice while another worker holds the issue lock', function (): void {
     $id = aiIssue();
-    $lock = Cache::lock('tracing:ai:analyze:'.$id, 60);
+    $lock = Cache::lock('sherlock:ai:analyze:'.$id, 60);
     expect($lock->get())->toBeTrue();
 
     $result = aiAnalyzer()->analyze($id);
@@ -355,7 +355,7 @@ it('fails gracefully for an unknown issue', function (): void {
 });
 
 it('sends no real data: planted secrets are redacted, SQL is normalized, no bindings', function (): void {
-    config()->set('tracing.ai.send_code_snippet', false);
+    config()->set('sherlock.ai.send_code_snippet', false);
     $id = aiIssue(aiFinding(description: 'Slow for user john.doe@example.com password=hunter2 Bearer abcdef1234567890xyz'), [
         'recommendation' => 'Ask ops@example.com, api_key=sk_live_123456789abcdef',
     ]);
@@ -379,13 +379,13 @@ it('includes the table schema and existing indexes of the referenced tables', fu
     aiAnalyzer()->analyze(aiIssue());
 
     Http::assertSent(fn (Request $r): bool => str_contains($prompt = $r->data()['messages'][0]['content'], 'Table schema')
-        && str_contains($prompt, '`tracing_issues`')
+        && str_contains($prompt, '`sherlock_issues`')
         && str_contains($prompt, 'fingerprint varchar')
         && str_contains($prompt, 'unique(fingerprint)'));
 });
 
 it('omits the schema when include_schema is off', function (): void {
-    config()->set('tracing.ai.include_schema', false);
+    config()->set('sherlock.ai.include_schema', false);
 
     aiAnalyzer()->analyze(aiIssue());
 

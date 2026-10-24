@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Context\ContextManager;
-use Anabil\Tracing\Context\TraceContext;
-use Anabil\Tracing\Data\HttpCallRecord;
-use Anabil\Tracing\Data\LogRecord;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\RecordingDecision;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\RecordReason;
-use Anabil\Tracing\Support\Null\NullTraceContext;
+use Anabil\Sherlock\Context\ContextManager;
+use Anabil\Sherlock\Context\TraceContext;
+use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Data\LogRecord;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\RecordingDecision;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\RecordReason;
+use Anabil\Sherlock\Support\Null\NullTraceContext;
 
 function captureQuery(float $ms = 1.0, string $sql = 'select 1'): QueryRecord
 {

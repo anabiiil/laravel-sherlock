@@ -15,18 +15,18 @@ return [
     |              only when a threshold is crossed (see "persist_min_severity"), an
     |              exception happens, or the trace is sampled (see "sample_rate").
     |
-    | The safe default is "production". Set TRACING_MODE=local on dev machines.
+    | The safe default is "production". Set SHERLOCK_MODE=local on dev machines.
     |
     */
 
-    'mode' => env('TRACING_MODE', 'production'),
+    'mode' => env('SHERLOCK_MODE', 'production'),
 
     // Fraction (0.0 - 1.0) of non-problematic units persisted in production as a baseline.
-    'sample_rate' => (float) env('TRACING_SAMPLE_RATE', 0.05),
+    'sample_rate' => (float) env('SHERLOCK_SAMPLE_RATE', 0.05),
 
     // In production, a trace is persisted when at least one finding reaches this severity
     // (info|warning|critical). Exceptions / log errors are always persisted.
-    'persist_min_severity' => env('TRACING_PERSIST_MIN_SEVERITY', 'warning'),
+    'persist_min_severity' => env('SHERLOCK_PERSIST_MIN_SEVERITY', 'warning'),
 
     /*
     |--------------------------------------------------------------------------
@@ -39,9 +39,9 @@ return [
     */
 
     'capture' => [
-        'requests' => env('TRACING_CAPTURE_REQUESTS', true),
-        'jobs' => env('TRACING_CAPTURE_JOBS', true),
-        'commands' => env('TRACING_CAPTURE_COMMANDS', true),
+        'requests' => env('SHERLOCK_CAPTURE_REQUESTS', true),
+        'jobs' => env('SHERLOCK_CAPTURE_JOBS', true),
+        'commands' => env('SHERLOCK_CAPTURE_COMMANDS', true),
 
         'queries' => true,
         'http_client' => true,
@@ -50,7 +50,7 @@ return [
         'exceptions' => true,
 
         // Minimum log level captured (PSR-3 name). "error" covers error, critical, alert, emergency.
-        'log_level' => env('TRACING_LOG_LEVEL', 'error'),
+        'log_level' => env('SHERLOCK_LOG_LEVEL', 'error'),
 
         // Source location (backtrace) capture, with DEBUG_BACKTRACE_IGNORE_ARGS: once per SQL
         // string per trace (first occurrence in full capture, second in production lightweight
@@ -73,13 +73,13 @@ return [
 
     'thresholds' => [
         'slow_query' => [
-            'warning_ms' => (int) env('TRACING_SLOW_QUERY_MS', 100),
+            'warning_ms' => (int) env('SHERLOCK_SLOW_QUERY_MS', 100),
             'critical_ms' => 1000,
         ],
 
         // Same fingerprint + same source location repeated in one trace.
         'n_plus_one' => [
-            'warning_count' => (int) env('TRACING_N_PLUS_ONE_THRESHOLD', 5),
+            'warning_count' => (int) env('SHERLOCK_N_PLUS_ONE_THRESHOLD', 5),
             'critical_count' => 20,
         ],
 
@@ -90,7 +90,7 @@ return [
 
         // Total query count per trace.
         'excessive_queries' => [
-            'warning_count' => (int) env('TRACING_MAX_QUERIES', 50),
+            'warning_count' => (int) env('SHERLOCK_MAX_QUERIES', 50),
             'critical_count' => 200,
         ],
 
@@ -103,13 +103,13 @@ return [
 
         // Peak memory per unit.
         'memory' => [
-            'warning_mb' => (int) env('TRACING_MEMORY_MB', 128),
+            'warning_mb' => (int) env('SHERLOCK_MEMORY_MB', 128),
             'critical_mb' => 512,
         ],
 
         // Outgoing HTTP call duration.
         'slow_http' => [
-            'warning_ms' => (int) env('TRACING_SLOW_HTTP_MS', 1000),
+            'warning_ms' => (int) env('SHERLOCK_SLOW_HTTP_MS', 1000),
             'critical_ms' => 5000,
         ],
 
@@ -142,21 +142,21 @@ return [
     |--------------------------------------------------------------------------
     |
     | Analyzer pipeline (Strategy). Each class implements
-    | Anabil\Tracing\Contracts\Analyzer. Add your own or remove any.
+    | Anabil\Sherlock\Contracts\Analyzer. Add your own or remove any.
     |
     */
 
     'analyzers' => [
-        'Anabil\Tracing\Analysis\Analyzers\SlowQueryAnalyzer',
-        'Anabil\Tracing\Analysis\Analyzers\NPlusOneAnalyzer',
-        'Anabil\Tracing\Analysis\Analyzers\DuplicateQueryAnalyzer',
-        'Anabil\Tracing\Analysis\Analyzers\ExcessiveQueriesAnalyzer',
-        'Anabil\Tracing\Analysis\Analyzers\SlowEntryAnalyzer',
-        'Anabil\Tracing\Analysis\Analyzers\HighMemoryAnalyzer',
-        'Anabil\Tracing\Analysis\Analyzers\SlowExternalCallAnalyzer',
-        'Anabil\Tracing\Analysis\Analyzers\CacheMissRateAnalyzer',
-        'Anabil\Tracing\Analysis\Analyzers\ExceptionAnalyzer',
-        'Anabil\Tracing\Analysis\Analyzers\MissingIndexAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\SlowQueryAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\NPlusOneAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\DuplicateQueryAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\ExcessiveQueriesAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\SlowEntryAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\HighMemoryAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\SlowExternalCallAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\CacheMissRateAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\ExceptionAnalyzer',
+        'Anabil\Sherlock\Analysis\Analyzers\MissingIndexAnalyzer',
     ],
 
     /*
@@ -190,7 +190,7 @@ return [
     */
 
     'explain' => [
-        'enabled' => env('TRACING_EXPLAIN', true),
+        'enabled' => env('SHERLOCK_EXPLAIN', true),
         'only_select' => true,
         // Minimum query time to explain; null = thresholds.slow_query.warning_ms. In production,
         // such queries keep their redacted bindings in memory until EXPLAIN ran (never stored).
@@ -203,12 +203,12 @@ return [
         // MariaDB max_statement_time, PostgreSQL statement_timeout).
         'timeout_ms' => 1000,
         // Environments where EXPLAIN may run (array or comma separated); null = all.
-        'environments' => env('TRACING_EXPLAIN_ENVIRONMENTS'),
+        'environments' => env('SHERLOCK_EXPLAIN_ENVIRONMENTS'),
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | Watch window (php artisan tracing:watch)
+    | Watch window (php artisan sherlock:watch)
     |--------------------------------------------------------------------------
     |
     | Temporary full tracing stored in cache. Use a shared store (redis) so all
@@ -218,17 +218,17 @@ return [
     | one cache "get" per memo_seconds per process. PHP-FPM rebuilds the app on every
     | request, so the read is shared across FPM workers through APCu when the extension
     | is enabled ("shared_memo"); without APCu it is one cache get per request. Set
-    | "enabled" to false to never read the cache in the request path (tracing:watch
+    | "enabled" to false to never read the cache in the request path (sherlock:watch
     | then has no effect).
     |
     */
 
     'watch' => [
-        'enabled' => env('TRACING_WATCH_ENABLED', true),
+        'enabled' => env('SHERLOCK_WATCH_ENABLED', true),
         // Share the last read between the PHP-FPM workers of a server (APCu, when available).
         'shared_memo' => true,
-        'cache_store' => env('TRACING_WATCH_STORE'),
-        'cache_key' => 'tracing:watch',
+        'cache_store' => env('SHERLOCK_WATCH_STORE'),
+        'cache_key' => 'sherlock:watch',
         'default_minutes' => 30,
         'max_minutes' => 1440,
         // Seconds a worker process (Octane / queue / long commands) reuses the last cache
@@ -247,9 +247,9 @@ return [
     */
 
     'header' => [
-        'enabled' => env('TRACING_HEADER_ENABLED', true),
-        'name' => 'X-Tracing',
-        'secret' => env('TRACING_HEADER_SECRET'),
+        'enabled' => env('SHERLOCK_HEADER_ENABLED', true),
+        'name' => 'X-Sherlock',
+        'secret' => env('SHERLOCK_HEADER_SECRET'),
     ],
 
     /*
@@ -263,7 +263,7 @@ return [
 
     'ignore' => [
         'paths' => [
-            'tracing*',
+            'sherlock*',
             'horizon*',
             'telescope*',
             'pulse*',
@@ -279,7 +279,7 @@ return [
 
         // Job class names.
         'jobs' => [
-            'Anabil\Tracing\Jobs\*',
+            'Anabil\Sherlock\Jobs\*',
         ],
 
         // Artisan command names.
@@ -297,7 +297,7 @@ return [
             'package:discover',
             'vendor:publish',
             'migrate*',
-            'tracing:*',
+            'sherlock:*',
         ],
 
         // SQL patterns (Str::is on the raw SQL) never recorded.
@@ -312,27 +312,27 @@ return [
     | Storage
     |--------------------------------------------------------------------------
     |
-    | Tables are prefixed "tracing_". The package's own queries are never recorded.
+    | Tables are prefixed "sherlock_". The package's own queries are never recorded.
     | Persistence: "after_response" (in the terminating callback, after the
     | response is sent) or "queue" (a PersistTraceJob on the queue below).
     |
     */
 
     'storage' => [
-        'connection' => env('TRACING_DB_CONNECTION'),
-        // Prefix for the package tables (tracing_traces, tracing_issues, ...).
-        'table_prefix' => env('TRACING_TABLE_PREFIX', 'tracing_'),
-        'persistence' => env('TRACING_PERSISTENCE', 'after_response'),
+        'connection' => env('SHERLOCK_DB_CONNECTION'),
+        // Prefix for the package tables (sherlock_traces, sherlock_issues, ...).
+        'table_prefix' => env('SHERLOCK_TABLE_PREFIX', 'sherlock_'),
+        'persistence' => env('SHERLOCK_PERSISTENCE', 'after_response'),
         // Max query rows stored per trace (the slowest / most relevant first).
         'max_queries_per_trace' => 200,
-        // Example traces kept per issue (tracing_issue_traces).
+        // Example traces kept per issue (sherlock_issue_traces).
         'issue_traces_cap' => 10,
     ],
 
     // Queue used by all package jobs (persist, AI analysis, notifications, digest).
     'queue' => [
-        'connection' => env('TRACING_QUEUE_CONNECTION'),
-        'name' => env('TRACING_QUEUE', 'default'),
+        'connection' => env('SHERLOCK_QUEUE_CONNECTION'),
+        'name' => env('SHERLOCK_QUEUE', 'default'),
     ],
 
     /*
@@ -340,7 +340,7 @@ return [
     | Retention
     |--------------------------------------------------------------------------
     |
-    | Days to keep; null keeps forever. tracing:prune is scheduled automatically
+    | Days to keep; null keeps forever. sherlock:prune is scheduled automatically
     | unless "schedule" is false.
     |
     */
@@ -376,7 +376,7 @@ return [
         // Extra regexes; every match is replaced with [REDACTED].
         'patterns' => [],
 
-        'store_bindings' => env('TRACING_STORE_BINDINGS', 'auto'),
+        'store_bindings' => env('SHERLOCK_STORE_BINDINGS', 'auto'),
     ],
 
     /*
@@ -391,18 +391,18 @@ return [
     */
 
     'notifications' => [
-        'enabled' => env('TRACING_NOTIFICATIONS', false),
+        'enabled' => env('SHERLOCK_NOTIFICATIONS', false),
 
         // Any combination of: slack, telegram, mail (comma separated in env).
         'channels' => array_values(array_filter(array_map(
             'trim',
-            explode(',', (string) env('TRACING_NOTIFICATION_CHANNELS', ''))
+            explode(',', (string) env('SHERLOCK_NOTIFICATION_CHANNELS', ''))
         ))),
 
         // Global minimum severity; each channel may raise it.
-        'min_severity' => env('TRACING_NOTIFY_MIN_SEVERITY', 'warning'),
+        'min_severity' => env('SHERLOCK_NOTIFY_MIN_SEVERITY', 'warning'),
 
-        'throttle_minutes' => (int) env('TRACING_THROTTLE_MINUTES', 60),
+        'throttle_minutes' => (int) env('SHERLOCK_THROTTLE_MINUTES', 60),
 
         // What triggers a notification.
         'notify_on' => [
@@ -412,33 +412,33 @@ return [
         ],
 
         // Base URL for dashboard links; null = app.url.
-        'dashboard_url' => env('TRACING_DASHBOARD_URL'),
+        'dashboard_url' => env('SHERLOCK_DASHBOARD_URL'),
 
         // HTTP timeout (seconds) for webhook / bot API calls.
         'timeout' => 10,
 
         'slack' => [
-            'webhook_url' => env('TRACING_SLACK_WEBHOOK_URL'),
-            'min_severity' => env('TRACING_SLACK_MIN_SEVERITY', 'warning'),
-            'username' => 'Tracing',
-            'channel' => env('TRACING_SLACK_CHANNEL'),
+            'webhook_url' => env('SHERLOCK_SLACK_WEBHOOK_URL'),
+            'min_severity' => env('SHERLOCK_SLACK_MIN_SEVERITY', 'warning'),
+            'username' => 'Sherlock',
+            'channel' => env('SHERLOCK_SLACK_CHANNEL'),
         ],
 
         'telegram' => [
-            'bot_token' => env('TRACING_TELEGRAM_BOT_TOKEN'),
-            'chat_id' => env('TRACING_TELEGRAM_CHAT_ID'),
-            'min_severity' => env('TRACING_TELEGRAM_MIN_SEVERITY', 'warning'),
+            'bot_token' => env('SHERLOCK_TELEGRAM_BOT_TOKEN'),
+            'chat_id' => env('SHERLOCK_TELEGRAM_CHAT_ID'),
+            'min_severity' => env('SHERLOCK_TELEGRAM_MIN_SEVERITY', 'warning'),
             'api_url' => 'https://api.telegram.org',
         ],
 
         'mail' => [
             'to' => array_values(array_filter(array_map(
                 'trim',
-                explode(',', (string) env('TRACING_MAIL_TO', ''))
+                explode(',', (string) env('SHERLOCK_MAIL_TO', ''))
             ))),
-            'min_severity' => env('TRACING_MAIL_MIN_SEVERITY', 'critical'),
+            'min_severity' => env('SHERLOCK_MAIL_MIN_SEVERITY', 'critical'),
             // Mailer name; null = default mailer.
-            'mailer' => env('TRACING_MAILER'),
+            'mailer' => env('SHERLOCK_MAILER'),
         ],
     ],
 
@@ -457,22 +457,22 @@ return [
     */
 
     'ai' => [
-        'enabled' => env('TRACING_AI_ENABLED', false),
-        'driver' => env('TRACING_AI_DRIVER', 'anthropic'),
+        'enabled' => env('SHERLOCK_AI_ENABLED', false),
+        'driver' => env('SHERLOCK_AI_DRIVER', 'anthropic'),
         // null = the driver's default model below.
-        'model' => env('TRACING_AI_MODEL'),
-        'api_key' => env('TRACING_AI_KEY'),
+        'model' => env('SHERLOCK_AI_MODEL'),
+        'api_key' => env('SHERLOCK_AI_KEY'),
         // null = the driver's default base URL below (required for openai_compatible).
-        'base_url' => env('TRACING_AI_BASE_URL'),
+        'base_url' => env('SHERLOCK_AI_BASE_URL'),
         // Language of the generated analysis.
-        'language' => env('TRACING_AI_LANGUAGE', 'en'),
+        'language' => env('SHERLOCK_AI_LANGUAGE', 'en'),
         'analyze' => [
             'performance' => true,
             'exceptions' => false,
         ],
-        'min_severity' => env('TRACING_AI_MIN_SEVERITY', 'critical'),
+        'min_severity' => env('SHERLOCK_AI_MIN_SEVERITY', 'critical'),
         // AI calls per day (app timezone). 0 = no calls (fail-safe), negative (-1) = unlimited.
-        'daily_limit' => (int) env('TRACING_AI_DAILY_LIMIT', 50),
+        'daily_limit' => (int) env('SHERLOCK_AI_DAILY_LIMIT', 50),
         'max_tokens' => 1500,
         // HTTP timeout in seconds; bounds the wait before the notification is sent.
         'timeout' => 30,
@@ -519,14 +519,14 @@ return [
                 'model' => 'meta-llama/llama-3.3-70b-instruct:free',
                 // Optional attribution headers (HTTP-Referer / X-Title); null = not sent.
                 'referer' => null,
-                'title' => 'Laravel Tracing',
+                'title' => 'Laravel Sherlock',
             ],
             'mistral' => [
                 'base_url' => 'https://api.mistral.ai/v1',
                 'model' => 'mistral-small-latest',
             ],
             'ollama' => [
-                'base_url' => env('TRACING_OLLAMA_URL', 'http://localhost:11434'),
+                'base_url' => env('SHERLOCK_OLLAMA_URL', 'http://localhost:11434'),
                 'model' => 'qwen2.5-coder',
             ],
             'openai_compatible' => [
@@ -547,19 +547,19 @@ return [
     */
 
     'digest' => [
-        'enabled' => env('TRACING_DIGEST', false),
-        'every_days' => (int) env('TRACING_DIGEST_EVERY_DAYS', 1),
+        'enabled' => env('SHERLOCK_DIGEST', false),
+        'every_days' => (int) env('SHERLOCK_DIGEST_EVERY_DAYS', 1),
         // Time of the daily check (scheduler timezone).
-        'at' => env('TRACING_DIGEST_AT', '09:00'),
+        'at' => env('SHERLOCK_DIGEST_AT', '09:00'),
         // Notification channels (comma separated in env); empty = every enabled channel.
         'channels' => array_values(array_filter(array_map(
             'trim',
-            explode(',', (string) env('TRACING_DIGEST_CHANNELS', 'mail'))
+            explode(',', (string) env('SHERLOCK_DIGEST_CHANNELS', 'mail'))
         ))),
         // Items per digest section.
         'limit' => 10,
         // Cache store holding the last-sent time (kept forever); null = default store.
-        'cache_store' => env('TRACING_DIGEST_STORE'),
+        'cache_store' => env('SHERLOCK_DIGEST_STORE'),
     ],
 
     /*
@@ -567,22 +567,22 @@ return [
     | Dashboard
     |--------------------------------------------------------------------------
     |
-    | Access is guarded by the "viewTracing" gate (default: local env only).
+    | Access is guarded by the "viewSherlock" gate (default: local env only).
     | Override it in your AppServiceProvider::boot(), e.g.:
     |
-    |     Gate::define('viewTracing', fn ($user) => in_array($user->email, [...]));
+    |     Gate::define('viewSherlock', fn ($user) => in_array($user->email, [...]));
     |
     | When disabled, no route, view or gate is registered. Dashboard requests
-    | are never traced (their path and "tracing.*" route names are ignored).
+    | are never traced (their path and "sherlock.*" route names are ignored).
     |
     */
 
     'dashboard' => [
-        'enabled' => env('TRACING_DASHBOARD', true),
-        'path' => env('TRACING_PATH', 'tracing'),
+        'enabled' => env('SHERLOCK_DASHBOARD', true),
+        'path' => env('SHERLOCK_PATH', 'sherlock'),
         // Optional dedicated (sub)domain; the path is then relative to it.
-        'domain' => env('TRACING_DOMAIN'),
-        // The viewTracing gate middleware is always appended.
+        'domain' => env('SHERLOCK_DOMAIN'),
+        // The viewSherlock gate middleware is always appended.
         'middleware' => ['web'],
         'per_page' => 25,
     ],

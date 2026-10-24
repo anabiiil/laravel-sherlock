@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support;
+namespace Anabil\Sherlock\Support;
 
-use Anabil\Tracing\Contracts\SourceLocator;
-use Anabil\Tracing\Data\SourceLocation;
+use Anabil\Sherlock\Contracts\SourceLocator;
+use Anabil\Sherlock\Data\SourceLocation;
 
 /**
  * First stack frame inside the application base path that is not in vendor/,

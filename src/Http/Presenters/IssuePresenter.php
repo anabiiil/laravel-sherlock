@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Presenters;
+namespace Anabil\Sherlock\Http\Presenters;
 
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Http\Support\Format;
-use Anabil\Tracing\Http\Support\Markdown;
-use Anabil\Tracing\Http\Support\SqlHighlighter;
-use Anabil\Tracing\Http\Support\Value;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Http\Support\Format;
+use Anabil\Sherlock\Http\Support\Markdown;
+use Anabil\Sherlock\Http\Support\SqlHighlighter;
+use Anabil\Sherlock\Http\Support\Value;
 use Illuminate\Support\HtmlString;
 
 /**

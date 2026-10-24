@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\ExplainInsight;
+use Anabil\Sherlock\Data\ExplainInsight;
 
 /**
  * Turns a raw EXPLAIN plan into human readable insights.

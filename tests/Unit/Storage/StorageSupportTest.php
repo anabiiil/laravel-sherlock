@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\ContextManager;
-use Anabil\Tracing\Storage\Support\QuietReporter;
-use Anabil\Tracing\Storage\Support\RecordingPauser;
-use Anabil\Tracing\Storage\Support\Values;
-use Anabil\Tracing\Storage\Tables;
-use Anabil\Tracing\Tracing;
+use Anabil\Sherlock\Contracts\ContextManager;
+use Anabil\Sherlock\Sherlock;
+use Anabil\Sherlock\Storage\Support\QuietReporter;
+use Anabil\Sherlock\Storage\Support\RecordingPauser;
+use Anabil\Sherlock\Storage\Support\Values;
+use Anabil\Sherlock\Storage\Tables;
 use Illuminate\Container\Container;
 use Psr\Log\AbstractLogger;
 
 it('names the tables with the prefix', function (): void {
-    expect((new Tables)->all())->toBe(['tracing_traces', 'tracing_queries', 'tracing_issues', 'tracing_issue_traces'])
+    expect((new Tables)->all())->toBe(['sherlock_traces', 'sherlock_queries', 'sherlock_issues', 'sherlock_issue_traces'])
         ->and((new Tables('perf_'))->issues())->toBe('perf_issues');
 });
 
@@ -52,7 +52,7 @@ it('runs callbacks directly when no pause hook exists', function (): void {
     expect((new RecordingPauser)->run(fn (): int => 7))->toBe(7);
 
     $container = new Container;
-    $container->instance(Tracing::class, new stdClass);
+    $container->instance(Sherlock::class, new stdClass);
 
     expect((new RecordingPauser($container))->run(fn (): string => 'ok'))->toBe('ok');
 });
@@ -96,8 +96,8 @@ it('reports each distinct failure once', function (): void {
     (new QuietReporter)->report('no logger', new RuntimeException('x'));
 
     expect($logger->messages)->toBe([
-        '[tracing] failed to persist trace: down',
-        '[tracing] failed to persist trace: other',
+        '[sherlock] failed to persist trace: down',
+        '[sherlock] failed to persist trace: other',
     ]);
 
     QuietReporter::flush();

@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\IssueService;
-use Anabil\Tracing\Data\IssueOutcome;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\OccurrenceType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Events\IssueRecurred;
-use Anabil\Tracing\Notifications\Jobs\SendThrottledSummaryJob;
-use Anabil\Tracing\Notifications\Throttler;
-use Anabil\Tracing\Tests\Feature\Notifications\NotificationFixtures as N;
+use Anabil\Sherlock\Contracts\IssueService;
+use Anabil\Sherlock\Data\IssueOutcome;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\OccurrenceType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Events\IssueRecurred;
+use Anabil\Sherlock\Notifications\Jobs\SendThrottledSummaryJob;
+use Anabil\Sherlock\Notifications\Throttler;
+use Anabil\Sherlock\Tests\Feature\Notifications\NotificationFixtures as N;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Bus;
@@ -44,7 +44,7 @@ function notifFirstNotified(string $fingerprint = 'notif-issue', IssueType $type
 /** @param  'sync'|'redis'  $driver */
 function notifQueue(string $driver): void
 {
-    config()->set('tracing.queue.connection', null);
+    config()->set('sherlock.queue.connection', null);
     config()->set('queue.default', $driver);
     config()->set("queue.connections.{$driver}", ['driver' => $driver]);
 }
@@ -230,10 +230,10 @@ it('is wired to recurring occurrences recorded by the issue service', function (
 
     $service = app(IssueService::class);
     $finding = N::finding();
-    $recorded = new Anabil\Tracing\Data\RecordedTrace(
-        Anabil\Tracing\Tests\Feature\Storage\StorageFixtures::traceData(),
-        new Anabil\Tracing\Data\AnalysisResult([$finding], Anabil\Tracing\Data\Verdict::unknown()),
-        Anabil\Tracing\Enums\RecordReason::Local,
+    $recorded = new Anabil\Sherlock\Data\RecordedTrace(
+        Anabil\Sherlock\Tests\Feature\Storage\StorageFixtures::traceData(),
+        new Anabil\Sherlock\Data\AnalysisResult([$finding], Anabil\Sherlock\Data\Verdict::unknown()),
+        Anabil\Sherlock\Enums\RecordReason::Local,
         false,
     );
 

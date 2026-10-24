@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Analysis\Explain\ExplainService;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Tests\Feature\Integration\Support\BootsTracing;
-use Anabil\Tracing\Tests\Feature\Integration\Support\Integration;
+use Anabil\Sherlock\Analysis\Explain\ExplainService;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Tests\Feature\Integration\Support\BootsSherlock;
+use Anabil\Sherlock\Tests\Feature\Integration\Support\Integration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
-uses(BootsTracing::class);
+uses(BootsSherlock::class);
 
 beforeEach(function (): void {
     Integration::setUp('production');
@@ -36,16 +36,16 @@ it('persists nothing for a fast clean request when not sampled', function (): vo
 it('persists an n+1 request with reason threshold, without bindings', function (): void {
     $this->get('/integration/n-plus-one')->assertOk();
 
-    $traces = Integration::rows('tracing_traces');
+    $traces = Integration::rows('sherlock_traces');
     expect($traces)->toHaveCount(1)
         ->and($traces[0]['record_reason'])->toBe('threshold')
         ->and(Integration::json($traces[0]['details'])['full'])->toBeFalse();
 
-    $queries = Integration::rows('tracing_queries');
+    $queries = Integration::rows('sherlock_queries');
     expect($queries)->toHaveCount(Integration::POSTS + 1)
         ->and(array_filter(array_column($queries, 'bindings'), static fn (mixed $b): bool => $b !== null))->toBe([]);
 
-    $issue = Integration::rows('tracing_issues');
+    $issue = Integration::rows('sherlock_issues');
     expect($issue)->toHaveCount(1)
         ->and($issue[0]['type'])->toBe(IssueType::NPlusOne->value);
 
@@ -58,57 +58,57 @@ it('persists an n+1 request with reason threshold, without bindings', function (
 it('persists a slow-query request with reason threshold', function (): void {
     $this->get('/integration/report')->assertOk();
 
-    $traces = Integration::rows('tracing_traces');
+    $traces = Integration::rows('sherlock_traces');
     expect($traces)->toHaveCount(1)
         ->and($traces[0]['record_reason'])->toBe('threshold');
 
-    $types = array_column(Integration::rows('tracing_issues'), 'type');
+    $types = array_column(Integration::rows('sherlock_issues'), 'type');
     expect($types)->toContain(IssueType::SlowQuery->value, IssueType::NPlusOne->value);
 });
 
 it('persists every unit as a sample when sample_rate is 1', function (): void {
-    config()->set('tracing.sample_rate', 1.0);
+    config()->set('sherlock.sample_rate', 1.0);
 
     $this->get('/integration/fast')->assertOk();
 
-    $traces = Integration::rows('tracing_traces');
+    $traces = Integration::rows('sherlock_traces');
     expect($traces)->toHaveCount(1)
         ->and($traces[0]['record_reason'])->toBe('sample')
-        ->and(Integration::count('tracing_issues'))->toBe(0)
-        ->and(Integration::rows('tracing_queries')[0]['bindings'])->toBeNull();
+        ->and(Integration::count('sherlock_issues'))->toBe(0)
+        ->and(Integration::rows('sherlock_queries')[0]['bindings'])->toBeNull();
 });
 
 it('reports threshold rather than sample when a sampled trace also crosses a threshold', function (): void {
-    config()->set('tracing.sample_rate', 1.0);
+    config()->set('sherlock.sample_rate', 1.0);
 
     $this->get('/integration/n-plus-one')->assertOk();
 
-    expect(Integration::rows('tracing_traces')[0]['record_reason'])->toBe('threshold');
+    expect(Integration::rows('sherlock_traces')[0]['record_reason'])->toBe('threshold');
 });
 
 it('fully traces a request carrying the trigger header, with redacted bindings', function (): void {
-    $this->get('/integration/fast', ['X-Tracing' => 'integration-header-secret'])->assertOk();
+    $this->get('/integration/fast', ['X-Sherlock' => 'integration-header-secret'])->assertOk();
 
-    $traces = Integration::rows('tracing_traces');
+    $traces = Integration::rows('sherlock_traces');
     expect($traces)->toHaveCount(1)
         ->and($traces[0]['record_reason'])->toBe('header')
         ->and(Integration::json($traces[0]['details'])['full'])->toBeTrue();
 
     // count(*) has no bindings; the stored value is the (empty) redacted list, not NULL.
-    expect(Integration::rows('tracing_queries')[0]['bindings'])->not->toBeNull();
+    expect(Integration::rows('sherlock_queries')[0]['bindings'])->not->toBeNull();
 
-    $this->get('/integration/n-plus-one', ['X-Tracing' => 'integration-header-secret'])->assertOk();
+    $this->get('/integration/n-plus-one', ['X-Sherlock' => 'integration-header-secret'])->assertOk();
     $authorBindings = array_values(array_filter(
-        Integration::rows('tracing_queries'),
+        Integration::rows('sherlock_queries'),
         static fn (array $q): bool => str_contains((string) $q['normalized_sql'], 'from `integration_authors` where'),
     ));
     expect(Integration::json($authorBindings[0]['bindings']))->toBe([1]);
 });
 
 it('ignores a wrong trigger header', function (): void {
-    $this->get('/integration/fast', ['X-Tracing' => 'wrong-secret'])->assertOk();
+    $this->get('/integration/fast', ['X-Sherlock' => 'wrong-secret'])->assertOk();
 
-    expect(Integration::count('tracing_traces'))->toBe(0);
+    expect(Integration::count('sherlock_traces'))->toBe(0);
 });
 
 it('explains a slow parameterized query in production: missing index found, no literal stored or queued', function (): void {
@@ -140,13 +140,13 @@ it('explains a slow parameterized query in production: missing index found, no l
         $table->unsignedInteger('available_at');
         $table->unsignedInteger('created_at');
     });
-    config()->set('tracing.storage.persistence', 'queue');
-    config()->set('tracing.queue.connection', 'database');
+    config()->set('sherlock.storage.persistence', 'queue');
+    config()->set('sherlock.queue.connection', 'database');
     config()->set('queue.connections.database', ['driver' => 'database', 'table' => 'jobs', 'queue' => 'default', 'retry_after' => 90]);
 
     // Every SELECT is "slow enough" to be explained; the query itself stays fast (no slow-query issue).
-    config()->set('tracing.explain.enabled', true);
-    config()->set('tracing.explain.min_query_ms', 0);
+    config()->set('sherlock.explain.enabled', true);
+    config()->set('sherlock.explain.min_query_ms', 0);
     cache()->flush();
     Integration::rebuildQueryCollector();
 
@@ -168,7 +168,7 @@ it('explains a slow parameterized query in production: missing index found, no l
     $this->artisan('queue:work', ['connection' => 'database', '--stop-when-empty' => true])->assertSuccessful();
     app()->terminate();
 
-    $issues = Integration::rows('tracing_issues');
+    $issues = Integration::rows('sherlock_issues');
     $missing = array_values(array_filter($issues, static fn (array $issue): bool => $issue['type'] === IssueType::MissingIndex->value));
     expect($missing)->toHaveCount(1);
 
@@ -186,11 +186,11 @@ it('explains a slow parameterized query in production: missing index found, no l
         // The raw plan is kept, with its literals scrubbed.
         ->and(json_encode($context['explain']['raw']))->toContain('attached_condition');
 
-    $queries = Integration::rows('tracing_queries');
+    $queries = Integration::rows('sherlock_queries');
     expect($queries)->toHaveCount(1)
         ->and($queries[0]['bindings'])->toBeNull();
 
-    // No literal value in any tracing_* column ...
+    // No literal value in any sherlock_* column ...
     foreach (Integration::storageTables() as $table) {
         foreach (DB::table($table)->get() as $row) {
             foreach ((array) $row as $column => $value) {

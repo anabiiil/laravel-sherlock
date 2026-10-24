@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Capture\Support;
+namespace Anabil\Sherlock\Tests\Feature\Capture\Support;
 
-use Anabil\Tracing\Collectors\QueryCollector;
-use Anabil\Tracing\Contracts\SourceLocator;
-use Anabil\Tracing\Contracts\TraceRecorder;
+use Anabil\Sherlock\Collectors\QueryCollector;
+use Anabil\Sherlock\Contracts\SourceLocator;
+use Anabil\Sherlock\Contracts\TraceRecorder;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Event;

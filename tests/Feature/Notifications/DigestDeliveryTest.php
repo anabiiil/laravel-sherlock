@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\NotificationDispatcher;
-use Anabil\Tracing\Data\NotificationMessage;
-use Anabil\Tracing\Digest\DigestBuilder;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Notifications\DefaultNotificationDispatcher;
-use Anabil\Tracing\Notifications\Mail\IssueNotificationMail;
-use Anabil\Tracing\Tests\Feature\Notifications\NotificationFixtures as N;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Data\NotificationMessage;
+use Anabil\Sherlock\Digest\DigestBuilder;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Notifications\DefaultNotificationDispatcher;
+use Anabil\Sherlock\Notifications\Mail\IssueNotificationMail;
+use Anabil\Sherlock\Tests\Feature\Notifications\NotificationFixtures as N;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -20,7 +20,7 @@ function notifDigest(Severity $severity = Severity::Info, array $fields = ['Top 
         severity: $severity,
         summary: 'Weekly summary for ops@example.com',
         fields: $fields,
-        url: 'https://example.test/tracing',
+        url: 'https://example.test/sherlock',
         footer: 'Periodic digest from stored data. No new AI calls were made.',
         fingerprint: DigestBuilder::FINGERPRINT,
         kind: NotificationMessage::KIND_DIGEST,
@@ -62,7 +62,7 @@ it('honours explicit digest channels even when not listed in notifications.chann
 
     expect(notifDigestHosts())->toBe(['api.telegram.org']);
     Mail::assertSent(IssueNotificationMail::class, fn (IssueNotificationMail $mail): bool => $mail->hasTo('ops@example.test')
-        && $mail->subjectLine === '[Tracing] Digest: Shop');
+        && $mail->subjectLine === '[Sherlock] Digest: Shop');
 });
 
 it('still requires the global switch, credentials and redaction for digests', function (): void {
@@ -101,7 +101,7 @@ it('delivers a long 10-item digest to telegram within the 4096 character limit',
 
     expect(mb_strlen($text))->toBeLessThanOrEqual(4096)
         ->and($text)->toContain('<b>New issues:</b>')
-        ->and($text)->toEndWith('<a href="https://example.test/tracing">Open in dashboard</a>')
+        ->and($text)->toEndWith('<a href="https://example.test/sherlock">Open in dashboard</a>')
         ->and(substr_count($text, '<b>'))->toBe(substr_count($text, '</b>'))
         ->and(preg_match('/&[a-z]*…/', $text))->toBe(0);
 });

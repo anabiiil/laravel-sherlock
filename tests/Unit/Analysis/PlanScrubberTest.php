@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Analysis\Explain\PlanScrubber;
-use Anabil\Tracing\Tests\Unit\Analysis\AnalysisFactory as F;
+use Anabil\Sherlock\Analysis\Explain\PlanScrubber;
+use Anabil\Sherlock\Tests\Unit\Analysis\AnalysisFactory as F;
 
 it('replaces literal values in plan strings and keeps identifiers', function (string $input, string $expected): void {
     expect(PlanScrubber::scrubString($input))->toBe($expected);

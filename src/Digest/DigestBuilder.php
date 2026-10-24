@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Digest;
+namespace Anabil\Sherlock\Digest;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Data\EntryStat;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Data\NotificationMessage;
-use Anabil\Tracing\Data\QueryStat;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\EntryStat;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Data\NotificationMessage;
+use Anabil\Sherlock\Data\QueryStat;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\Severity;
 use DateTimeImmutable;
 
 /**
@@ -23,7 +23,7 @@ use DateTimeImmutable;
 final class DigestBuilder
 {
     /** Fingerprint marking digest messages, so channels / the dispatcher can tell them apart. */
-    public const FINGERPRINT = 'tracing-digest';
+    public const FINGERPRINT = 'sherlock-digest';
 
     private const SQL_CHARS = 140;
 

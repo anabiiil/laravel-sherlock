@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Providers;
+namespace Anabil\Sherlock\Providers;
 
-use Anabil\Tracing\Console\DigestCommand;
-use Anabil\Tracing\Contracts\DigestService;
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\NotificationDispatcher;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Digest\DefaultDigestService;
-use Anabil\Tracing\Digest\DigestBuilder;
-use Anabil\Tracing\Jobs\SendDigestJob;
+use Anabil\Sherlock\Console\DigestCommand;
+use Anabil\Sherlock\Contracts\DigestService;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Digest\DefaultDigestService;
+use Anabil\Sherlock\Digest\DigestBuilder;
+use Anabil\Sherlock\Jobs\SendDigestJob;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Bus\Dispatcher as Bus;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
@@ -20,7 +20,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Owns the digest: DigestBuilder, DigestService, the tracing:digest command and its schedule.
+ * Owns the digest: DigestBuilder, DigestService, the sherlock:digest command and its schedule.
  *
  * Nothing here touches the request path. The schedule entry is registered only when the
  * digest is enabled; it runs once a day at "digest.at", checks isDue() (one cache read) and
@@ -28,13 +28,13 @@ use Illuminate\Support\ServiceProvider;
  */
 final class DigestServiceProvider extends ServiceProvider
 {
-    public const SCHEDULE_NAME = 'tracing:digest';
+    public const SCHEDULE_NAME = 'sherlock:digest';
 
     public function register(): void
     {
         $this->app->singleton(DigestBuilder::class, static function (Application $app): DigestBuilder {
             $config = $app->make(Repository::class);
-            $limit = $config->get('tracing.digest.limit', 10);
+            $limit = $config->get('sherlock.digest.limit', 10);
             $name = $config->get('app.name');
 
             return new DigestBuilder(
@@ -48,16 +48,16 @@ final class DigestServiceProvider extends ServiceProvider
 
         $this->app->singleton(DigestService::class, static function (Application $app): DefaultDigestService {
             $config = $app->make(Repository::class);
-            $store = $config->get('tracing.digest.cache_store');
-            $days = $config->get('tracing.digest.every_days', 1);
-            $channels = $config->get('tracing.digest.channels', []);
+            $store = $config->get('sherlock.digest.cache_store');
+            $days = $config->get('sherlock.digest.every_days', 1);
+            $channels = $config->get('sherlock.digest.channels', []);
             $timezone = $config->get('app.timezone');
 
             return new DefaultDigestService(
                 $app->make(DigestBuilder::class),
                 $app->make(NotificationDispatcher::class),
                 $app->make(CacheFactory::class)->store(is_string($store) && $store !== '' ? $store : null),
-                (bool) $config->get('tracing.digest.enabled', false),
+                (bool) $config->get('sherlock.digest.enabled', false),
                 is_numeric($days) ? max(1, (int) $days) : 1,
                 is_array($channels) ? array_values(array_filter($channels, static fn (mixed $c): bool => is_string($c) && $c !== '')) : [],
                 is_string($timezone) && $timezone !== '' ? $timezone : 'UTC',
@@ -76,11 +76,11 @@ final class DigestServiceProvider extends ServiceProvider
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
             $config = $this->app->make(Repository::class);
 
-            if (! $config->get('tracing.digest.enabled', false)) {
+            if (! $config->get('sherlock.digest.enabled', false)) {
                 return;
             }
 
-            $at = $config->get('tracing.digest.at', '09:00');
+            $at = $config->get('sherlock.digest.at', '09:00');
 
             $schedule->call(function (): void {
                 $this->app->make(Bus::class)->dispatch(new SendDigestJob);
@@ -93,17 +93,17 @@ final class DigestServiceProvider extends ServiceProvider
 
     private static function dashboardUrl(Repository $config): ?string
     {
-        if (! $config->get('tracing.dashboard.enabled', true)) {
+        if (! $config->get('sherlock.dashboard.enabled', true)) {
             return null;
         }
 
-        $base = $config->get('tracing.notifications.dashboard_url') ?: $config->get('app.url');
-        $path = $config->get('tracing.dashboard.path', 'tracing');
+        $base = $config->get('sherlock.notifications.dashboard_url') ?: $config->get('app.url');
+        $path = $config->get('sherlock.dashboard.path', 'sherlock');
 
         if (! is_string($base) || $base === '') {
             return null;
         }
 
-        return rtrim($base, '/').'/'.(is_string($path) ? trim($path, '/') : 'tracing');
+        return rtrim($base, '/').'/'.(is_string($path) ? trim($path, '/') : 'sherlock');
     }
 }

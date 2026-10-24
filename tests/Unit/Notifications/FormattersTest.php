@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Data\NotificationMessage;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Notifications\Formatters\MailFormatter;
-use Anabil\Tracing\Notifications\Formatters\SlackFormatter;
-use Anabil\Tracing\Notifications\Formatters\TelegramFormatter;
+use Anabil\Sherlock\Data\NotificationMessage;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Notifications\Formatters\MailFormatter;
+use Anabil\Sherlock\Notifications\Formatters\SlackFormatter;
+use Anabil\Sherlock\Notifications\Formatters\TelegramFormatter;
 
 function notifFormatterMessage(array $overrides = []): NotificationMessage
 {
@@ -17,9 +17,9 @@ function notifFormatterMessage(array $overrides = []): NotificationMessage
         'fields' => ['Entry' => 'GET orders.index', 'Location' => 'app/Http/Controllers/OrderController.php:42'],
         'sql' => 'select * from `orders` where `user_id` = ? and total > ?',
         'aiRecommendation' => 'Add an index on orders(user_id).',
-        'url' => 'https://example.test/tracing/issues/7',
+        'url' => 'https://example.test/sherlock/issues/7',
         'occurrences' => 1,
-        'footer' => 'Tracing · Shop (production)',
+        'footer' => 'Sherlock · Shop (production)',
         'issueId' => 7,
         'fingerprint' => 'fp',
     ], $overrides));
@@ -27,13 +27,13 @@ function notifFormatterMessage(array $overrides = []): NotificationMessage
 
 describe('slack', function (): void {
     it('builds a Block Kit payload inside a severity-colored attachment', function (): void {
-        $payload = (new SlackFormatter)->format(notifFormatterMessage(), ['username' => 'Tracing', 'channel' => '#ops', 'unknown' => 'x']);
+        $payload = (new SlackFormatter)->format(notifFormatterMessage(), ['username' => 'Sherlock', 'channel' => '#ops', 'unknown' => 'x']);
 
         $blocks = $payload['attachments'][0]['blocks'];
         $types = array_column($blocks, 'type');
 
         expect($payload['text'])->toBe('Critical: Slow query on <orders> & co')
-            ->and($payload['username'])->toBe('Tracing')
+            ->and($payload['username'])->toBe('Sherlock')
             ->and($payload['channel'])->toBe('#ops')
             ->and($payload)->not->toHaveKey('unknown')
             ->and($payload['attachments'][0]['color'])->toBe('#E01E5A')
@@ -43,8 +43,8 @@ describe('slack', function (): void {
             ->and($blocks[2]['fields'][0])->toBe(['type' => 'mrkdwn', 'text' => "*Entry*\nGET orders.index"])
             ->and($blocks[3]['text']['text'])->toBe("```\nselect * from `orders` where `user_id` = ? and total &gt; ?\n```")
             ->and($blocks[5]['text']['text'])->toContain('AI recommendation')->toContain('orders(user_id)')
-            ->and($blocks[6]['elements'][0]['text'])->toBe('Tracing · Shop (production)')
-            ->and($blocks[7]['elements'][0]['url'])->toBe('https://example.test/tracing/issues/7');
+            ->and($blocks[6]['elements'][0]['text'])->toBe('Sherlock · Shop (production)')
+            ->and($blocks[7]['elements'][0]['url'])->toBe('https://example.test/sherlock/issues/7');
     });
 
     it('omits optional blocks and maps severity colors', function (): void {
@@ -90,8 +90,8 @@ describe('telegram', function (): void {
             ->toContain('<b>&lt;b&gt;Label&lt;/b&gt;:</b> a &lt; b &amp;&amp; c &gt; &quot;d&quot;')
             ->toContain('<pre><code class="language-sql">select * from `orders` where `user_id` = ? and total &gt; ?</code></pre>')
             ->toContain('<b>💡 AI recommendation</b>')
-            ->toContain('<i>Tracing · Shop (production)</i>')
-            ->toEndWith('<a href="https://example.test/tracing/issues/7">Open in dashboard</a>')
+            ->toContain('<i>Sherlock · Shop (production)</i>')
+            ->toEndWith('<a href="https://example.test/sherlock/issues/7">Open in dashboard</a>')
             ->not->toContain('<orders>');
     });
 
@@ -123,7 +123,7 @@ describe('mail', function (): void {
         $formatter = new MailFormatter;
         $message = notifFormatterMessage(['title' => "Multi\nline   title"]);
 
-        expect($formatter->subject($message))->toBe('[Tracing] Critical: Multi line title')
+        expect($formatter->subject($message))->toBe('[Sherlock] Critical: Multi line title')
             ->and(mb_strlen($formatter->subject(notifFormatterMessage(['title' => str_repeat('x', 500)]))))->toBe(180)
             ->and($formatter->data($message))->toMatchArray([
                 'severity' => 'Critical',
@@ -132,7 +132,7 @@ describe('mail', function (): void {
                 'summary' => 'Query took 912 ms',
                 'sql' => 'select * from `orders` where `user_id` = ? and total > ?',
                 'ai' => 'Add an index on orders(user_id).',
-                'url' => 'https://example.test/tracing/issues/7',
+                'url' => 'https://example.test/sherlock/issues/7',
                 'occurrences' => 1,
             ]);
     });
@@ -143,7 +143,7 @@ it('truncates long multi-line digests for telegram and slack', function (): void
     for ($i = 1; $i <= 10; $i++) {
         $fields['Section '.$i] = implode("\n", array_fill(0, 10, $i.'. Slow query on <orders> & '.str_repeat('y', 50)));
     }
-    $message = notifFormatterMessage(['fields' => $fields, 'sql' => null, 'aiRecommendation' => null, 'fingerprint' => 'tracing-digest']);
+    $message = notifFormatterMessage(['fields' => $fields, 'sql' => null, 'aiRecommendation' => null, 'fingerprint' => 'sherlock-digest']);
 
     $text = (new TelegramFormatter)->text($message);
     $slack = (new SlackFormatter)->format($message);
@@ -172,7 +172,7 @@ describe('digest and test messages', function (): void {
             ->and($slack['attachments'][0]['color'])->not->toBe('#E01E5A')
             ->and($telegram)->not->toContain('🚨')->not->toContain('Critical');
     })->with([
-        'digest' => [NotificationMessage::KIND_DIGEST, 'Digest: Shop', '[Tracing] Digest: Shop'],
-        'test' => [NotificationMessage::KIND_TEST, 'Test notification', '[Tracing] Test notification'],
+        'digest' => [NotificationMessage::KIND_DIGEST, 'Digest: Shop', '[Sherlock] Digest: Shop'],
+        'test' => [NotificationMessage::KIND_TEST, 'Test notification', '[Sherlock] Test notification'],
     ]);
 });

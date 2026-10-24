@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Console;
+namespace Anabil\Sherlock\Console;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Data\EntryStat;
-use Anabil\Tracing\Data\IssueFilter;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Data\QueryStat;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\EntryStat;
+use Anabil\Sherlock\Data\IssueFilter;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Data\QueryStat;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\Severity;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 
@@ -29,7 +29,7 @@ final class ReportCommand extends Command
     private const NAME_CHARS = 60;
 
     /** @var string */
-    protected $signature = 'tracing:report
+    protected $signature = 'sherlock:report
         {--days=7 : Period to cover, in days}
         {--type= : Only this unit type for traces / slowest entries: request, job or command}
         {--limit=10 : Rows per table}';
@@ -87,7 +87,7 @@ final class ReportCommand extends Command
             $parts[] = ($open[$severity->value] ?? 0).' '.$severity->value;
         }
 
-        $this->components->twoColumnDetail('<fg=green;options=bold>Tracing report</>');
+        $this->components->twoColumnDetail('<fg=green;options=bold>Sherlock report</>');
         $this->components->twoColumnDetail('Period', $since->format('Y-m-d H:i').' to '.$now->format('Y-m-d H:i T'));
         $this->components->twoColumnDetail('Traces'.($type === null ? '' : ' ('.$type->value.')'), number_format($traces->countSince($since, $type)));
         $this->components->twoColumnDetail('Open issues', number_format(array_sum($open)).' ('.implode(', ', $parts).')');

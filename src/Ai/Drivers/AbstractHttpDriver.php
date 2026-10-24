@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Ai\Drivers;
+namespace Anabil\Sherlock\Ai\Drivers;
 
-use Anabil\Tracing\Ai\AiProviderException;
-use Anabil\Tracing\Contracts\AiProvider;
-use Anabil\Tracing\Data\AiRequest;
+use Anabil\Sherlock\Ai\AiProviderException;
+use Anabil\Sherlock\Contracts\AiProvider;
+use Anabil\Sherlock\Data\AiRequest;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\Response;
@@ -39,7 +39,7 @@ abstract class AbstractHttpDriver implements AiProvider
         $model = $request->model ?? $this->string('model');
 
         if ($model === null || $model === '') {
-            throw AiProviderException::misconfigured($this->name, 'no model configured (set tracing.ai.model).');
+            throw AiProviderException::misconfigured($this->name, 'no model configured (set sherlock.ai.model).');
         }
 
         return $model;
@@ -50,7 +50,7 @@ abstract class AbstractHttpDriver implements AiProvider
         $url = $this->string('base_url');
 
         if ($url === null || $url === '') {
-            throw AiProviderException::misconfigured($this->name, 'no base URL configured (set tracing.ai.base_url).');
+            throw AiProviderException::misconfigured($this->name, 'no base URL configured (set sherlock.ai.base_url).');
         }
 
         return rtrim($url, '/');
@@ -65,7 +65,7 @@ abstract class AbstractHttpDriver implements AiProvider
 
     protected function requireApiKey(): string
     {
-        return $this->apiKey() ?? throw AiProviderException::misconfigured($this->name, 'no API key configured (set TRACING_AI_KEY).');
+        return $this->apiKey() ?? throw AiProviderException::misconfigured($this->name, 'no API key configured (set SHERLOCK_AI_KEY).');
     }
 
     protected function string(string $key): ?string

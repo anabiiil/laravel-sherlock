@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Storage\Support;
+namespace Anabil\Sherlock\Storage\Support;
 
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -34,7 +34,7 @@ final class QuietReporter
         self::$reported[$key] = true;
 
         try {
-            $this->logger?->warning('[tracing] '.$what.': '.$e->getMessage(), ['exception' => $e::class]);
+            $this->logger?->warning('[sherlock] '.$what.': '.$e->getMessage(), ['exception' => $e::class]);
         } catch (Throwable) {
             // Logging must never break the host application either.
         }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
 /**
  * One outgoing HTTP call. The URL is already redacted (sensitive query values masked).

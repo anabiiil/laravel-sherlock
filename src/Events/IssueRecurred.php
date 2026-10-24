@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Events;
+namespace Anabil\Sherlock\Events;
 
-use Anabil\Tracing\Data\IssueOutcome;
+use Anabil\Sherlock\Data\IssueOutcome;
 
 /**
  * Fired when an open issue occurs again (not for ignored issues). Hook for throttled

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Enums;
+namespace Anabil\Sherlock\Enums;
 
 /**
  * What an occurrence means for its issue: first time seen, repeat, or a resolved issue coming back.

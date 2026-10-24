@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Privacy\Rules;
+namespace Anabil\Sherlock\Privacy\Rules;
 
-use Anabil\Tracing\Contracts\RedactionRule;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Privacy\SensitiveKeys;
+use Anabil\Sherlock\Contracts\RedactionRule;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Privacy\SensitiveKeys;
 
 /**
  * Masks values of sensitive keys inside free text: "password=secret", "token: abc",

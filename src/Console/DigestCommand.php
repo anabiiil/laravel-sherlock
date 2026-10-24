@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Console;
+namespace Anabil\Sherlock\Console;
 
-use Anabil\Tracing\Contracts\DigestService;
+use Anabil\Sherlock\Contracts\DigestService;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 
@@ -15,23 +15,23 @@ use Illuminate\Contracts\Config\Repository;
 final class DigestCommand extends Command
 {
     /** @var string */
-    protected $signature = 'tracing:digest {--force : Send even when the digest is disabled or not due yet}';
+    protected $signature = 'sherlock:digest {--force : Send even when the digest is disabled or not due yet}';
 
     /** @var string */
-    protected $description = 'Send the tracing digest (top issues, slowest entries, top queries) now';
+    protected $description = 'Send the Sherlock digest (top issues, slowest entries, top queries) now';
 
     public function handle(DigestService $digest, Repository $config): int
     {
         $force = (bool) $this->option('force');
 
-        if (! $force && ! $config->get('tracing.digest.enabled')) {
-            $this->components->warn('The digest is disabled (TRACING_DIGEST=false). Use --force to send it anyway.');
+        if (! $force && ! $config->get('sherlock.digest.enabled')) {
+            $this->components->warn('The digest is disabled (SHERLOCK_DIGEST=false). Use --force to send it anyway.');
 
             return self::SUCCESS;
         }
 
         if (! $force && ! $digest->isDue()) {
-            $days = $config->get('tracing.digest.every_days', 1);
+            $days = $config->get('sherlock.digest.every_days', 1);
             $this->components->info(sprintf('The digest is not due yet (every %s day(s)). Use --force to send it now.', is_scalar($days) ? (string) $days : '1'));
 
             return self::SUCCESS;
@@ -43,7 +43,7 @@ final class DigestCommand extends Command
             return self::SUCCESS;
         }
 
-        $channels = $config->get('tracing.digest.channels', []);
+        $channels = $config->get('sherlock.digest.channels', []);
         $channels = is_array($channels) ? array_values(array_filter($channels, 'is_string')) : [];
 
         $this->components->info('Digest sent to: '.($channels === [] ? 'all enabled notification channels' : implode(', ', $channels)).'.');

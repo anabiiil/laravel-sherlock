@@ -7,3 +7,7 @@ phpunit.xml
 .idea/
 .vscode/
 .DS_Store
+
+# Internal working notes (kept locally)
+PLAN.md
+REPORT.md

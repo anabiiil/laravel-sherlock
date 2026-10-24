@@ -2,35 +2,35 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Providers;
+namespace Anabil\Sherlock\Providers;
 
-use Anabil\Tracing\Collectors\CacheCollector;
-use Anabil\Tracing\Collectors\CommandCollector;
-use Anabil\Tracing\Collectors\HttpClientCollector;
-use Anabil\Tracing\Collectors\JobCollector;
-use Anabil\Tracing\Collectors\LogCollector;
-use Anabil\Tracing\Collectors\QueryCollector;
-use Anabil\Tracing\Collectors\RequestCollector;
-use Anabil\Tracing\Console\StatusCommand;
-use Anabil\Tracing\Console\WatchCommand;
-use Anabil\Tracing\Context\ContextManager;
-use Anabil\Tracing\Context\FailureReporter;
-use Anabil\Tracing\Context\UnitLifecycle;
-use Anabil\Tracing\Contracts\Collector;
-use Anabil\Tracing\Contracts\ContextManager as ContextManagerContract;
-use Anabil\Tracing\Contracts\RecordingPolicy;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Contracts\SourceLocator;
-use Anabil\Tracing\Contracts\WatchWindow;
-use Anabil\Tracing\Enums\TracingMode;
-use Anabil\Tracing\Recording\CacheWatchWindow;
-use Anabil\Tracing\Recording\Policies\CompositeRecordingPolicy;
-use Anabil\Tracing\Recording\Policies\HeaderTriggerPolicy;
-use Anabil\Tracing\Recording\Policies\IgnorePolicy;
-use Anabil\Tracing\Recording\Policies\LocalPolicy;
-use Anabil\Tracing\Recording\Policies\OffPolicy;
-use Anabil\Tracing\Recording\Policies\ProductionPolicy;
-use Anabil\Tracing\Recording\Policies\WatchWindowPolicy;
+use Anabil\Sherlock\Collectors\CacheCollector;
+use Anabil\Sherlock\Collectors\CommandCollector;
+use Anabil\Sherlock\Collectors\HttpClientCollector;
+use Anabil\Sherlock\Collectors\JobCollector;
+use Anabil\Sherlock\Collectors\LogCollector;
+use Anabil\Sherlock\Collectors\QueryCollector;
+use Anabil\Sherlock\Collectors\RequestCollector;
+use Anabil\Sherlock\Console\StatusCommand;
+use Anabil\Sherlock\Console\WatchCommand;
+use Anabil\Sherlock\Context\ContextManager;
+use Anabil\Sherlock\Context\FailureReporter;
+use Anabil\Sherlock\Context\UnitLifecycle;
+use Anabil\Sherlock\Contracts\Collector;
+use Anabil\Sherlock\Contracts\ContextManager as ContextManagerContract;
+use Anabil\Sherlock\Contracts\RecordingPolicy;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\SourceLocator;
+use Anabil\Sherlock\Contracts\WatchWindow;
+use Anabil\Sherlock\Enums\SherlockMode;
+use Anabil\Sherlock\Recording\CacheWatchWindow;
+use Anabil\Sherlock\Recording\Policies\CompositeRecordingPolicy;
+use Anabil\Sherlock\Recording\Policies\HeaderTriggerPolicy;
+use Anabil\Sherlock\Recording\Policies\IgnorePolicy;
+use Anabil\Sherlock\Recording\Policies\LocalPolicy;
+use Anabil\Sherlock\Recording\Policies\OffPolicy;
+use Anabil\Sherlock\Recording\Policies\ProductionPolicy;
+use Anabil\Sherlock\Recording\Policies\WatchWindowPolicy;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -45,7 +45,7 @@ use Throwable;
  *
  * mode=off registers nothing at all: no bindings, no listeners, no terminating callback
  * (the core Null Objects stay in place). Only the two artisan commands are registered, in
- * console, so "tracing:status" still works.
+ * console, so "sherlock:status" still works.
  */
 final class CaptureServiceProvider extends ServiceProvider
 {
@@ -53,7 +53,7 @@ final class CaptureServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $this->enabled = TracingMode::fromConfig($this->config()->get('tracing.mode'))->isEnabled();
+        $this->enabled = SherlockMode::fromConfig($this->config()->get('sherlock.mode'))->isEnabled();
 
         if (! $this->enabled) {
             return;
@@ -77,7 +77,7 @@ final class CaptureServiceProvider extends ServiceProvider
         try {
             $this->bootCapture();
         } catch (Throwable $e) {
-            // Tracing must never prevent the application from booting.
+            // Sherlock must never prevent the application from booting.
             $this->app->make(FailureReporter::class)->report($e);
         }
     }
@@ -87,7 +87,7 @@ final class CaptureServiceProvider extends ServiceProvider
      */
     public function collectors(): array
     {
-        $capture = $this->config()->get('tracing.capture', []);
+        $capture = $this->config()->get('sherlock.capture', []);
         $capture = is_array($capture) ? $capture : [];
         $on = static fn (string $key, bool $default = true): bool => (bool) ($capture[$key] ?? $default);
 
@@ -160,9 +160,9 @@ final class CaptureServiceProvider extends ServiceProvider
     {
         $this->app->singleton(ContextManager::class, function (): ContextManager {
             return new ContextManager(
-                $this->int('tracing.capture.max_queries', 1000),
-                $this->int('tracing.capture.max_http_calls', 200),
-                $this->int('tracing.capture.max_logs', 100),
+                $this->int('sherlock.capture.max_queries', 1000),
+                $this->int('sherlock.capture.max_http_calls', 200),
+                $this->int('sherlock.capture.max_logs', 100),
             );
         });
         $this->app->singleton(ContextManagerContract::class, static fn (Application $app): ContextManager => $app->make(ContextManager::class));
@@ -182,47 +182,47 @@ final class CaptureServiceProvider extends ServiceProvider
     private function registerPolicies(): void
     {
         $this->app->singleton(WatchWindow::class, function (Application $app): CacheWatchWindow {
-            $store = $this->config()->get('tracing.watch.cache_store');
-            $key = $this->config()->get('tracing.watch.cache_key');
+            $store = $this->config()->get('sherlock.watch.cache_store');
+            $key = $this->config()->get('sherlock.watch.cache_key');
 
             return new CacheWatchWindow(
                 $app->make('cache'),
                 is_string($store) && $store !== '' ? $store : null,
-                is_string($key) && $key !== '' ? $key : 'tracing:watch',
-                $this->int('tracing.watch.max_minutes', 1440),
-                $this->int('tracing.watch.memo_seconds', 5),
+                is_string($key) && $key !== '' ? $key : 'sherlock:watch',
+                $this->int('sherlock.watch.max_minutes', 1440),
+                $this->int('sherlock.watch.memo_seconds', 5),
                 null,
-                (bool) $this->config()->get('tracing.watch.shared_memo', true),
+                (bool) $this->config()->get('sherlock.watch.shared_memo', true),
                 hash('xxh3', $app->basePath()),
             );
         });
 
         $this->app->singleton(IgnorePolicy::class, function (): IgnorePolicy {
-            $ignore = $this->config()->get('tracing.ignore', []);
+            $ignore = $this->config()->get('sherlock.ignore', []);
 
             return IgnorePolicy::fromConfig(is_array($ignore) ? $ignore : []);
         });
 
         $this->app->singleton(HeaderTriggerPolicy::class, function (): HeaderTriggerPolicy {
-            $secret = $this->config()->get('tracing.header.secret');
+            $secret = $this->config()->get('sherlock.header.secret');
 
             return new HeaderTriggerPolicy(
                 is_string($secret) ? $secret : null,
-                (bool) $this->config()->get('tracing.header.enabled', true),
+                (bool) $this->config()->get('sherlock.header.enabled', true),
             );
         });
 
         // Resolved lazily (first unit), so the mode / sample rate are read at that point.
         $this->app->singleton(RecordingPolicy::class, function (Application $app): RecordingPolicy {
-            $rate = $this->config()->get('tracing.sample_rate', 0.0);
+            $rate = $this->config()->get('sherlock.sample_rate', 0.0);
 
-            return match (TracingMode::fromConfig($this->config()->get('tracing.mode'))) {
-                TracingMode::Off => new OffPolicy,
-                TracingMode::Local => new CompositeRecordingPolicy([new LocalPolicy], $app->make(IgnorePolicy::class)),
-                TracingMode::Production => new CompositeRecordingPolicy(array_values(array_filter([
+            return match (SherlockMode::fromConfig($this->config()->get('sherlock.mode'))) {
+                SherlockMode::Off => new OffPolicy,
+                SherlockMode::Local => new CompositeRecordingPolicy([new LocalPolicy], $app->make(IgnorePolicy::class)),
+                SherlockMode::Production => new CompositeRecordingPolicy(array_values(array_filter([
                     $app->make(HeaderTriggerPolicy::class),
                     // watch.enabled=false: no cache read at all when a unit starts.
-                    $this->config()->get('tracing.watch.enabled', true) ? new WatchWindowPolicy($app->make(WatchWindow::class)) : null,
+                    $this->config()->get('sherlock.watch.enabled', true) ? new WatchWindowPolicy($app->make(WatchWindow::class)) : null,
                     new ProductionPolicy(is_numeric($rate) ? (float) $rate : 0.0),
                 ])), $app->make(IgnorePolicy::class)),
             };
@@ -232,7 +232,7 @@ final class CaptureServiceProvider extends ServiceProvider
     private function registerCollectors(): void
     {
         $this->app->singleton(QueryCollector::class, function (Application $app): QueryCollector {
-            $ignored = $this->config()->get('tracing.ignore.queries', []);
+            $ignored = $this->config()->get('sherlock.ignore.queries', []);
 
             return new QueryCollector(
                 $app->make(Dispatcher::class),
@@ -240,8 +240,8 @@ final class CaptureServiceProvider extends ServiceProvider
                 $app->make(Redactor::class),
                 $app->make(SourceLocator::class),
                 $app->make(FailureReporter::class),
-                (float) $this->int('tracing.thresholds.slow_query.warning_ms', 100),
-                (bool) $this->config()->get('tracing.capture.source_location', true),
+                (float) $this->int('sherlock.thresholds.slow_query.warning_ms', 100),
+                (bool) $this->config()->get('sherlock.capture.source_location', true),
                 is_array($ignored) ? $ignored : [],
                 AnalysisServiceProvider::explainEnabled($app) ? AnalysisServiceProvider::explainMinQueryMs($app) : null,
             );
@@ -259,11 +259,11 @@ final class CaptureServiceProvider extends ServiceProvider
             $app->make(Redactor::class),
             $app->make(SourceLocator::class),
             $app->make(FailureReporter::class),
-            (bool) $this->config()->get('tracing.capture.source_location', true),
+            (bool) $this->config()->get('sherlock.capture.source_location', true),
         ));
 
         $this->app->singleton(LogCollector::class, function (Application $app): LogCollector {
-            $level = $this->config()->get('tracing.capture.log_level', 'error');
+            $level = $this->config()->get('sherlock.capture.log_level', 'error');
 
             return new LogCollector(
                 $app->make(Dispatcher::class),
@@ -271,9 +271,9 @@ final class CaptureServiceProvider extends ServiceProvider
                 $app->make(Redactor::class),
                 $app->make(SourceLocator::class),
                 is_string($level) ? $level : 'error',
-                (bool) $this->config()->get('tracing.capture.logs', true),
-                (bool) $this->config()->get('tracing.capture.exceptions', true),
-                $this->int('tracing.capture.max_stack_frames', 30),
+                (bool) $this->config()->get('sherlock.capture.logs', true),
+                (bool) $this->config()->get('sherlock.capture.exceptions', true),
+                $this->int('sherlock.capture.max_stack_frames', 30),
                 // Error path only: values the request sent under sensitive keys are scrubbed.
                 in_array(RequestCollector::class, $this->collectors(), true)
                     ? static fn (): array => $app->make(RequestCollector::class)->sensitiveInput()
@@ -282,7 +282,7 @@ final class CaptureServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(RequestCollector::class, function (Application $app): RequestCollector {
-            $name = $this->config()->get('tracing.header.name', 'X-Tracing');
+            $name = $this->config()->get('sherlock.header.name', 'X-Sherlock');
 
             // The header value is read (one array lookup) and only compared by HeaderTriggerPolicy.
             return new RequestCollector(

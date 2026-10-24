@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Facades;
+namespace Anabil\Sherlock\Facades;
 
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static \Anabil\Tracing\Enums\TracingMode mode()
+ * @method static \Anabil\Sherlock\Enums\SherlockMode mode()
  * @method static bool enabled()
  * @method static bool isRecording()
  * @method static void tag(string $key, string|int|float|bool|null $value)
  * @method static void extendAi(string $driver, \Closure $factory)
- * @method static \Anabil\Tracing\Data\WatchState watch(int $minutes, ?string $routePattern = null, int|string|null $userId = null)
+ * @method static \Anabil\Sherlock\Data\WatchState watch(int $minutes, ?string $routePattern = null, int|string|null $userId = null)
  * @method static void stopWatching()
- * @method static \Anabil\Tracing\Data\WatchState|null watching()
+ * @method static \Anabil\Sherlock\Data\WatchState|null watching()
  * @method static mixed pause(\Closure $callback)
  *
- * @see \Anabil\Tracing\Tracing
+ * @see \Anabil\Sherlock\Sherlock
  */
-final class Tracing extends Facade
+final class Sherlock extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return \Anabil\Tracing\Tracing::class;
+        return \Anabil\Sherlock\Sherlock::class;
     }
 }

@@ -24,15 +24,15 @@ declare(strict_types=1);
 |
 */
 
-use Anabil\Tracing\Collectors\QueryCollector;
-use Anabil\Tracing\Context\UnitLifecycle;
-use Anabil\Tracing\Contracts\SourceLocator;
-use Anabil\Tracing\Contracts\TraceRecorder;
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\TracingServiceProvider;
+use Anabil\Sherlock\Collectors\QueryCollector;
+use Anabil\Sherlock\Context\UnitLifecycle;
+use Anabil\Sherlock\Contracts\SourceLocator;
+use Anabil\Sherlock\Contracts\TraceRecorder;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\SherlockServiceProvider;
 use Illuminate\Cache\Events\CacheHit;
 use Illuminate\Cache\Events\CacheMissed;
 use Illuminate\Cache\Events\RetrievingKey;
@@ -112,11 +112,11 @@ if (! isset($options['mode'])) {
 // ---------------------------------------------------------------- single mode (child process)
 
 $mode = (string) $options['mode'];
-$_ENV['TRACING_MODE'] = $_SERVER['TRACING_MODE'] = MODES[$mode];
-putenv('TRACING_MODE='.MODES[$mode]);
-$_ENV['TRACING_SAMPLE_RATE'] = $_SERVER['TRACING_SAMPLE_RATE'] = '0';
+$_ENV['SHERLOCK_MODE'] = $_SERVER['SHERLOCK_MODE'] = MODES[$mode];
+putenv('SHERLOCK_MODE='.MODES[$mode]);
+$_ENV['SHERLOCK_SAMPLE_RATE'] = $_SERVER['SHERLOCK_SAMPLE_RATE'] = '0';
 
-$app = Testbench::create(options: ['extra' => ['providers' => [TracingServiceProvider::class], 'dont-discover' => ['*']]]);
+$app = Testbench::create(options: ['extra' => ['providers' => [SherlockServiceProvider::class], 'dont-discover' => ['*']]]);
 
 $app->instance(TraceRecorder::class, new class implements TraceRecorder
 {

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Events;
+namespace Anabil\Sherlock\Events;
 
-use Anabil\Tracing\Data\RecordedTrace;
+use Anabil\Sherlock\Data\RecordedTrace;
 
 /**
  * Fired after a trace has been stored.

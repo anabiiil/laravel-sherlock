@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Providers;
+namespace Anabil\Sherlock\Providers;
 
-use Anabil\Tracing\Ai\AiManager;
-use Anabil\Tracing\Ai\CacheAiBudget;
-use Anabil\Tracing\Ai\DefaultAiAnalyzer;
-use Anabil\Tracing\Ai\PromptBuilder;
-use Anabil\Tracing\Console\AnalyzeCommand;
-use Anabil\Tracing\Contracts\AiAnalyzer;
-use Anabil\Tracing\Contracts\AiBudget;
-use Anabil\Tracing\Contracts\AiProvider;
-use Anabil\Tracing\Contracts\AiProviderFactory;
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Tracing;
+use Anabil\Sherlock\Ai\AiManager;
+use Anabil\Sherlock\Ai\CacheAiBudget;
+use Anabil\Sherlock\Ai\DefaultAiAnalyzer;
+use Anabil\Sherlock\Ai\PromptBuilder;
+use Anabil\Sherlock\Console\AnalyzeCommand;
+use Anabil\Sherlock\Contracts\AiAnalyzer;
+use Anabil\Sherlock\Contracts\AiBudget;
+use Anabil\Sherlock\Contracts\AiProvider;
+use Anabil\Sherlock\Contracts\AiProviderFactory;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Sherlock;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Config\Repository;
@@ -26,7 +26,7 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Owns AI: AiProviderFactory (AiManager + drivers / presets), RedactingAiProvider, AiBudget, AiAnalyzer (AiAnalysisService), PromptBuilder.
- * Nothing here runs in the request path: analysis happens in AnalyzeIssueJob or tracing:analyze.
+ * Nothing here runs in the request path: analysis happens in AnalyzeIssueJob or sherlock:analyze.
  */
 final class AiServiceProvider extends ServiceProvider
 {
@@ -44,7 +44,7 @@ final class AiServiceProvider extends ServiceProvider
 
         $this->app->singleton(AiBudget::class, static function (Application $app): CacheAiBudget {
             $config = $app->make(Repository::class);
-            $limit = $config->get('tracing.ai.daily_limit', 50);
+            $limit = $config->get('sherlock.ai.daily_limit', 50);
             $timezone = $config->get('app.timezone', 'UTC');
 
             return new CacheAiBudget(
@@ -69,7 +69,7 @@ final class AiServiceProvider extends ServiceProvider
             $app->make(PromptBuilder::class),
             $app->make(Repository::class),
             self::cache($app),
-            $app->make(Tracing::class),
+            $app->make(Sherlock::class),
             $app->bound(LoggerInterface::class) ? $app->make(LoggerInterface::class) : null,
         ));
     }
@@ -83,7 +83,7 @@ final class AiServiceProvider extends ServiceProvider
 
     private static function cache(Application $app): Cache
     {
-        $store = $app->make(Repository::class)->get('tracing.ai.budget_store');
+        $store = $app->make(Repository::class)->get('sherlock.ai.budget_store');
 
         return $app->make(CacheFactory::class)->store(is_string($store) && $store !== '' ? $store : null);
     }

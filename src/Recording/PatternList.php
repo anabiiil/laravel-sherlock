@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Recording;
+namespace Anabil\Sherlock\Recording;
 
 /**
  * A list of Str::is()-style wildcard patterns compiled once into a hash set (exact

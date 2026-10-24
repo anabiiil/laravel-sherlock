@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Providers;
+namespace Anabil\Sherlock\Providers;
 
-use Anabil\Tracing\Http\Middleware\Authorize;
+use Anabil\Sherlock\Http\Middleware\Authorize;
 use Illuminate\Contracts\Auth\Access\Gate;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
@@ -13,21 +13,21 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
 /**
- * Owns the dashboard: routes, viewTracing gate, controllers, views (loadViewsFrom "tracing").
+ * Owns the dashboard: routes, viewSherlock gate, controllers, views (loadViewsFrom "sherlock").
  *
- * When "tracing.dashboard.enabled" is false nothing is registered (no routes, no views, no
+ * When "sherlock.dashboard.enabled" is false nothing is registered (no routes, no views, no
  * gate). Otherwise the cost on non-dashboard requests is the route registration only;
  * controllers, presenters and views load when a dashboard route is hit.
  *
- * Access: the "viewTracing" gate, defined here only when the app has not defined it, allows
+ * Access: the "viewSherlock" gate, defined here only when the app has not defined it, allows
  * the "local" environment only. Override it in your AppServiceProvider::boot():
  *
- *     Gate::define('viewTracing', fn ($user) => in_array($user->email, ['me@example.com'], true));
+ *     Gate::define('viewSherlock', fn ($user) => in_array($user->email, ['me@example.com'], true));
  */
 final class DashboardServiceProvider extends ServiceProvider
 {
-    /** Dashboard route names; added to "tracing.ignore.routes" so the dashboard is never traced. */
-    public const ROUTE_PATTERN = 'tracing.*';
+    /** Dashboard route names; added to "sherlock.ignore.routes" so the dashboard is never traced. */
+    public const ROUTE_PATTERN = 'sherlock.*';
 
     public function register(): void
     {
@@ -35,7 +35,7 @@ final class DashboardServiceProvider extends ServiceProvider
             return;
         }
 
-        $this->excludeFromTracing();
+        $this->excludeFromRecording();
     }
 
     public function boot(): void
@@ -44,7 +44,7 @@ final class DashboardServiceProvider extends ServiceProvider
             return;
         }
 
-        $this->loadViewsFrom(__DIR__.'/../../resources/views', 'tracing');
+        $this->loadViewsFrom(__DIR__.'/../../resources/views', 'sherlock');
 
         $this->callAfterResolving(Gate::class, static function (Gate $gate, Application $app): void {
             if (! $gate->has(Authorize::ABILITY)) {
@@ -62,29 +62,29 @@ final class DashboardServiceProvider extends ServiceProvider
         }
 
         $config = $this->config();
-        $domain = $config->get('tracing.dashboard.domain');
-        $middleware = $config->get('tracing.dashboard.middleware', ['web']);
+        $domain = $config->get('sherlock.dashboard.domain');
+        $middleware = $config->get('sherlock.dashboard.middleware', ['web']);
 
         $this->app->make(Router::class)->group([
             'domain' => is_string($domain) && $domain !== '' ? $domain : null,
             'prefix' => $this->path(),
             'middleware' => [...(is_array($middleware) ? array_values($middleware) : ['web']), Authorize::class],
-            'as' => 'tracing.',
+            'as' => 'sherlock.',
         ], __DIR__.'/../Http/routes.php');
     }
 
     /**
-     * The default ignore list covers "tracing*" only; a custom path or domain would be traced.
+     * The default ignore list covers "sherlock*" only; a custom path or domain would be traced.
      * Ignoring the route names covers every case; ignoring the path too skips the work earlier.
      */
-    private function excludeFromTracing(): void
+    private function excludeFromRecording(): void
     {
         $config = $this->config();
 
-        $routes = $config->get('tracing.ignore.routes', []);
+        $routes = $config->get('sherlock.ignore.routes', []);
         $routes = is_array($routes) ? $routes : [];
         if (! in_array(self::ROUTE_PATTERN, $routes, true)) {
-            $config->set('tracing.ignore.routes', [...$routes, self::ROUTE_PATTERN]);
+            $config->set('sherlock.ignore.routes', [...$routes, self::ROUTE_PATTERN]);
         }
 
         $path = $this->path();
@@ -93,7 +93,7 @@ final class DashboardServiceProvider extends ServiceProvider
             return;
         }
 
-        $paths = $config->get('tracing.ignore.paths', []);
+        $paths = $config->get('sherlock.ignore.paths', []);
         $paths = is_array($paths) ? $paths : [];
         foreach ($paths as $pattern) {
             if (is_string($pattern) && Str::is($pattern, $path) && Str::is($pattern, $path.'/issues')) {
@@ -101,19 +101,19 @@ final class DashboardServiceProvider extends ServiceProvider
             }
         }
 
-        $config->set('tracing.ignore.paths', [...$paths, $path, $path.'/*']);
+        $config->set('sherlock.ignore.paths', [...$paths, $path, $path.'/*']);
     }
 
     private function path(): string
     {
-        $path = $this->config()->get('tracing.dashboard.path', 'tracing');
+        $path = $this->config()->get('sherlock.dashboard.path', 'sherlock');
 
-        return trim(is_string($path) ? $path : 'tracing', '/');
+        return trim(is_string($path) ? $path : 'sherlock', '/');
     }
 
     private function enabled(): bool
     {
-        return (bool) $this->config()->get('tracing.dashboard.enabled', true);
+        return (bool) $this->config()->get('sherlock.dashboard.enabled', true);
     }
 
     private function config(): Repository

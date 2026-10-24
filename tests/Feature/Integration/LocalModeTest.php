@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Tests\Feature\Integration\Support\BootsTracing;
-use Anabil\Tracing\Tests\Feature\Integration\Support\Integration;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Tests\Feature\Integration\Support\BootsSherlock;
+use Anabil\Sherlock\Tests\Feature\Integration\Support\Integration;
 use Illuminate\Support\Facades\Http;
 
-uses(BootsTracing::class);
+uses(BootsSherlock::class);
 
 beforeEach(function (): void {
     Integration::setUp('local');
@@ -21,7 +21,7 @@ afterEach(fn () => Integration::tearDown());
 function localIssuesByType(): array
 {
     $issues = [];
-    foreach (Integration::rows('tracing_issues') as $row) {
+    foreach (Integration::rows('sherlock_issues') as $row) {
         $issues[(string) $row['type']] = $row;
     }
 
@@ -32,7 +32,7 @@ it('records a real request end to end: trace, queries, n+1 and slow query issues
     $this->get('/integration/report')->assertOk()->assertJson(['authors' => Integration::POSTS]);
 
     // Trace row.
-    $traces = Integration::rows('tracing_traces');
+    $traces = Integration::rows('sherlock_traces');
     expect($traces)->toHaveCount(1);
     $trace = $traces[0];
 
@@ -58,7 +58,7 @@ it('records a real request end to end: trace, queries, n+1 and slow query issues
         ->and($details['http_calls'][0]['url'])->not->toContain('integration-url-token');
 
     // Query rows: every query stored, with bindings (local = full capture) and locations.
-    $queries = Integration::rows('tracing_queries');
+    $queries = Integration::rows('sherlock_queries');
     expect($queries)->toHaveCount(Integration::POSTS + 2);
 
     $controller = Integration::relative(Integration::controllerFile());
@@ -92,9 +92,9 @@ it('records a real request end to end: trace, queries, n+1 and slow query issues
         ->and($slowContext['metrics']['time_ms'])->toBeGreaterThanOrEqual((float) Integration::SLOW_QUERY_MS);
 
     // Every issue is linked to the trace.
-    $links = Integration::rows('tracing_issue_traces');
+    $links = Integration::rows('sherlock_issue_traces');
     expect(array_unique(array_column($links, 'trace_id')))->toBe([$trace['id']])
-        ->and(count($links))->toBe(count(Integration::rows('tracing_issues')));
+        ->and(count($links))->toBe(count(Integration::rows('sherlock_issues')));
 });
 
 it('counts a repeated request as the same issue, without duplicate issue rows', function (): void {
@@ -105,8 +105,8 @@ it('counts a repeated request as the same issue, without duplicate issue rows', 
     $this->get('/integration/report')->assertOk();
     $after = localIssuesByType();
 
-    expect(Integration::count('tracing_traces'))->toBe(3)
-        ->and(Integration::count('tracing_issues'))->toBe(count($first));
+    expect(Integration::count('sherlock_traces'))->toBe(3)
+        ->and(Integration::count('sherlock_issues'))->toBe(count($first));
 
     foreach ([IssueType::NPlusOne->value, IssueType::SlowQuery->value] as $type) {
         expect($after[$type]['fingerprint'])->toBe($first[$type]['fingerprint'])
@@ -116,5 +116,5 @@ it('counts a repeated request as the same issue, without duplicate issue rows', 
 
     // Each issue keeps one link per trace.
     $nPlusOneId = $after[IssueType::NPlusOne->value]['id'];
-    expect(count(array_filter(Integration::rows('tracing_issue_traces'), static fn (array $l): bool => $l['issue_id'] === $nPlusOneId)))->toBe(3);
+    expect(count(array_filter(Integration::rows('sherlock_issue_traces'), static fn (array $l): bool => $l['issue_id'] === $nPlusOneId)))->toBe(3);
 });

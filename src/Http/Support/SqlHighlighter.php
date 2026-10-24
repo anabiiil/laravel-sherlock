@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Support;
+namespace Anabil\Sherlock\Http\Support;
 
 use Illuminate\Support\HtmlString;
 

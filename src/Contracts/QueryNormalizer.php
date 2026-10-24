@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
 /**
  * Literals become "?", IN lists "IN (?+)", multi-row VALUES collapsed, whitespace collapsed.

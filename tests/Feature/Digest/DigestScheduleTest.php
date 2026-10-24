@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\DigestService;
-use Anabil\Tracing\Contracts\NotificationDispatcher;
-use Anabil\Tracing\Digest\DefaultDigestService;
-use Anabil\Tracing\Digest\DigestBuilder;
-use Anabil\Tracing\Jobs\SendDigestJob;
-use Anabil\Tracing\Providers\DigestServiceProvider;
-use Anabil\Tracing\Tests\Feature\Digest\FakeNotificationDispatcher;
+use Anabil\Sherlock\Contracts\DigestService;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Digest\DefaultDigestService;
+use Anabil\Sherlock\Digest\DigestBuilder;
+use Anabil\Sherlock\Jobs\SendDigestJob;
+use Anabil\Sherlock\Providers\DigestServiceProvider;
+use Anabil\Sherlock\Tests\Feature\Digest\FakeNotificationDispatcher;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Scheduling\Event as ScheduledEvent;
 use Illuminate\Console\Scheduling\Schedule;
@@ -31,20 +31,20 @@ function digestScheduleEvents(): array
 beforeEach(function (): void {
     $this->travelTo(CarbonImmutable::parse('2026-10-20 09:00:00'));
     Cache::flush();
-    config()->set('tracing.digest.enabled', true);
-    config()->set('tracing.digest.every_days', 1);
-    config()->set('tracing.digest.at', '09:00');
+    config()->set('sherlock.digest.enabled', true);
+    config()->set('sherlock.digest.every_days', 1);
+    config()->set('sherlock.digest.at', '09:00');
     app()->instance(NotificationDispatcher::class, new FakeNotificationDispatcher);
 });
 
 it('does not schedule the digest while disabled', function (): void {
-    config()->set('tracing.digest.enabled', false);
+    config()->set('sherlock.digest.enabled', false);
 
     expect(digestScheduleEvents())->toBe([]);
 });
 
 it('schedules a daily check at digest.at when enabled', function (): void {
-    config()->set('tracing.digest.at', '07:30');
+    config()->set('sherlock.digest.at', '07:30');
 
     $events = digestScheduleEvents();
 
@@ -85,15 +85,15 @@ it('does not queue the job when the digest is not due', function (): void {
 });
 
 it('sends the digest from the job and honours the queue config', function (): void {
-    config()->set('tracing.queue.connection', 'sync');
-    config()->set('tracing.queue.name', 'tracing');
+    config()->set('sherlock.queue.connection', 'sync');
+    config()->set('sherlock.queue.name', 'sherlock');
     $dispatcher = new FakeNotificationDispatcher;
     app()->instance(NotificationDispatcher::class, $dispatcher);
     digestScheduleEvents();
 
     $job = new SendDigestJob;
     expect($job->connection)->toBe('sync')
-        ->and($job->queue)->toBe('tracing')
+        ->and($job->queue)->toBe('sherlock')
         ->and($job->tries)->toBe(1);
 
     app()->call([$job, 'handle']);
@@ -103,31 +103,31 @@ it('sends the digest from the job and honours the queue config', function (): vo
         ->and(Cache::has(DefaultDigestService::LAST_SENT_KEY))->toBeTrue();
 });
 
-it('sends from tracing:digest only when enabled and due, unless forced', function (): void {
+it('sends from sherlock:digest only when enabled and due, unless forced', function (): void {
     $dispatcher = new FakeNotificationDispatcher;
     app()->instance(NotificationDispatcher::class, $dispatcher);
 
-    config()->set('tracing.digest.enabled', false);
+    config()->set('sherlock.digest.enabled', false);
     digestScheduleEvents();
-    $this->artisan('tracing:digest')
+    $this->artisan('sherlock:digest')
         ->expectsOutputToContain('The digest is disabled')
         ->assertSuccessful();
     expect($dispatcher->sent)->toBe([]);
 
-    $this->artisan('tracing:digest', ['--force' => true])
+    $this->artisan('sherlock:digest', ['--force' => true])
         ->expectsOutputToContain('Digest sent to: mail')
         ->assertSuccessful();
     expect($dispatcher->sent)->toHaveCount(1);
 
-    config()->set('tracing.digest.enabled', true);
+    config()->set('sherlock.digest.enabled', true);
     digestScheduleEvents();
-    $this->artisan('tracing:digest')
+    $this->artisan('sherlock:digest')
         ->expectsOutputToContain('not due yet')
         ->assertSuccessful();
     expect($dispatcher->sent)->toHaveCount(1);
 
     $this->travelTo(CarbonImmutable::parse('2026-10-21 09:00:00'));
-    $this->artisan('tracing:digest')
+    $this->artisan('sherlock:digest')
         ->expectsOutputToContain('Digest sent')
         ->assertSuccessful();
     expect($dispatcher->sent)->toHaveCount(2);

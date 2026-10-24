@@ -12,26 +12,26 @@ declare(strict_types=1);
  | Usage: php benchmarks/analysis-overhead.php [iterations=200]
  */
 
-use Anabil\Tracing\Analysis\Analyzers\CacheMissRateAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\DuplicateQueryAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\ExceptionAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\ExcessiveQueriesAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\HighMemoryAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\MissingIndexAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\NPlusOneAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\SlowEntryAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\SlowExternalCallAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\SlowQueryAnalyzer;
-use Anabil\Tracing\Analysis\DefaultBottleneckClassifier;
-use Anabil\Tracing\Analysis\TraceAnalysisPipeline;
-use Anabil\Tracing\Data\HttpCallRecord;
-use Anabil\Tracing\Data\LogRecord;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Support\HashFingerprinter;
-use Anabil\Tracing\Support\SqlQueryNormalizer;
+use Anabil\Sherlock\Analysis\Analyzers\CacheMissRateAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\DuplicateQueryAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\ExceptionAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\ExcessiveQueriesAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\HighMemoryAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\MissingIndexAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\NPlusOneAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\SlowEntryAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\SlowExternalCallAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\SlowQueryAnalyzer;
+use Anabil\Sherlock\Analysis\DefaultBottleneckClassifier;
+use Anabil\Sherlock\Analysis\TraceAnalysisPipeline;
+use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Data\LogRecord;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Support\HashFingerprinter;
+use Anabil\Sherlock\Support\SqlQueryNormalizer;
 
 require __DIR__.'/../vendor/autoload.php';
 

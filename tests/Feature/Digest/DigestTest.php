@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\AiAnalyzer;
-use Anabil\Tracing\Contracts\AiProvider;
-use Anabil\Tracing\Contracts\DigestService;
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\NotificationDispatcher;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Data\AiAnalysisResult;
-use Anabil\Tracing\Data\NotificationMessage;
-use Anabil\Tracing\Digest\DefaultDigestService;
-use Anabil\Tracing\Digest\DigestBuilder;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Tests\Feature\Digest\FakeNotificationDispatcher;
-use Anabil\Tracing\Tests\Feature\Digest\SpyAiAnalyzer;
-use Anabil\Tracing\Tests\Feature\Digest\SpyAiProvider;
-use Anabil\Tracing\Tests\Feature\Storage\StorageFixtures as F;
+use Anabil\Sherlock\Contracts\AiAnalyzer;
+use Anabil\Sherlock\Contracts\AiProvider;
+use Anabil\Sherlock\Contracts\DigestService;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\AiAnalysisResult;
+use Anabil\Sherlock\Data\NotificationMessage;
+use Anabil\Sherlock\Digest\DefaultDigestService;
+use Anabil\Sherlock\Digest\DigestBuilder;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Tests\Feature\Digest\FakeNotificationDispatcher;
+use Anabil\Sherlock\Tests\Feature\Digest\SpyAiAnalyzer;
+use Anabil\Sherlock\Tests\Feature\Digest\SpyAiProvider;
+use Anabil\Sherlock\Tests\Feature\Storage\StorageFixtures as F;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 
@@ -88,10 +88,10 @@ function seedDigestData(): void
 beforeEach(function (): void {
     $this->travelTo(CarbonImmutable::parse('2026-10-20 12:00:00'));
     Cache::flush();
-    config()->set('tracing.digest.enabled', true);
-    config()->set('tracing.digest.every_days', 1);
-    config()->set('tracing.digest.channels', ['mail']);
-    config()->set('tracing.digest.limit', 10);
+    config()->set('sherlock.digest.enabled', true);
+    config()->set('sherlock.digest.every_days', 1);
+    config()->set('sherlock.digest.channels', ['mail']);
+    config()->set('sherlock.digest.limit', 10);
 });
 
 it('builds the digest from stored traces and issues', function (): void {
@@ -133,12 +133,12 @@ it('builds the digest from stored traces and issues', function (): void {
         ->and($message->fields['Top queries'])->toContain('select * from users where email = ?')
         ->and($message->fields['Top queries'])->not->toContain('[REDACTED]')
         ->and($message->fields['Bottlenecks'])->toBe('Database 67% (2) · Application / Server 33% (1)')
-        ->and($message->url)->toEndWith('/tracing');
+        ->and($message->url)->toEndWith('/sherlock');
 });
 
 it('respects digest.limit for every section', function (): void {
     seedDigestData();
-    config()->set('tracing.digest.limit', 1);
+    config()->set('sherlock.digest.limit', 1);
     digestService();
     $now = CarbonImmutable::now();
 
@@ -169,7 +169,7 @@ it('excerpts the Fix section of a stored analysis', function (): void {
 });
 
 it('is never due while disabled', function (): void {
-    config()->set('tracing.digest.enabled', false);
+    config()->set('sherlock.digest.enabled', false);
     $digest = digestService();
 
     expect($digest->isDue())->toBeFalse()
@@ -182,7 +182,7 @@ it('is due right away when it was never sent', function (): void {
 });
 
 it('is due again after every_days calendar days', function (int $everyDays, array $expectations): void {
-    config()->set('tracing.digest.every_days', $everyDays);
+    config()->set('sherlock.digest.every_days', $everyDays);
     $dispatcher = digestDispatcher();
     $digest = digestService();
 
@@ -203,7 +203,7 @@ it('is due again after every_days calendar days', function (int $everyDays, arra
 ]);
 
 it('sends to the configured channels and stores the last-sent time', function (): void {
-    config()->set('tracing.digest.channels', ['slack', 'telegram']);
+    config()->set('sherlock.digest.channels', ['slack', 'telegram']);
     $dispatcher = digestDispatcher();
     $digest = digestService();
 
@@ -221,7 +221,7 @@ it('sends to the configured channels and stores the last-sent time', function ()
 });
 
 it('sends to every enabled channel when digest.channels is empty', function (): void {
-    config()->set('tracing.digest.channels', []);
+    config()->set('sherlock.digest.channels', []);
     $dispatcher = digestDispatcher();
 
     digestService()->send();
@@ -230,7 +230,7 @@ it('sends to every enabled channel when digest.channels is empty', function (): 
 });
 
 it('force-sends even when disabled or not due', function (): void {
-    config()->set('tracing.digest.enabled', false);
+    config()->set('sherlock.digest.enabled', false);
     $dispatcher = digestDispatcher();
     $digest = digestService();
 

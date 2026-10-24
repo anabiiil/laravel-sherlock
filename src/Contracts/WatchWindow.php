@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Data\WatchState;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Data\WatchState;
 
 /**
- * Cache-backed temporary full tracing ("tracing:watch").
+ * Cache-backed temporary full tracing ("sherlock:watch").
  */
 interface WatchWindow
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Storage\Support;
+namespace Anabil\Sherlock\Storage\Support;
 
 use DateTimeImmutable;
 use DateTimeInterface;

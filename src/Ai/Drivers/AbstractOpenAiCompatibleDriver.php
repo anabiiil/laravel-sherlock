@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Ai\Drivers;
+namespace Anabil\Sherlock\Ai\Drivers;
 
-use Anabil\Tracing\Data\AiRequest;
-use Anabil\Tracing\Data\AiResponse;
+use Anabil\Sherlock\Data\AiRequest;
+use Anabil\Sherlock\Data\AiResponse;
 
 /**
  * Template Method for OpenAI-style Chat Completions APIs (POST {base}/chat/completions,

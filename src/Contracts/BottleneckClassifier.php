@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Data\Verdict;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Data\Verdict;
 
 interface BottleneckClassifier
 {

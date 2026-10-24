@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\AiAnalyzer;
-use Anabil\Tracing\Data\AiAnalysisResult;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Enums\AiStatus;
+use Anabil\Sherlock\Contracts\AiAnalyzer;
+use Anabil\Sherlock\Data\AiAnalysisResult;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Enums\AiStatus;
 
 final class NullAiAnalyzer implements AiAnalyzer
 {

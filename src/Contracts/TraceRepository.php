@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\EntryStat;
-use Anabil\Tracing\Data\QueryStat;
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Data\StoredQuery;
-use Anabil\Tracing\Data\StoredTrace;
-use Anabil\Tracing\Data\TraceFilter;
-use Anabil\Tracing\Enums\EntryType;
+use Anabil\Sherlock\Data\EntryStat;
+use Anabil\Sherlock\Data\QueryStat;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Data\StoredQuery;
+use Anabil\Sherlock\Data\StoredTrace;
+use Anabil\Sherlock\Data\TraceFilter;
+use Anabil\Sherlock\Enums\EntryType;
 use DateTimeImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * tracing_traces + tracing_queries on the tracing connection.
+ * sherlock_traces + sherlock_queries on the Sherlock connection.
  */
 interface TraceRepository
 {

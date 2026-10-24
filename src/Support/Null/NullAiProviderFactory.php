@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\AiProvider;
-use Anabil\Tracing\Contracts\AiProviderFactory;
+use Anabil\Sherlock\Contracts\AiProvider;
+use Anabil\Sherlock\Contracts\AiProviderFactory;
 use Closure;
 
 final class NullAiProviderFactory implements AiProviderFactory

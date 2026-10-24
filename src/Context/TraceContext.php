@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Context;
+namespace Anabil\Sherlock\Context;
 
-use Anabil\Tracing\Contracts\TraceContext as TraceContextContract;
-use Anabil\Tracing\Data\HttpCallRecord;
-use Anabil\Tracing\Data\LogRecord;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\RecordReason;
+use Anabil\Sherlock\Contracts\TraceContext as TraceContextContract;
+use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Data\LogRecord;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\RecordReason;
 use DateTimeImmutable;
 
 /**

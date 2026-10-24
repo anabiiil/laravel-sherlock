@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\Explainer;
-use Anabil\Tracing\Data\ExplainPlan;
-use Anabil\Tracing\Data\QueryRecord;
+use Anabil\Sherlock\Contracts\Explainer;
+use Anabil\Sherlock\Data\ExplainPlan;
+use Anabil\Sherlock\Data\QueryRecord;
 
 final class NullExplainer implements Explainer
 {

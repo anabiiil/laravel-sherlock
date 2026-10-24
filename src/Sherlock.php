@@ -2,32 +2,32 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing;
+namespace Anabil\Sherlock;
 
-use Anabil\Tracing\Contracts\AiProviderFactory;
-use Anabil\Tracing\Contracts\ContextManager;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Contracts\WatchWindow;
-use Anabil\Tracing\Data\WatchState;
-use Anabil\Tracing\Enums\TracingMode;
+use Anabil\Sherlock\Contracts\AiProviderFactory;
+use Anabil\Sherlock\Contracts\ContextManager;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\WatchWindow;
+use Anabil\Sherlock\Data\WatchState;
+use Anabil\Sherlock\Enums\SherlockMode;
 use Closure;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
 
 /**
- * Main service behind the Tracing facade (user-facing API only).
+ * Main service behind the Sherlock facade (user-facing API only).
  * Services are resolved lazily so calling the facade costs nothing when unused.
  */
-final class Tracing
+final class Sherlock
 {
     public function __construct(
         private readonly Container $container,
         private readonly Repository $config,
     ) {}
 
-    public function mode(): TracingMode
+    public function mode(): SherlockMode
     {
-        return TracingMode::fromConfig($this->config->get('tracing.mode'));
+        return SherlockMode::fromConfig($this->config->get('sherlock.mode'));
     }
 
     public function enabled(): bool
@@ -73,7 +73,7 @@ final class Tracing
     }
 
     /**
-     * Register a custom AI driver: Tracing::extendAi('name', fn ($app, array $config) => new MyDriver).
+     * Register a custom AI driver: Sherlock::extendAi('name', fn ($app, array $config) => new MyDriver).
      */
     public function extendAi(string $driver, Closure $factory): void
     {

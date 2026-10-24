@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Context;
+namespace Anabil\Sherlock\Context;
 
-use Anabil\Tracing\Contracts\RecordingPolicy;
-use Anabil\Tracing\Contracts\TraceContext as TraceContextContract;
-use Anabil\Tracing\Contracts\TraceRecorder;
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Data\RecordingDecision;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\EntryType;
+use Anabil\Sherlock\Contracts\RecordingPolicy;
+use Anabil\Sherlock\Contracts\TraceContext as TraceContextContract;
+use Anabil\Sherlock\Contracts\TraceRecorder;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Data\RecordingDecision;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\EntryType;
 use Illuminate\Contracts\Container\Container;
 use Throwable;
 

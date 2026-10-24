@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Analysis\Analyzers\NPlusOneAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\SlowQueryAnalyzer;
-use Anabil\Tracing\Analysis\DefaultBottleneckClassifier;
-use Anabil\Tracing\Analysis\PlanAwareAnalyzer;
-use Anabil\Tracing\Analysis\TraceAnalysisPipeline;
-use Anabil\Tracing\Contracts\Analyzer;
-use Anabil\Tracing\Contracts\BottleneckClassifier;
-use Anabil\Tracing\Contracts\QueryNormalizer;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Data\Verdict;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Support\SqlQueryNormalizer;
-use Anabil\Tracing\Tests\Unit\Analysis\AnalysisFactory as F;
+use Anabil\Sherlock\Analysis\Analyzers\NPlusOneAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\SlowQueryAnalyzer;
+use Anabil\Sherlock\Analysis\DefaultBottleneckClassifier;
+use Anabil\Sherlock\Analysis\PlanAwareAnalyzer;
+use Anabil\Sherlock\Analysis\TraceAnalysisPipeline;
+use Anabil\Sherlock\Contracts\Analyzer;
+use Anabil\Sherlock\Contracts\BottleneckClassifier;
+use Anabil\Sherlock\Contracts\QueryNormalizer;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Data\Verdict;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Support\SqlQueryNormalizer;
+use Anabil\Sherlock\Tests\Unit\Analysis\AnalysisFactory as F;
 use Psr\Log\AbstractLogger;
 
 function pipelineLogger(): AbstractLogger
@@ -98,7 +98,7 @@ it('keeps going when an analyzer throws and reports it once, quietly', function 
     expect($first->findings)->toHaveCount(1)
         ->and($first->findings[0]->type)->toBe(IssueType::SlowQuery)
         ->and($logger->messages)->toHaveCount(1)
-        ->and($logger->messages[0])->toStartWith('warning: [tracing] analysis step failed')->toContain('analyzer exploded');
+        ->and($logger->messages[0])->toStartWith('warning: [sherlock] analysis step failed')->toContain('analyzer exploded');
 });
 
 it('falls back to an unknown verdict when the classifier throws', function (): void {

@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Storage\Repositories;
+namespace Anabil\Sherlock\Storage\Repositories;
 
-use Anabil\Tracing\Contracts\Fingerprinter;
-use Anabil\Tracing\Contracts\QueryNormalizer;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Data\EntryStat;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\QueryStat;
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Data\StoredQuery;
-use Anabil\Tracing\Data\StoredTrace;
-use Anabil\Tracing\Data\TraceFilter;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\RecordReason;
-use Anabil\Tracing\Storage\Support\Values;
-use Anabil\Tracing\Storage\Tables;
+use Anabil\Sherlock\Contracts\Fingerprinter;
+use Anabil\Sherlock\Contracts\QueryNormalizer;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\EntryStat;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\QueryStat;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Data\StoredQuery;
+use Anabil\Sherlock\Data\StoredTrace;
+use Anabil\Sherlock\Data\TraceFilter;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\RecordReason;
+use Anabil\Sherlock\Storage\Support\Values;
+use Anabil\Sherlock\Storage\Tables;
 use DateTimeImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator as LengthAwarePaginatorContract;
 use Illuminate\Database\ConnectionInterface;
@@ -29,7 +29,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 
 /**
- * tracing_traces + tracing_queries through the query builder (no models, no hydration
+ * sherlock_traces + sherlock_queries through the query builder (no models, no hydration
  * overhead). A trace costs one insert plus one multi-row insert per chunk of queries,
  * inside one transaction.
  */

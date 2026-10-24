@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Analyzers;
+namespace Anabil\Sherlock\Analysis\Analyzers;
 
-use Anabil\Tracing\Analysis\Support\Describe;
-use Anabil\Tracing\Analysis\Support\ResolvesQueries;
-use Anabil\Tracing\Analysis\Support\Sql;
-use Anabil\Tracing\Contracts\Analyzer;
-use Anabil\Tracing\Contracts\Fingerprinter;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Analysis\Support\Describe;
+use Anabil\Sherlock\Analysis\Support\ResolvesQueries;
+use Anabil\Sherlock\Analysis\Support\Sql;
+use Anabil\Sherlock\Contracts\Analyzer;
+use Anabil\Sherlock\Contracts\Fingerprinter;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
 
 /**
  * Total query count of a trace >= warningCount (critical >= criticalCount).

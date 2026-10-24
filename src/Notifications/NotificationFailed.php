@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications;
+namespace Anabil\Sherlock\Notifications;
 
 use RuntimeException;
 use Throwable;

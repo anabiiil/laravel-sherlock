@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Notifications\Mail\IssueNotificationMail;
-use Anabil\Tracing\Tests\Feature\Integration\Support\BootsTracing;
-use Anabil\Tracing\Tests\Feature\Integration\Support\Integration;
+use Anabil\Sherlock\Notifications\Mail\IssueNotificationMail;
+use Anabil\Sherlock\Tests\Feature\Integration\Support\BootsSherlock;
+use Anabil\Sherlock\Tests\Feature\Integration\Support\Integration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Http\Request;
@@ -21,13 +21,13 @@ use Illuminate\Support\Str;
 | PLAN §9 end-to-end privacy suite. A small "application" registers a user with a known
 | password, changes it, fails a login, throws exceptions and logs carrying the password,
 | calls an external API with a token in the URL and a bearer header, all through the real
-| HTTP kernel. Then EVERY column of EVERY row of EVERY tracing_* table (and, with queued
+| HTTP kernel. Then EVERY column of EVERY row of EVERY sherlock_* table (and, with queued
 | persistence, the serialized job payloads) is scanned: neither the plain passwords, nor
 | their bcrypt hashes, nor the tokens may appear anywhere. The same holds for everything
 | the package sends out: Slack / Telegram / AI provider HTTP payloads and the mails.
 */
 
-uses(BootsTracing::class);
+uses(BootsSherlock::class);
 
 beforeEach(function (): void {
     Integration::setUp('local');
@@ -163,7 +163,7 @@ function privacyScenario(array $headers = []): array
 }
 
 /**
- * Every value of every row of every tracing_* table.
+ * Every value of every row of every sherlock_* table.
  *
  * @return list<array{string, string, string}> [table, column, value]
  */
@@ -237,9 +237,9 @@ function privacyAssertMarkers(array $values): void
         )));
     };
 
-    $bindings = $in('tracing_queries', 'bindings');
-    $details = $in('tracing_traces', 'details');
-    $issues = $in('tracing_issues', 'context');
+    $bindings = $in('sherlock_queries', 'bindings');
+    $details = $in('sherlock_traces', 'details');
+    $issues = $in('sherlock_issues', 'context');
 
     // Bound password / hash values were replaced, not dropped.
     expect($bindings)->toContain('[REDACTED]')
@@ -262,37 +262,37 @@ it('stores no password, hash or token anywhere in local mode (full capture, bind
     $hashes = privacyScenario();
 
     $values = privacyStoredValues();
-    expect(Integration::count('tracing_traces'))->toBe(8)
-        ->and(Integration::count('tracing_issues'))->toBeGreaterThanOrEqual(4)
+    expect(Integration::count('sherlock_traces'))->toBe(8)
+        ->and(Integration::count('sherlock_issues'))->toBeGreaterThanOrEqual(4)
         // Bindings are stored in local mode: the scan is meaningful.
-        ->and(DB::table('tracing_queries')->whereNotNull('bindings')->count())->toBeGreaterThan(0);
+        ->and(DB::table('sherlock_queries')->whereNotNull('bindings')->count())->toBeGreaterThan(0);
 
     privacyAssertClean($values, $hashes);
     privacyAssertMarkers($values);
 });
 
 it('stores no password, hash or token anywhere in production with the trigger header', function (): void {
-    config()->set('tracing.mode', 'production');
+    config()->set('sherlock.mode', 'production');
 
-    $hashes = privacyScenario(['X-Tracing' => 'integration-header-secret']);
+    $hashes = privacyScenario(['X-Sherlock' => 'integration-header-secret']);
 
     $values = privacyStoredValues();
-    expect(array_unique(array_column(Integration::rows('tracing_traces'), 'record_reason')))->toBe(['header'])
-        ->and(Integration::count('tracing_traces'))->toBe(8)
-        ->and(DB::table('tracing_queries')->whereNotNull('bindings')->count())->toBeGreaterThan(0);
+    expect(array_unique(array_column(Integration::rows('sherlock_traces'), 'record_reason')))->toBe(['header'])
+        ->and(Integration::count('sherlock_traces'))->toBe(8)
+        ->and(DB::table('sherlock_queries')->whereNotNull('bindings')->count())->toBeGreaterThan(0);
 
     privacyAssertClean($values, $hashes);
     privacyAssertMarkers($values);
 });
 
 it('stores no password, hash or token in production light traces (no bindings at all)', function (): void {
-    config()->set('tracing.mode', 'production');
+    config()->set('sherlock.mode', 'production');
 
     $hashes = privacyScenario();
 
     // Only the failing / logging requests cross a threshold; none stores bindings.
-    expect(Integration::count('tracing_traces'))->toBeGreaterThan(0)
-        ->and(DB::table('tracing_queries')->whereNotNull('bindings')->count())->toBe(0);
+    expect(Integration::count('sherlock_traces'))->toBeGreaterThan(0)
+        ->and(DB::table('sherlock_queries')->whereNotNull('bindings')->count())->toBe(0);
 
     privacyAssertClean(privacyStoredValues(), $hashes);
 });
@@ -307,8 +307,8 @@ it('keeps queued job payloads and the stored rows clean with queued persistence'
         $table->unsignedInteger('available_at');
         $table->unsignedInteger('created_at');
     });
-    config()->set('tracing.storage.persistence', 'queue');
-    config()->set('tracing.queue.connection', 'database');
+    config()->set('sherlock.storage.persistence', 'queue');
+    config()->set('sherlock.queue.connection', 'database');
     config()->set('queue.connections.database', ['driver' => 'database', 'table' => 'jobs', 'queue' => 'default', 'retry_after' => 90]);
 
     $hashes = privacyScenario();
@@ -324,31 +324,31 @@ it('keeps queued job payloads and the stored rows clean with queued persistence'
     $this->artisan('queue:work', ['connection' => 'database', '--stop-when-empty' => true])->assertSuccessful();
     app()->terminate();
 
-    expect(Integration::count('tracing_traces'))->toBe(8);
+    expect(Integration::count('sherlock_traces'))->toBe(8);
     $values = privacyStoredValues();
     privacyAssertClean($values, $hashes);
     privacyAssertMarkers($values);
 });
 
 it('sends no password, hash or token to Slack, Telegram, the AI provider or by mail', function (): void {
-    config()->set('tracing.ai.enabled', true);
-    config()->set('tracing.ai.driver', 'anthropic');
-    config()->set('tracing.ai.api_key', 'test-ai-key');
-    config()->set('tracing.ai.min_severity', 'info');
-    config()->set('tracing.ai.analyze.exceptions', true);
-    config()->set('tracing.ai.daily_limit', -1);
-    config()->set('tracing.ai.send_code_snippet', true);
-    config()->set('tracing.notifications.enabled', true);
-    config()->set('tracing.notifications.channels', ['slack', 'telegram', 'mail']);
-    config()->set('tracing.notifications.min_severity', 'info');
-    config()->set('tracing.notifications.slack.webhook_url', 'https://hooks.slack.test/services/T0/B0/X');
-    config()->set('tracing.notifications.slack.min_severity', 'info');
-    config()->set('tracing.notifications.telegram.bot_token', '123:test-bot');
-    config()->set('tracing.notifications.telegram.chat_id', '-100');
-    config()->set('tracing.notifications.telegram.min_severity', 'info');
-    config()->set('tracing.notifications.mail.to', ['ops@example.test']);
-    config()->set('tracing.notifications.mail.min_severity', 'info');
-    config()->set('tracing.digest.channels', ['slack', 'telegram', 'mail']);
+    config()->set('sherlock.ai.enabled', true);
+    config()->set('sherlock.ai.driver', 'anthropic');
+    config()->set('sherlock.ai.api_key', 'test-ai-key');
+    config()->set('sherlock.ai.min_severity', 'info');
+    config()->set('sherlock.ai.analyze.exceptions', true);
+    config()->set('sherlock.ai.daily_limit', -1);
+    config()->set('sherlock.ai.send_code_snippet', true);
+    config()->set('sherlock.notifications.enabled', true);
+    config()->set('sherlock.notifications.channels', ['slack', 'telegram', 'mail']);
+    config()->set('sherlock.notifications.min_severity', 'info');
+    config()->set('sherlock.notifications.slack.webhook_url', 'https://hooks.slack.test/services/T0/B0/X');
+    config()->set('sherlock.notifications.slack.min_severity', 'info');
+    config()->set('sherlock.notifications.telegram.bot_token', '123:test-bot');
+    config()->set('sherlock.notifications.telegram.chat_id', '-100');
+    config()->set('sherlock.notifications.telegram.min_severity', 'info');
+    config()->set('sherlock.notifications.mail.to', ['ops@example.test']);
+    config()->set('sherlock.notifications.mail.min_severity', 'info');
+    config()->set('sherlock.digest.channels', ['slack', 'telegram', 'mail']);
     config()->set('queue.default', 'sync');
     Mail::fake();
     Http::fake([
@@ -359,7 +359,7 @@ it('sends no password, hash or token to Slack, Telegram, the AI provider or by m
     ]);
 
     $hashes = privacyScenario();
-    $this->artisan('tracing:digest', ['--force' => true])->assertSuccessful();
+    $this->artisan('sherlock:digest', ['--force' => true])->assertSuccessful();
 
     // Everything the package sent out (the application's own call to api.example.test is not ours).
     $outbound = [];

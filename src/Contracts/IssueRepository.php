@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\AiAnalysisResult;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\IssueFilter;
-use Anabil\Tracing\Data\IssueOutcome;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Enums\IssueStatus;
+use Anabil\Sherlock\Data\AiAnalysisResult;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\IssueFilter;
+use Anabil\Sherlock\Data\IssueOutcome;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Enums\AiStatus;
+use Anabil\Sherlock\Enums\IssueStatus;
 use DateTimeImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * tracing_issues + tracing_issue_traces on the tracing connection.
+ * sherlock_issues + sherlock_issue_traces on the Sherlock connection.
  */
 interface IssueRepository
 {

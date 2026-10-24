@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\PersistenceStrategy;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\LogRecord;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Storage\Tables;
-use Anabil\Tracing\Tests\Feature\Storage\StorageFixtures as F;
+use Anabil\Sherlock\Contracts\PersistenceStrategy;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\LogRecord;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Storage\Tables;
+use Anabil\Sherlock\Tests\Feature\Storage\StorageFixtures as F;
 use Illuminate\Support\Facades\DB;
 
-it('never stores a plain password anywhere in the tracing tables', function (): void {
+it('never stores a plain password anywhere in the Sherlock tables', function (): void {
     $password = 'Sup3r-Secret-Pa55word!';
     $hash = password_hash($password, PASSWORD_BCRYPT);
     $redactor = app(Redactor::class);
@@ -43,7 +43,7 @@ it('never stores a plain password anywhere in the tracing tables', function (): 
     $trace = F::traceData([$query], logs: [$log]);
     $finding = new Finding(IssueType::Exception, Severity::Critical, 'RuntimeException', $log->message, 'exc-pw', location: $log->location());
 
-    config()->set('tracing.storage.persistence', 'after_response');
+    config()->set('sherlock.storage.persistence', 'after_response');
     app()->forgetInstance(PersistenceStrategy::class);
     app(PersistenceStrategy::class)->persist(F::recorded($trace, [$finding], storeBindings: true));
 
@@ -56,9 +56,9 @@ it('never stores a plain password anywhere in the tracing tables', function (): 
         }
     }
 
-    expect(DB::table('tracing_traces')->count())->toBe(1)
-        ->and(DB::table('tracing_queries')->count())->toBe(1)
-        ->and(DB::table('tracing_issues')->count())->toBe(1)
+    expect(DB::table('sherlock_traces')->count())->toBe(1)
+        ->and(DB::table('sherlock_queries')->count())->toBe(1)
+        ->and(DB::table('sherlock_issues')->count())->toBe(1)
         ->and($dump)->toContain('[REDACTED]')
         ->and($dump)->not->toContain($password)
         ->and($dump)->not->toContain($hash)

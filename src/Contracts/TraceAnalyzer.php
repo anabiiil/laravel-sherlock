@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\AnalysisResult;
-use Anabil\Tracing\Data\TraceData;
+use Anabil\Sherlock\Data\AnalysisResult;
+use Anabil\Sherlock\Data\TraceData;
 
 /**
  * Whole analysis stage: normalize/fingerprint queries, run the Analyzer pipeline,

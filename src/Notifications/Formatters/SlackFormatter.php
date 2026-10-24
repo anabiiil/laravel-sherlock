@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications\Formatters;
+namespace Anabil\Sherlock\Notifications\Formatters;
 
-use Anabil\Tracing\Data\NotificationMessage;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Data\NotificationMessage;
+use Anabil\Sherlock\Enums\Severity;
 
 /**
  * NotificationMessage -> Slack incoming-webhook payload (Block Kit inside a colored attachment).

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support;
+namespace Anabil\Sherlock\Support;
 
-use Anabil\Tracing\Contracts\QueryNormalizer;
+use Anabil\Sherlock\Contracts\QueryNormalizer;
 
 /**
  * Normalizes SQL for fingerprinting and display:

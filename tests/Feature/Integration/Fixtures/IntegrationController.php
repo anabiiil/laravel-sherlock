@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Integration\Fixtures;
+namespace Anabil\Sherlock\Tests\Feature\Integration\Fixtures;
 
-use Anabil\Tracing\Tests\Feature\Integration\Support\Integration;
+use Anabil\Sherlock\Tests\Feature\Integration\Support\Integration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;

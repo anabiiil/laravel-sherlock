@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Ai;
+namespace Anabil\Sherlock\Ai;
 
-use Anabil\Tracing\Contracts\AiProvider;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Data\AiRequest;
-use Anabil\Tracing\Data\AiResponse;
+use Anabil\Sherlock\Contracts\AiProvider;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Data\AiRequest;
+use Anabil\Sherlock\Data\AiResponse;
 
 /**
  * Decorator applied by AiManager to every provider (built-in and custom): system and user

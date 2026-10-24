@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\AiAnalysisResult;
-use Anabil\Tracing\Data\IssueRecord;
+use Anabil\Sherlock\Data\AiAnalysisResult;
+use Anabil\Sherlock\Data\IssueRecord;
 
 /**
  * Once-per-issue AI analysis (AiAnalysisService). Never throws: failures are recorded as "failed".

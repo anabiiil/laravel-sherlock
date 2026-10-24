@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\WatchWindow;
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Data\WatchState;
+use Anabil\Sherlock\Contracts\WatchWindow;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Data\WatchState;
 use DateTimeImmutable;
 
 /**

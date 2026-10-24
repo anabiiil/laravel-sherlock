@@ -7,7 +7,7 @@ declare(strict_types=1);
 | End-to-end request overhead benchmark
 |--------------------------------------------------------------------------
 |
-|   php benchmarks/e2e-overhead.php [--requests=300] [--warmup=30] [--rounds=3] [--database=tracing_bench]
+|   php benchmarks/e2e-overhead.php [--requests=300] [--warmup=30] [--rounds=3] [--database=sherlock_bench]
 |
 | Boots a Testbench application on MySQL (one PHP process per scenario) with a route that
 | runs 100 real queries: 1 posts query + a 40x lazy-loaded belongsTo (N+1) + 59 lookups.
@@ -28,11 +28,11 @@ declare(strict_types=1);
 |
 | DB credentials: DB_HOST / DB_PORT / DB_USERNAME / DB_PASSWORD env vars, falling back to the
 | values of a local phpunit.xml. The benchmark database is created if missing and its
-| bench_* / tracing_* tables are dropped afterwards.
+| bench_* / sherlock_* tables are dropped afterwards.
 |
 */
 
-use Anabil\Tracing\TracingServiceProvider;
+use Anabil\Sherlock\SherlockServiceProvider;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -52,7 +52,7 @@ $options = getopt('', ['requests::', 'warmup::', 'database::', 'scenario::', 'ro
 $rounds = max(1, (int) ($options['rounds'] ?? 3));
 $requests = max(20, (int) ($options['requests'] ?? 300));
 $warmup = max(1, (int) ($options['warmup'] ?? 30));
-$database = (string) ($options['database'] ?? 'tracing_bench');
+$database = (string) ($options['database'] ?? 'sherlock_bench');
 
 /** env var, else the value in a local phpunit.xml, else $default */
 function bench_env(string $name, string $default): string
@@ -173,7 +173,7 @@ $mode = match ($scenario) {
     default => throw new InvalidArgumentException("Unknown scenario {$scenario}"),
 };
 $env = [
-    'TRACING_MODE' => $mode, 'TRACING_SAMPLE_RATE' => '0', 'APP_ENV' => 'production', 'APP_DEBUG' => 'false',
+    'SHERLOCK_MODE' => $mode, 'SHERLOCK_SAMPLE_RATE' => '0', 'APP_ENV' => 'production', 'APP_DEBUG' => 'false',
     'DB_CONNECTION' => 'mysql', 'DB_HOST' => bench_env('DB_HOST', '127.0.0.1'), 'DB_PORT' => bench_env('DB_PORT', '3306'),
     'DB_DATABASE' => $database, 'DB_USERNAME' => bench_env('DB_USERNAME', 'root'), 'DB_PASSWORD' => bench_env('DB_PASSWORD', ''),
     'CACHE_STORE' => 'array', 'QUEUE_CONNECTION' => 'sync', 'LOG_CHANNEL' => 'null',
@@ -184,19 +184,19 @@ foreach ($env as $name => $value) {
 }
 
 $app = Testbench::create(
-    options: ['extra' => ['providers' => $scenario === 'none' ? [] : [TracingServiceProvider::class], 'dont-discover' => ['*']]],
+    options: ['extra' => ['providers' => $scenario === 'none' ? [] : [SherlockServiceProvider::class], 'dont-discover' => ['*']]],
 );
 
 $config = $app['config'];
-$config->set('tracing.explain.enabled', false);
+$config->set('sherlock.explain.enabled', false);
 if ($scenario === 'production') {
     // Same capture + analysis work, but nothing crosses a threshold: nothing is persisted.
-    $config->set('tracing.thresholds.n_plus_one.warning_count', 100000);
-    $config->set('tracing.thresholds.excessive_queries.warning_count', 100000);
-    $config->set('tracing.thresholds.duplicate_query.min_count', 100000);
+    $config->set('sherlock.thresholds.n_plus_one.warning_count', 100000);
+    $config->set('sherlock.thresholds.excessive_queries.warning_count', 100000);
+    $config->set('sherlock.thresholds.duplicate_query.min_count', 100000);
 }
 
-// Schema: fixture tables + fresh tracing tables.
+// Schema: fixture tables + fresh Sherlock tables.
 Schema::dropIfExists('bench_settle');
 Schema::create('bench_settle', static function (Blueprint $table): void {
     $table->id();
@@ -216,7 +216,7 @@ Schema::create('bench_posts', static function (Blueprint $table): void {
 DB::table('bench_authors')->insert(array_map(static fn (int $i): array => ['id' => $i, 'name' => 'Author '.$i], range(1, 40)));
 DB::table('bench_posts')->insert(array_map(static fn (int $i): array => ['author_id' => $i, 'title' => 'Post '.$i], range(1, 40)));
 
-$migration = require __DIR__.'/../database/migrations/2026_01_01_000000_create_tracing_tables.php';
+$migration = require __DIR__.'/../database/migrations/2026_01_01_000000_create_sherlock_tables.php';
 $migration->down();
 if ($scenario !== 'none') {
     $migration->up();
@@ -275,8 +275,8 @@ $percentile = static function (array $values, float $p): float {
     return $values[min(count($values) - 1, (int) floor(count($values) * $p))];
 };
 
-$traces = $scenario === 'none' || ! Schema::hasTable('tracing_traces') ? 0 : DB::table('tracing_traces')->count();
-$issues = $scenario === 'none' || ! Schema::hasTable('tracing_issues') ? 0 : DB::table('tracing_issues')->count();
+$traces = $scenario === 'none' || ! Schema::hasTable('sherlock_traces') ? 0 : DB::table('sherlock_traces')->count();
+$issues = $scenario === 'none' || ! Schema::hasTable('sherlock_issues') ? 0 : DB::table('sherlock_issues')->count();
 
 $migration->down();
 Schema::dropIfExists('bench_settle');

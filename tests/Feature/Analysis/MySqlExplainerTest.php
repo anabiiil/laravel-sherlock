@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Analysis\Explain\DefaultPlanInterpreter;
-use Anabil\Tracing\Analysis\Explain\ExplainService;
-use Anabil\Tracing\Analysis\Explain\MySqlExplainer;
-use Anabil\Tracing\Contracts\TraceAnalyzer;
-use Anabil\Tracing\Data\ExplainInsight;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\ExplainInsightType;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Support\SqlQueryNormalizer;
+use Anabil\Sherlock\Analysis\Explain\DefaultPlanInterpreter;
+use Anabil\Sherlock\Analysis\Explain\ExplainService;
+use Anabil\Sherlock\Analysis\Explain\MySqlExplainer;
+use Anabil\Sherlock\Contracts\TraceAnalyzer;
+use Anabil\Sherlock\Data\ExplainInsight;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\ExplainInsightType;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Support\SqlQueryNormalizer;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
 
-const EXPLAIN_TABLE = 'tracing_explain_orders';
+const EXPLAIN_TABLE = 'sherlock_explain_orders';
 
 beforeEach(function (): void {
     Schema::dropIfExists(EXPLAIN_TABLE);

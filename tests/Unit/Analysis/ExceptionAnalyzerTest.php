@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Analysis\Analyzers\ExceptionAnalyzer;
-use Anabil\Tracing\Data\LogRecord;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Support\BacktraceSourceLocator;
-use Anabil\Tracing\Tests\Unit\Analysis\AnalysisFactory as F;
+use Anabil\Sherlock\Analysis\Analyzers\ExceptionAnalyzer;
+use Anabil\Sherlock\Data\LogRecord;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Support\BacktraceSourceLocator;
+use Anabil\Sherlock\Tests\Unit\Analysis\AnalysisFactory as F;
 
 function exceptionLog(string $message, string $class = 'RuntimeException', string $file = 'app/Services/Billing.php', int $line = 42, array $frames = []): LogRecord
 {

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Explain;
+namespace Anabil\Sherlock\Analysis\Explain;
 
-use Anabil\Tracing\Contracts\PlanInterpreter;
-use Anabil\Tracing\Data\ExplainInsight;
+use Anabil\Sherlock\Contracts\PlanInterpreter;
+use Anabil\Sherlock\Data\ExplainInsight;
 
 /**
  * A plan interpreter that can also read the explained (normalized) SQL, e.g. to

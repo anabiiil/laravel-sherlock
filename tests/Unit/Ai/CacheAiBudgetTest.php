@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Ai\CacheAiBudget;
+use Anabil\Sherlock\Ai\CacheAiBudget;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository;
 
@@ -52,14 +52,14 @@ it('resets on a new day in the app timezone', function (): void {
     $now = new DateTimeImmutable('2026-10-24 20:00:00', new DateTimeZone('UTC'));
     $budget = aiBudgetFor(1, $now, 'Asia/Riyadh', $cache);
 
-    expect($budget->key())->toBe('tracing:ai:budget:2026-10-24')
+    expect($budget->key())->toBe('sherlock:ai:budget:2026-10-24')
         ->and($budget->consume())->toBeTrue()
         ->and($budget->consume())->toBeFalse();
 
     // 21:30 UTC is already the next day in Riyadh (UTC+3).
     $now = new DateTimeImmutable('2026-10-24 21:30:00', new DateTimeZone('UTC'));
 
-    expect($budget->key())->toBe('tracing:ai:budget:2026-10-25')
+    expect($budget->key())->toBe('sherlock:ai:budget:2026-10-25')
         ->and($budget->used())->toBe(0)
         ->and($budget->consume())->toBeTrue();
 });

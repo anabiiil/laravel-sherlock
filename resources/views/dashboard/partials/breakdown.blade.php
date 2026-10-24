@@ -1,5 +1,5 @@
-{{-- $breakdown: Anabil\Tracing\Http\Presenters\Breakdown --}}
-@use('Anabil\Tracing\Http\Support\Format')
+{{-- $breakdown: Anabil\Sherlock\Http\Presenters\Breakdown --}}
+@use('Anabil\Sherlock\Http\Support\Format')
 @if ($breakdown->isEmpty())
     <p class="text-sm text-zinc-500 dark:text-zinc-400">No timing breakdown recorded.</p>
 @else

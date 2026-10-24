@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\BottleneckClassifier;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Data\Verdict;
+use Anabil\Sherlock\Contracts\BottleneckClassifier;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Data\Verdict;
 
 final class NullBottleneckClassifier implements BottleneckClassifier
 {

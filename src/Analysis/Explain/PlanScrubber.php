@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Explain;
+namespace Anabil\Sherlock\Analysis\Explain;
 
 /**
  * Removes literal values from a raw EXPLAIN plan.

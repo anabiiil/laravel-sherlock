@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Capture\Support;
+namespace Anabil\Sherlock\Tests\Feature\Capture\Support;
 
-use Anabil\Tracing\Contracts\SourceLocator;
-use Anabil\Tracing\Data\SourceLocation;
+use Anabil\Sherlock\Contracts\SourceLocator;
+use Anabil\Sherlock\Data\SourceLocation;
 use RuntimeException;
 
 final class SpySourceLocator implements SourceLocator

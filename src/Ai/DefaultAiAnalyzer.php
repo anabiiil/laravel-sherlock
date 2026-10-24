@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Ai;
+namespace Anabil\Sherlock\Ai;
 
-use Anabil\Tracing\Contracts\AiAnalyzer;
-use Anabil\Tracing\Contracts\AiBudget;
-use Anabil\Tracing\Contracts\AiProviderFactory;
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Data\AiAnalysisResult;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Tracing;
+use Anabil\Sherlock\Contracts\AiAnalyzer;
+use Anabil\Sherlock\Contracts\AiBudget;
+use Anabil\Sherlock\Contracts\AiProviderFactory;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Data\AiAnalysisResult;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Enums\AiStatus;
+use Anabil\Sherlock\Sherlock;
 use DateTimeImmutable;
 use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Contracts\Cache\LockProvider;
@@ -31,7 +31,7 @@ use Throwable;
  */
 final class DefaultAiAnalyzer implements AiAnalyzer
 {
-    private const LOCK_KEY = 'tracing:ai:analyze:';
+    private const LOCK_KEY = 'sherlock:ai:analyze:';
 
     public function __construct(
         private readonly IssueRepository $issues,
@@ -40,7 +40,7 @@ final class DefaultAiAnalyzer implements AiAnalyzer
         private readonly PromptBuilder $prompts,
         private readonly Repository $config,
         private readonly Cache $cache,
-        private readonly ?Tracing $tracing = null,
+        private readonly ?Sherlock $sherlock = null,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
@@ -166,7 +166,7 @@ final class DefaultAiAnalyzer implements AiAnalyzer
             return null;
         }
 
-        $timeout = $this->config->get('tracing.ai.timeout', 30);
+        $timeout = $this->config->get('sherlock.ai.timeout', 30);
 
         // Outlives the HTTP timeout; released explicitly when done.
         return $store->lock(self::LOCK_KEY.$issueId, (is_numeric($timeout) ? (int) $timeout : 30) + 60);
@@ -182,7 +182,7 @@ final class DefaultAiAnalyzer implements AiAnalyzer
      */
     private function paused(callable $callback): mixed
     {
-        return $this->tracing !== null ? $this->tracing->pause($callback(...)) : $callback();
+        return $this->sherlock !== null ? $this->sherlock->pause($callback(...)) : $callback();
     }
 
     private function safely(callable $callback): void
@@ -196,7 +196,7 @@ final class DefaultAiAnalyzer implements AiAnalyzer
 
     private function report(int|string $issueId, Throwable $e): void
     {
-        $this->safely(fn () => $this->logger?->warning('[tracing] AI analysis failed', [
+        $this->safely(fn () => $this->logger?->warning('[sherlock] AI analysis failed', [
             'issue_id' => $issueId,
             'exception' => $e::class,
             'error' => $this->message($e),
@@ -209,7 +209,7 @@ final class DefaultAiAnalyzer implements AiAnalyzer
         $message = $e instanceof AiProviderException || $e instanceof InvalidArgumentException
             ? $e->getMessage()
             : 'Unexpected '.class_basename($e).' during AI analysis.';
-        $key = $this->config->get('tracing.ai.api_key');
+        $key = $this->config->get('sherlock.ai.api_key');
 
         return AiProviderException::scrub($message, is_string($key) ? $key : null);
     }

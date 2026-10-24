@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
-use Anabil\Tracing\Enums\RecordReason;
+use Anabil\Sherlock\Enums\RecordReason;
 
 /**
  * A trace that was decided to be persisted, with its analysis. This is what

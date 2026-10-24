@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\IssueService;
-use Anabil\Tracing\Data\IssueOutcome;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\OccurrenceType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Events\IssueDetected;
-use Anabil\Tracing\Events\IssueRecurred;
-use Anabil\Tracing\Events\IssueRegressed;
-use Anabil\Tracing\Issues\DefaultIssueService;
-use Anabil\Tracing\Jobs\AnalyzeIssueJob;
-use Anabil\Tracing\Jobs\NotifyIssueJob;
-use Anabil\Tracing\Tests\Feature\Storage\StorageFixtures as F;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\IssueService;
+use Anabil\Sherlock\Data\IssueOutcome;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\OccurrenceType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Events\IssueDetected;
+use Anabil\Sherlock\Events\IssueRecurred;
+use Anabil\Sherlock\Events\IssueRegressed;
+use Anabil\Sherlock\Issues\DefaultIssueService;
+use Anabil\Sherlock\Jobs\AnalyzeIssueJob;
+use Anabil\Sherlock\Jobs\NotifyIssueJob;
+use Anabil\Sherlock\Tests\Feature\Storage\StorageFixtures as F;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -101,7 +101,7 @@ it('records each issue fingerprint once per trace, keeping the most severe findi
     expect($outcomes)->toHaveCount(2)
         ->and(app(IssueRepository::class)->findByFingerprint('same')->occurrences)->toBe(1)
         ->and(app(IssueRepository::class)->findByFingerprint('same')->severity)->toBe(Severity::Critical)
-        ->and(DB::table('tracing_issues')->count())->toBe(2);
+        ->and(DB::table('sherlock_issues')->count())->toBe(2);
 });
 
 it('stores a useful, AI-ready context', function (): void {
@@ -125,8 +125,8 @@ it('stores a useful, AI-ready context', function (): void {
 
 it('includes exception details for error issues and slow calls for external issues', function (): void {
     $trace = F::traceData(type: EntryType::Job, name: 'App\\Jobs\\Charge', logs: [F::exception()], httpCalls: [F::httpCall()]);
-    $exception = new Anabil\Tracing\Data\Finding(IssueType::Exception, Severity::Critical, 'RuntimeException', 'Something failed', 'exc', location: new Anabil\Tracing\Data\SourceLocation('app/Services/Billing.php', 10));
-    $external = new Anabil\Tracing\Data\Finding(IssueType::SlowExternalCall, Severity::Warning, 'Slow call', '', 'ext');
+    $exception = new Anabil\Sherlock\Data\Finding(IssueType::Exception, Severity::Critical, 'RuntimeException', 'Something failed', 'exc', location: new Anabil\Sherlock\Data\SourceLocation('app/Services/Billing.php', 10));
+    $external = new Anabil\Sherlock\Data\Finding(IssueType::SlowExternalCall, Severity::Warning, 'Slow call', '', 'ext');
 
     issueService()->recordFindings($trace->id, F::recorded($trace, [$exception, $external]));
 
@@ -140,7 +140,7 @@ it('includes exception details for error issues and slow calls for external issu
 });
 
 it('dispatches the AI -> notification chain for new and regressed issues when enabled', function (): void {
-    config()->set('tracing.notifications.enabled', true);
+    config()->set('sherlock.notifications.enabled', true);
     app()->forgetInstance(IssueService::class);
     Bus::fake();
 
@@ -160,8 +160,8 @@ it('dispatches the AI -> notification chain for new and regressed issues when en
 });
 
 it('does not dispatch jobs when AI and notifications are disabled', function (): void {
-    config()->set('tracing.notifications.enabled', false);
-    config()->set('tracing.ai.enabled', false);
+    config()->set('sherlock.notifications.enabled', false);
+    config()->set('sherlock.ai.enabled', false);
     app()->forgetInstance(IssueService::class);
     Bus::fake();
 
@@ -179,10 +179,10 @@ function issueServiceInHttpWorker(bool $http): void
 }
 
 it('skips the AI job on a sync queue inside an HTTP request (it would hold the PHP worker)', function (): void {
-    config()->set('tracing.ai.enabled', true);
-    config()->set('tracing.ai.min_severity', 'info');
-    config()->set('tracing.notifications.enabled', true);
-    config()->set('tracing.queue.connection', 'sync');
+    config()->set('sherlock.ai.enabled', true);
+    config()->set('sherlock.ai.min_severity', 'info');
+    config()->set('sherlock.notifications.enabled', true);
+    config()->set('sherlock.queue.connection', 'sync');
     issueServiceInHttpWorker(true);
     Bus::fake();
 
@@ -195,15 +195,15 @@ it('skips the AI job on a sync queue inside an HTTP request (it would hold the P
     Bus::assertNotDispatched(AnalyzeIssueJob::class);
     Bus::assertDispatched(NotifyIssueJob::class, 1);
     // No analysis is scheduled: "not analyzed" (null), not "pending".
-    expect(DB::table('tracing_issues')->value('ai_status'))->toBeNull();
+    expect(DB::table('sherlock_issues')->value('ai_status'))->toBeNull();
 });
 
 it('keeps the AI chain on a real queue, or on a sync queue outside HTTP requests', function (bool $http, string $connection): void {
-    config()->set('tracing.ai.enabled', true);
-    config()->set('tracing.ai.min_severity', 'info');
-    config()->set('tracing.notifications.enabled', true);
+    config()->set('sherlock.ai.enabled', true);
+    config()->set('sherlock.ai.min_severity', 'info');
+    config()->set('sherlock.notifications.enabled', true);
     config()->set('queue.connections.redis-like', ['driver' => 'database']);
-    config()->set('tracing.queue.connection', $connection);
+    config()->set('sherlock.queue.connection', $connection);
     issueServiceInHttpWorker($http);
     Bus::fake();
 
@@ -214,16 +214,16 @@ it('keeps the AI chain on a real queue, or on a sync queue outside HTTP requests
     }
 
     Bus::assertChained([AnalyzeIssueJob::class, NotifyIssueJob::class]);
-    expect(DB::table('tracing_issues')->value('ai_status'))->toBe('pending');
+    expect(DB::table('sherlock_issues')->value('ai_status'))->toBe('pending');
 })->with([
     'http request, real queue' => [true, 'redis-like'],
     'queue worker / command, sync queue' => [false, 'sync'],
 ]);
 
 it('dispatches nothing on a sync queue inside an HTTP request when only AI is enabled', function (): void {
-    config()->set('tracing.ai.enabled', true);
-    config()->set('tracing.notifications.enabled', false);
-    config()->set('tracing.queue.connection', 'sync');
+    config()->set('sherlock.ai.enabled', true);
+    config()->set('sherlock.notifications.enabled', false);
+    config()->set('sherlock.queue.connection', 'sync');
     issueServiceInHttpWorker(true);
     Bus::fake();
 

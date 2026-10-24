@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 /*
 | Dashboard routes. Loaded by DashboardServiceProvider inside a group that applies the
-| configured domain / path / middleware + the viewTracing gate and the "tracing." name prefix.
+| configured domain / path / middleware + the viewSherlock gate and the "sherlock." name prefix.
 */
 
-use Anabil\Tracing\Http\Controllers\IssuesController;
-use Anabil\Tracing\Http\Controllers\OverviewController;
-use Anabil\Tracing\Http\Controllers\QueriesController;
-use Anabil\Tracing\Http\Controllers\TracesController;
+use Anabil\Sherlock\Http\Controllers\IssuesController;
+use Anabil\Sherlock\Http\Controllers\OverviewController;
+use Anabil\Sherlock\Http\Controllers\QueriesController;
+use Anabil\Sherlock\Http\Controllers\TracesController;
 use Illuminate\Support\Facades\Route;
 
 $id = '[A-Za-z0-9_-]+';

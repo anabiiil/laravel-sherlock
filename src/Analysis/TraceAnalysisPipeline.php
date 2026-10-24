@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis;
+namespace Anabil\Sherlock\Analysis;
 
-use Anabil\Tracing\Analysis\Explain\ExplainService;
-use Anabil\Tracing\Contracts\Analyzer;
-use Anabil\Tracing\Contracts\BottleneckClassifier;
-use Anabil\Tracing\Contracts\Fingerprinter;
-use Anabil\Tracing\Contracts\QueryNormalizer;
-use Anabil\Tracing\Contracts\TraceAnalyzer;
-use Anabil\Tracing\Data\AnalysisResult;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Data\Verdict;
+use Anabil\Sherlock\Analysis\Explain\ExplainService;
+use Anabil\Sherlock\Contracts\Analyzer;
+use Anabil\Sherlock\Contracts\BottleneckClassifier;
+use Anabil\Sherlock\Contracts\Fingerprinter;
+use Anabil\Sherlock\Contracts\QueryNormalizer;
+use Anabil\Sherlock\Contracts\TraceAnalyzer;
+use Anabil\Sherlock\Data\AnalysisResult;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Data\Verdict;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -155,7 +155,7 @@ final class TraceAnalysisPipeline implements TraceAnalyzer
         }
         $this->reported[$component] = true;
 
-        $this->logger?->warning('[tracing] analysis step failed: '.$component.': '.$e->getMessage(), [
+        $this->logger?->warning('[sherlock] analysis step failed: '.$component.': '.$e->getMessage(), [
             'exception' => $e::class,
         ]);
     }

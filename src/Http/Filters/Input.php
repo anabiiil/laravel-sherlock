@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Filters;
+namespace Anabil\Sherlock\Http\Filters;
 
 use Illuminate\Http\Request;
 

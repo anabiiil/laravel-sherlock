@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Jobs;
+namespace Anabil\Sherlock\Jobs;
 
 /**
- * Applies config("tracing.queue") to package jobs.
+ * Applies config("sherlock.queue") to package jobs.
  */
 final class QueueTarget
 {
@@ -18,8 +18,8 @@ final class QueueTarget
             return;
         }
 
-        $connection = config('tracing.queue.connection');
-        $queue = config('tracing.queue.name');
+        $connection = config('sherlock.queue.connection');
+        $queue = config('sherlock.queue.name');
 
         if (is_string($connection) && $connection !== '') {
             $job->onConnection($connection);

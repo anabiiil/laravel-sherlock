@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Notifications\NotificationPolicy;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Notifications\NotificationPolicy;
 use Illuminate\Config\Repository;
 
 function notifPolicy(array $notifications = [], array $extra = []): NotificationPolicy
 {
-    return new NotificationPolicy(new Repository(array_replace_recursive(['tracing' => ['notifications' => $notifications]], $extra)));
+    return new NotificationPolicy(new Repository(array_replace_recursive(['sherlock' => ['notifications' => $notifications]], $extra)));
 }
 
 it('reads the global switch and normalizes channel names', function (): void {
@@ -56,6 +56,6 @@ it('bounds throttle and timeout values', function (): void {
 
 it('detects a sync package queue', function (): void {
     expect(notifPolicy([], ['queue' => ['default' => 'sync', 'connections' => ['sync' => ['driver' => 'sync']]]])->queueIsSync())->toBeTrue()
-        ->and(notifPolicy([], ['queue' => ['default' => 'sync', 'connections' => ['redis' => ['driver' => 'redis']]], 'tracing' => ['queue' => ['connection' => 'redis']]])->queueIsSync())->toBeFalse()
+        ->and(notifPolicy([], ['queue' => ['default' => 'sync', 'connections' => ['redis' => ['driver' => 'redis']]], 'sherlock' => ['queue' => ['connection' => 'redis']]])->queueIsSync())->toBeFalse()
         ->and(notifPolicy([], ['queue' => ['default' => 'database', 'connections' => ['database' => ['driver' => 'database']]]])->queueIsSync())->toBeFalse();
 });

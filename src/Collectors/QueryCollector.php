@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Collectors;
+namespace Anabil\Sherlock\Collectors;
 
-use Anabil\Tracing\Analysis\Explain\ExplainGuard;
-use Anabil\Tracing\Context\ContextManager;
-use Anabil\Tracing\Context\FailureReporter;
-use Anabil\Tracing\Contracts\Collector;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Contracts\SourceLocator;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Recording\PatternList;
+use Anabil\Sherlock\Analysis\Explain\ExplainGuard;
+use Anabil\Sherlock\Context\ContextManager;
+use Anabil\Sherlock\Context\FailureReporter;
+use Anabil\Sherlock\Contracts\Collector;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\SourceLocator;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Recording\PatternList;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Events\QueryExecuted;
 use Throwable;

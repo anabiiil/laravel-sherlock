@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Collectors;
+namespace Anabil\Sherlock\Collectors;
 
-use Anabil\Tracing\Context\UnitLifecycle;
-use Anabil\Tracing\Contracts\Collector;
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Recording\Policies\IgnorePolicy;
+use Anabil\Sherlock\Context\UnitLifecycle;
+use Anabil\Sherlock\Contracts\Collector;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Recording\Policies\IgnorePolicy;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Queue\Job;
 use Illuminate\Queue\Events\JobExceptionOccurred;

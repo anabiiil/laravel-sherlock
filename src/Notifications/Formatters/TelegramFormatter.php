@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications\Formatters;
+namespace Anabil\Sherlock\Notifications\Formatters;
 
-use Anabil\Tracing\Data\NotificationMessage;
+use Anabil\Sherlock\Data\NotificationMessage;
 
 /**
  * NotificationMessage -> Telegram Bot API sendMessage text (parse_mode=HTML).

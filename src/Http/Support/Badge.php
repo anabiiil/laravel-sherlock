@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Support;
+namespace Anabil\Sherlock\Http\Support;
 
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\Severity;
 
 /**
  * Tailwind classes for badges and chart segments, kept out of the views.

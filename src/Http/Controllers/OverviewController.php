@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Controllers;
+namespace Anabil\Sherlock\Http\Controllers;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Http\Support\Period;
-use Anabil\Tracing\Http\Support\Views;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Http\Support\Period;
+use Anabil\Sherlock\Http\Support\Views;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -44,7 +44,7 @@ final class OverviewController
             $severities[] = ['severity' => $severity, 'count' => $bySeverity[$severity->value] ?? 0];
         }
 
-        return $this->views->make('tracing::dashboard.overview', [
+        return $this->views->make('sherlock::dashboard.overview', [
             'period' => $period,
             'traceCounts' => $counts,
             'totalTraces' => array_sum($counts),

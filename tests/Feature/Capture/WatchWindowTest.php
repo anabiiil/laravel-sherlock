@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\WatchWindow;
-use Anabil\Tracing\Enums\RecordReason;
-use Anabil\Tracing\Facades\Tracing;
-use Anabil\Tracing\Recording\CacheWatchWindow;
-use Anabil\Tracing\Tests\Feature\Capture\Support\Capture;
+use Anabil\Sherlock\Contracts\WatchWindow;
+use Anabil\Sherlock\Enums\RecordReason;
+use Anabil\Sherlock\Facades\Sherlock;
+use Anabil\Sherlock\Recording\CacheWatchWindow;
+use Anabil\Sherlock\Tests\Feature\Capture\Support\Capture;
 use Illuminate\Auth\GenericUser;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 beforeEach(function (): void {
-    config()->set('tracing.mode', 'production');
-    config()->set('tracing.sample_rate', 0.0);
+    config()->set('sherlock.mode', 'production');
+    config()->set('sherlock.sample_rate', 0.0);
 
     $this->recorder = Capture::fakeRecorder();
 
@@ -26,7 +26,7 @@ it('binds the cache-backed watch window', function (): void {
 });
 
 it('fully traces matching requests while a watch window is active', function (): void {
-    Tracing::watch(10, 'api/orders*');
+    Sherlock::watch(10, 'api/orders*');
 
     $this->get('/api/orders/7')->assertOk();
     $this->get('/other')->assertOk();
@@ -38,21 +38,21 @@ it('fully traces matching requests while a watch window is active', function ():
         ->and($watched->queries[0]->bindings)->toBe(['7'])
         ->and($other->full)->toBeFalse()
         ->and($other->recordReasons)->toBe([])
-        ->and(Tracing::watching()?->routePattern)->toBe('api/orders*');
+        ->and(Sherlock::watching()?->routePattern)->toBe('api/orders*');
 });
 
 it('stops the watch window early', function (): void {
-    Tracing::watch(10);
-    Tracing::stopWatching();
+    Sherlock::watch(10);
+    Sherlock::stopWatching();
 
     $this->get('/other')->assertOk();
 
     expect($this->recorder->last()->full)->toBeFalse()
-        ->and(Tracing::watching())->toBeNull();
+        ->and(Sherlock::watching())->toBeNull();
 });
 
 it('drops the watch reason at terminate when the user filter does not match', function (): void {
-    Tracing::watch(10, null, 99);
+    Sherlock::watch(10, null, 99);
 
     $this->actingAs(new GenericUser(['id' => 5]))->get('/other')->assertOk();
     $this->actingAs(new GenericUser(['id' => 99]))->get('/other')->assertOk();
@@ -72,7 +72,7 @@ it('does not resolve a user that no guard resolved', function (): void {
 });
 
 it('starts and stops the window from artisan', function (): void {
-    $this->artisan('tracing:watch', ['--minutes' => 15, '--route' => 'api/*', '--user' => '42'])
+    $this->artisan('sherlock:watch', ['--minutes' => 15, '--route' => 'api/*', '--user' => '42'])
         ->expectsOutputToContain('Full tracing on until')
         ->assertSuccessful();
 
@@ -82,18 +82,18 @@ it('starts and stops the window from artisan', function (): void {
         ->and($state->userId)->toBe(42)
         ->and($state->remainingSeconds())->toBeGreaterThan(14 * 60);
 
-    $this->artisan('tracing:watch', ['--stop' => true])->assertSuccessful();
+    $this->artisan('sherlock:watch', ['--stop' => true])->assertSuccessful();
     expect(app(WatchWindow::class)->current())->toBeNull();
 
-    $this->artisan('tracing:watch', ['--minutes' => 0])->assertFailed();
+    $this->artisan('sherlock:watch', ['--minutes' => 0])->assertFailed();
 });
 
 it('prints the status', function (): void {
-    config()->set('tracing.notifications.channels', ['slack', 'telegram']);
-    config()->set('tracing.notifications.slack.webhook_url', 'https://hooks.slack.test/x');
-    Tracing::watch(5, 'api/*');
+    config()->set('sherlock.notifications.channels', ['slack', 'telegram']);
+    config()->set('sherlock.notifications.slack.webhook_url', 'https://hooks.slack.test/x');
+    Sherlock::watch(5, 'api/*');
 
-    $this->artisan('tracing:status')
+    $this->artisan('sherlock:status')
         ->expectsOutputToContain('production')
         ->expectsOutputToContain('active')
         ->expectsOutputToContain('slack, telegram')

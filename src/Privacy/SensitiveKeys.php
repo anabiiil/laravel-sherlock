@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Privacy;
+namespace Anabil\Sherlock\Privacy;
 
 /**
  * Sensitive key names. The locked defaults can never be removed; config can only add.

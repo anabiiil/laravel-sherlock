@@ -1,7 +1,7 @@
-@extends('tracing::dashboard.layout')
+@extends('sherlock::dashboard.layout')
 
-@use('Anabil\Tracing\Http\Support\Badge')
-@use('Anabil\Tracing\Http\Support\Format')
+@use('Anabil\Sherlock\Http\Support\Badge')
+@use('Anabil\Sherlock\Http\Support\Format')
 
 @section('title', $trace->name)
 
@@ -18,7 +18,7 @@
 @endphp
 
 @section('content')
-    <nav class="mb-3 text-sm"><a href="{{ route('tracing.traces.index') }}" class="text-zinc-500 hover:underline dark:text-zinc-400">&larr; Traces</a></nav>
+    <nav class="mb-3 text-sm"><a href="{{ route('sherlock.traces.index') }}" class="text-zinc-500 hover:underline dark:text-zinc-400">&larr; Traces</a></nav>
 
     <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
@@ -36,25 +36,25 @@
     </div>
 
     <section class="{{ $card }} mt-5">
-        @include('tracing::dashboard.partials.card-title', ['title' => 'Timeline'])
+        @include('sherlock::dashboard.partials.card-title', ['title' => 'Timeline'])
         @if ($presenter->verdictReason())
             <p class="mb-3 text-sm text-zinc-600 dark:text-zinc-300">{{ $presenter->verdictReason() }}</p>
         @endif
-        @include('tracing::dashboard.partials.breakdown', ['breakdown' => $presenter->breakdown()])
+        @include('sherlock::dashboard.partials.breakdown', ['breakdown' => $presenter->breakdown()])
     </section>
 
     <div class="mt-6 grid gap-6 lg:grid-cols-3">
         <div class="min-w-0 space-y-6 lg:col-span-2">
             @if ($findings !== [])
                 <section class="{{ $card }}">
-                    @include('tracing::dashboard.partials.card-title', ['title' => 'Findings'])
+                    @include('sherlock::dashboard.partials.card-title', ['title' => 'Findings'])
                     <ul class="space-y-2 text-sm">
                         @foreach ($findings as $finding)
                             <li class="flex items-start gap-2">
-                                @include('tracing::dashboard.partials.severity', ['severity' => $finding['severity']])
+                                @include('sherlock::dashboard.partials.severity', ['severity' => $finding['severity']])
                                 <div class="min-w-0">
                                     @if ($finding['issue'])
-                                        <a href="{{ route('tracing.issues.show', ['issue' => $finding['issue']->id]) }}" class="font-medium hover:underline">{{ $finding['title'] }}</a>
+                                        <a href="{{ route('sherlock.issues.show', ['issue' => $finding['issue']->id]) }}" class="font-medium hover:underline">{{ $finding['title'] }}</a>
                                     @else
                                         <span class="font-medium">{{ $finding['title'] }}</span>
                                     @endif
@@ -77,7 +77,7 @@
                     </span>
                 </div>
                 @if ($groups === [])
-                    @include('tracing::dashboard.partials.empty', ['message' => 'No queries stored for this trace.'])
+                    @include('sherlock::dashboard.partials.empty', ['message' => 'No queries stored for this trace.'])
                 @else
                     <div class="overflow-x-auto">
                         <table class="min-w-full text-sm">
@@ -140,7 +140,7 @@
 
             @if ($calls !== [])
                 <section class="{{ $card }}">
-                    @include('tracing::dashboard.partials.card-title', ['title' => 'HTTP calls'])
+                    @include('sherlock::dashboard.partials.card-title', ['title' => 'HTTP calls'])
                     <ul class="divide-y divide-zinc-100 text-sm dark:divide-zinc-800">
                         @foreach ($calls as $call)
                             <li class="flex items-center justify-between gap-3 py-1.5">
@@ -154,7 +154,7 @@
 
             @if ($logs !== [])
                 <section class="{{ $card }}">
-                    @include('tracing::dashboard.partials.card-title', ['title' => 'Logs & exceptions'])
+                    @include('sherlock::dashboard.partials.card-title', ['title' => 'Logs & exceptions'])
                     <ul class="space-y-3 text-sm">
                         @foreach ($logs as $log)
                             <li>
@@ -192,7 +192,7 @@
 
         <aside class="min-w-0 space-y-6">
             <section class="{{ $card }}">
-                @include('tracing::dashboard.partials.card-title', ['title' => 'Summary'])
+                @include('sherlock::dashboard.partials.card-title', ['title' => 'Summary'])
                 <dl class="space-y-1 text-sm">
                     @foreach ($summary as $label => $value)
                         <div class="flex justify-between gap-3"><dt class="shrink-0 text-zinc-500 dark:text-zinc-400">{{ $label }}</dt><dd class="min-w-0 break-all text-right">{{ $value }}</dd></div>
@@ -202,7 +202,7 @@
 
             @if ($tags !== [] || $metadata !== [])
                 <section class="{{ $card }}">
-                    @include('tracing::dashboard.partials.card-title', ['title' => 'Tags'])
+                    @include('sherlock::dashboard.partials.card-title', ['title' => 'Tags'])
                     @if ($tags !== [])
                         <ul class="flex flex-wrap gap-1.5">
                             @foreach ($tags as $key => $value)

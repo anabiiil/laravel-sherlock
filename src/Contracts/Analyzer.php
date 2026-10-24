@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\TraceData;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\TraceData;
 
 /**
  * One detection rule (Strategy). Receives a trace whose queries are already

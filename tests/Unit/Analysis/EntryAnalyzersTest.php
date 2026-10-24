@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Analysis\Analyzers\CacheMissRateAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\HighMemoryAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\SlowEntryAnalyzer;
-use Anabil\Tracing\Analysis\Analyzers\SlowExternalCallAnalyzer;
-use Anabil\Tracing\Data\HttpCallRecord;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Tests\Unit\Analysis\AnalysisFactory as F;
+use Anabil\Sherlock\Analysis\Analyzers\CacheMissRateAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\HighMemoryAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\SlowEntryAnalyzer;
+use Anabil\Sherlock\Analysis\Analyzers\SlowExternalCallAnalyzer;
+use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Tests\Unit\Analysis\AnalysisFactory as F;
 
 describe('SlowEntryAnalyzer', function (): void {
     beforeEach(fn () => $this->analyzer = new SlowEntryAnalyzer(F::fingerprinter()));

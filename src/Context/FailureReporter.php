@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Context;
+namespace Anabil\Sherlock\Context;
 
 use Illuminate\Contracts\Container\Container;
 use Psr\Log\LoggerInterface;
@@ -37,7 +37,7 @@ final class FailureReporter
 
                 $logger = $this->container->make('log');
                 if ($logger instanceof LoggerInterface) {
-                    $logger->warning('[tracing] capture failed and was disabled for this unit: '.$e->getMessage(), [
+                    $logger->warning('[sherlock] capture failed and was disabled for this unit: '.$e->getMessage(), [
                         'exception_class' => $e::class,
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),

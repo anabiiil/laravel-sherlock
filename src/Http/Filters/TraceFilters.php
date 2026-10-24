@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Filters;
+namespace Anabil\Sherlock\Http\Filters;
 
-use Anabil\Tracing\Data\TraceFilter;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\EntryType;
+use Anabil\Sherlock\Data\TraceFilter;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\EntryType;
 use Illuminate\Http\Request;
 
 /**

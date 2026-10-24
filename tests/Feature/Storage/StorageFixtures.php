@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Storage;
+namespace Anabil\Sherlock\Tests\Feature\Storage;
 
-use Anabil\Tracing\Data\AnalysisResult;
-use Anabil\Tracing\Data\ExplainInsight;
-use Anabil\Tracing\Data\ExplainPlan;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\HttpCallRecord;
-use Anabil\Tracing\Data\LogRecord;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Data\Verdict;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\ExplainInsightType;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\RecordReason;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Data\AnalysisResult;
+use Anabil\Sherlock\Data\ExplainInsight;
+use Anabil\Sherlock\Data\ExplainPlan;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Data\LogRecord;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Data\Verdict;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\ExplainInsightType;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\RecordReason;
+use Anabil\Sherlock\Enums\Severity;
 use Carbon\CarbonImmutable;
 use DateTimeImmutable;
 use Illuminate\Support\Str;

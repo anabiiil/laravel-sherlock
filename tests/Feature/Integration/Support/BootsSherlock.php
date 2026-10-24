@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Integration\Support;
+namespace Anabil\Sherlock\Tests\Feature\Integration\Support;
 
-use Anabil\Tracing\Contracts\SourceLocator;
-use Anabil\Tracing\Support\BacktraceSourceLocator;
+use Anabil\Sherlock\Contracts\SourceLocator;
+use Anabil\Sherlock\Support\BacktraceSourceLocator;
 use Illuminate\Contracts\Foundation\Application;
 
 /**
@@ -18,7 +18,7 @@ use Illuminate\Contracts\Foundation\Application;
  * Runs while the application is created (after register, before boot), so the collectors
  * built at boot receive this locator.
  */
-trait BootsTracing
+trait BootsSherlock
 {
     protected function getEnvironmentSetUp($app): void
     {

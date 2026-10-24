@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Privacy;
+namespace Anabil\Sherlock\Privacy;
 
-use Anabil\Tracing\Contracts\RedactionRule;
-use Anabil\Tracing\Contracts\Redactor as RedactorContract;
-use Anabil\Tracing\Privacy\Rules\BearerTokenRule;
-use Anabil\Tracing\Privacy\Rules\CardNumberRule;
-use Anabil\Tracing\Privacy\Rules\CustomPatternRule;
-use Anabil\Tracing\Privacy\Rules\EmailRule;
-use Anabil\Tracing\Privacy\Rules\IpAddressRule;
-use Anabil\Tracing\Privacy\Rules\LongSecretRule;
-use Anabil\Tracing\Privacy\Rules\PasswordHashRule;
-use Anabil\Tracing\Privacy\Rules\PhoneRule;
-use Anabil\Tracing\Privacy\Rules\SensitiveKeyRule;
+use Anabil\Sherlock\Contracts\RedactionRule;
+use Anabil\Sherlock\Contracts\Redactor as RedactorContract;
+use Anabil\Sherlock\Privacy\Rules\BearerTokenRule;
+use Anabil\Sherlock\Privacy\Rules\CardNumberRule;
+use Anabil\Sherlock\Privacy\Rules\CustomPatternRule;
+use Anabil\Sherlock\Privacy\Rules\EmailRule;
+use Anabil\Sherlock\Privacy\Rules\IpAddressRule;
+use Anabil\Sherlock\Privacy\Rules\LongSecretRule;
+use Anabil\Sherlock\Privacy\Rules\PasswordHashRule;
+use Anabil\Sherlock\Privacy\Rules\PhoneRule;
+use Anabil\Sherlock\Privacy\Rules\SensitiveKeyRule;
 use BackedEnum;
 use DateTimeInterface;
 use Illuminate\Contracts\Support\Arrayable;
@@ -49,7 +49,7 @@ final class Redactor implements RedactorContract
         'x-auth-token',
         'x-csrf-token',
         'x-xsrf-token',
-        'x-tracing',
+        'x-sherlock',
         'php-auth-user',
         'php-auth-pw',
         'php-auth-digest',

@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Presenters;
+namespace Anabil\Sherlock\Http\Presenters;
 
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Data\StoredQuery;
-use Anabil\Tracing\Data\StoredTrace;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Http\Support\Format;
-use Anabil\Tracing\Http\Support\SqlHighlighter;
-use Anabil\Tracing\Http\Support\Value;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Data\StoredQuery;
+use Anabil\Sherlock\Data\StoredTrace;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Http\Support\Format;
+use Anabil\Sherlock\Http\Support\SqlHighlighter;
+use Anabil\Sherlock\Http\Support\Value;
 use Illuminate\Support\HtmlString;
 
 /**

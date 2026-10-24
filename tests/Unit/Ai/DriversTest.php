@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Ai\AiProviderException;
-use Anabil\Tracing\Ai\Drivers\AnthropicDriver;
-use Anabil\Tracing\Ai\Drivers\GeminiDriver;
-use Anabil\Tracing\Ai\Drivers\NullDriver;
-use Anabil\Tracing\Ai\Drivers\OllamaDriver;
-use Anabil\Tracing\Ai\Drivers\OpenAiCompatibleDriver;
-use Anabil\Tracing\Data\AiRequest;
+use Anabil\Sherlock\Ai\AiProviderException;
+use Anabil\Sherlock\Ai\Drivers\AnthropicDriver;
+use Anabil\Sherlock\Ai\Drivers\GeminiDriver;
+use Anabil\Sherlock\Ai\Drivers\NullDriver;
+use Anabil\Sherlock\Ai\Drivers\OllamaDriver;
+use Anabil\Sherlock\Ai\Drivers\OpenAiCompatibleDriver;
+use Anabil\Sherlock\Data\AiRequest;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
@@ -123,13 +123,13 @@ describe('openai compatible', function (): void {
     });
 
     it('adds the openrouter attribution headers', function (): void {
-        $driver = new OpenAiCompatibleDriver('openrouter', ['base_url' => 'https://openrouter.ai/api/v1', 'model' => 'm', 'api_key' => 'k', 'referer' => 'https://example.test', 'title' => 'Laravel Tracing'], $this->http);
+        $driver = new OpenAiCompatibleDriver('openrouter', ['base_url' => 'https://openrouter.ai/api/v1', 'model' => 'm', 'api_key' => 'k', 'referer' => 'https://example.test', 'title' => 'Laravel Sherlock'], $this->http);
         $this->http->fake(['*' => $this->http->response(aiOpenAiBody())]);
 
         $driver->complete(aiRequest());
 
         $this->http->assertSent(fn (Request $r): bool => $r->header('HTTP-Referer') === ['https://example.test']
-            && $r->header('X-Title') === ['Laravel Tracing']);
+            && $r->header('X-Title') === ['Laravel Sherlock']);
     });
 
     it('sends no Authorization header without a key (local servers)', function (): void {

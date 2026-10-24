@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Collectors;
+namespace Anabil\Sherlock\Collectors;
 
-use Anabil\Tracing\Context\ContextManager;
-use Anabil\Tracing\Context\FailureReporter;
-use Anabil\Tracing\Contracts\Collector;
+use Anabil\Sherlock\Context\ContextManager;
+use Anabil\Sherlock\Context\FailureReporter;
+use Anabil\Sherlock\Contracts\Collector;
 use Illuminate\Cache\Events\CacheHit;
 use Illuminate\Cache\Events\CacheMissed;
 use Illuminate\Cache\Events\KeyWritten;

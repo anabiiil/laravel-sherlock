@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Tests\Feature\Dashboard\DashboardFixtures as D;
+use Anabil\Sherlock\Tests\Feature\Dashboard\DashboardFixtures as D;
 use Carbon\CarbonImmutable;
 
 beforeEach(fn () => D::allowAccess());
@@ -10,24 +10,24 @@ beforeEach(fn () => D::allowAccess());
 it('renders every list page with empty data', function (string $uri, string $empty): void {
     $this->get($uri)
         ->assertOk()
-        ->assertSee('Tracing')
+        ->assertSee('Sherlock')
         ->assertSee($empty);
 })->with([
-    'overview' => ['/tracing', 'No traces in this period.'],
-    'issues' => ['/tracing/issues', 'No issues match these filters.'],
-    'traces' => ['/tracing/traces', 'No traces match these filters.'],
-    'queries' => ['/tracing/queries', 'No queries recorded in this period.'],
+    'overview' => ['/sherlock', 'No traces in this period.'],
+    'issues' => ['/sherlock/issues', 'No issues match these filters.'],
+    'traces' => ['/sherlock/traces', 'No traces match these filters.'],
+    'queries' => ['/sherlock/queries', 'No queries recorded in this period.'],
 ]);
 
 it('returns 404 for unknown issues and traces', function (): void {
-    $this->get('/tracing/issues/999999')->assertNotFound();
-    $this->get('/tracing/traces/01UNKNOWNTRACE000000000000')->assertNotFound();
+    $this->get('/sherlock/issues/999999')->assertNotFound();
+    $this->get('/sherlock/traces/01UNKNOWNTRACE000000000000')->assertNotFound();
 });
 
 it('renders the overview with seeded data', function (): void {
     D::seed();
 
-    $this->get('/tracing')
+    $this->get('/sherlock')
         ->assertOk()
         ->assertSee('N+1 queries on posts')
         ->assertSee('Slow query on users')
@@ -39,21 +39,21 @@ it('renders the overview with seeded data', function (): void {
 it('switches the overview period', function (): void {
     D::seed(CarbonImmutable::now()->subDays(3));
 
-    $this->get('/tracing?period=24h')->assertOk()->assertSee('No traces in this period.');
-    $this->get('/tracing?period=7d')->assertOk()->assertDontSee('No traces in this period.')->assertSee('GET /users');
-    $this->get('/tracing?period=bogus')->assertOk()->assertSee('Last 24 hours');
+    $this->get('/sherlock?period=24h')->assertOk()->assertSee('No traces in this period.');
+    $this->get('/sherlock?period=7d')->assertOk()->assertDontSee('No traces in this period.')->assertSee('GET /users');
+    $this->get('/sherlock?period=bogus')->assertOk()->assertSee('Last 24 hours');
 });
 
 it('renders the issues list and the issue detail page', function (): void {
     $seeded = D::seed();
     D::analyze($seeded['slow'], "## Root cause\n\nMissing index on `users.email`.\n\n- Add the index");
 
-    $this->get('/tracing/issues')
+    $this->get('/sherlock/issues')
         ->assertOk()
         ->assertSee('Slow query on users')
         ->assertSee('N+1 queries on posts');
 
-    $this->get('/tracing/issues/'.$seeded['slow']->id)
+    $this->get('/sherlock/issues/'.$seeded['slow']->id)
         ->assertOk()
         ->assertSee('Slow query on users')
         ->assertSee('Warning')
@@ -66,14 +66,14 @@ it('renders the issues list and the issue detail page', function (): void {
         ->assertSee('<h2>Root cause</h2>', false)
         ->assertSee('<code>users.email</code>', false)
         ->assertSee('test-model')
-        ->assertSee('/tracing/traces/'.$seeded['trace'])
+        ->assertSee('/sherlock/traces/'.$seeded['trace'])
         ->assertSee('name="_token"', false);
 });
 
 it('renders the trace detail page with timeline, N+1 group, http calls and logs', function (): void {
     $seeded = D::seed();
 
-    $this->get('/tracing/traces/'.$seeded['trace'])
+    $this->get('/sherlock/traces/'.$seeded['trace'])
         ->assertOk()
         ->assertSee('GET /users')
         ->assertSee('Timeline')
@@ -85,22 +85,22 @@ it('renders the trace detail page with timeline, N+1 group, http calls and logs'
         ->assertSee('Something failed')
         ->assertSee('tenant: acme')
         ->assertSee('7 stored of 7 executed')
-        ->assertSee('/tracing/issues/'.$seeded['nPlusOne']->id);
+        ->assertSee('/sherlock/issues/'.$seeded['nPlusOne']->id);
 });
 
 it('renders the traces list and the queries page with seeded data', function (): void {
     D::seed();
 
-    $this->get('/tracing/traces')->assertOk()->assertSee('GET /users')->assertSee('1.25 s');
+    $this->get('/sherlock/traces')->assertOk()->assertSee('GET /users')->assertSee('1.25 s');
 
-    $this->get('/tracing/queries')
+    $this->get('/sherlock/queries')
         ->assertOk()
         ->assertSee('fp-users')
         ->assertSee('posts');
 });
 
 it('uses the configured dashboard view namespace', function (): void {
-    expect(view()->exists('tracing::dashboard.overview'))->toBeTrue()
-        ->and(route('tracing.overview', [], false))->toBe('/tracing')
-        ->and(route('tracing.issues.show', ['issue' => 5], false))->toBe('/tracing/issues/5');
+    expect(view()->exists('sherlock::dashboard.overview'))->toBeTrue()
+        ->and(route('sherlock.overview', [], false))->toBe('/sherlock')
+        ->and(route('sherlock.issues.show', ['issue' => 5], false))->toBe('/sherlock/issues/5');
 });

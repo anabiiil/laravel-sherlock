@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Enums\IssueType;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Enums\IssueType;
 
 /**
  * Short stable hashes (32 hex chars).

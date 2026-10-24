@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Enums\Severity;
 
 /**
  * Channel-agnostic notification. Channels format it (Slack blocks, Telegram HTML, Mail markdown);

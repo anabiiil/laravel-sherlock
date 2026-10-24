@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Tests\TestCase;
+use Anabil\Sherlock\Tests\TestCase;
 
 /*
 | Feature and Privacy tests boot Laravel (Testbench, MySQL). Unit and Arch tests are

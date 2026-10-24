@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\PersistenceStrategy;
-use Anabil\Tracing\Data\RecordedTrace;
+use Anabil\Sherlock\Contracts\PersistenceStrategy;
+use Anabil\Sherlock\Data\RecordedTrace;
 
 final class NullPersistenceStrategy implements PersistenceStrategy
 {

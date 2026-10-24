@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Providers;
+namespace Anabil\Sherlock\Providers;
 
-use Anabil\Tracing\Console\TestNotificationCommand;
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\NotificationChannel;
-use Anabil\Tracing\Contracts\NotificationDispatcher;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Events\IssueRecurred;
-use Anabil\Tracing\Notifications\Channels\MailChannel;
-use Anabil\Tracing\Notifications\Channels\SlackChannel;
-use Anabil\Tracing\Notifications\Channels\TelegramChannel;
-use Anabil\Tracing\Notifications\DefaultNotificationDispatcher;
-use Anabil\Tracing\Notifications\IssueMessageFactory;
-use Anabil\Tracing\Notifications\Listeners\RecordRepeatedIssue;
-use Anabil\Tracing\Notifications\NotificationPolicy;
-use Anabil\Tracing\Notifications\Throttler;
+use Anabil\Sherlock\Console\TestNotificationCommand;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\NotificationChannel;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Events\IssueRecurred;
+use Anabil\Sherlock\Notifications\Channels\MailChannel;
+use Anabil\Sherlock\Notifications\Channels\SlackChannel;
+use Anabil\Sherlock\Notifications\Channels\TelegramChannel;
+use Anabil\Sherlock\Notifications\DefaultNotificationDispatcher;
+use Anabil\Sherlock\Notifications\IssueMessageFactory;
+use Anabil\Sherlock\Notifications\Listeners\RecordRepeatedIssue;
+use Anabil\Sherlock\Notifications\NotificationPolicy;
+use Anabil\Sherlock\Notifications\Throttler;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Events\Dispatcher as Events;
@@ -29,11 +29,11 @@ use Psr\Log\LoggerInterface;
  * Owns notifications: channels (slack, telegram, mail), formatters, throttler, NotificationDispatcher.
  *
  * Custom channels: implement NotificationChannel and tag the binding with self::CHANNEL_TAG,
- * then list its name() in tracing.notifications.channels.
+ * then list its name() in sherlock.notifications.channels.
  */
 final class NotificationServiceProvider extends ServiceProvider
 {
-    public const CHANNEL_TAG = 'tracing.notification_channels';
+    public const CHANNEL_TAG = 'sherlock.notification_channels';
 
     public function register(): void
     {
@@ -74,7 +74,7 @@ final class NotificationServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadViewsFrom(__DIR__.'/../../resources/views', 'tracing');
+        $this->loadViewsFrom(__DIR__.'/../../resources/views', 'sherlock');
 
         $this->app->make(Events::class)->listen(IssueRecurred::class, [RecordRepeatedIssue::class, 'handle']);
 

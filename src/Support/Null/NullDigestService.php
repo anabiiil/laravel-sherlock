@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\DigestService;
+use Anabil\Sherlock\Contracts\DigestService;
 use DateTimeInterface;
 
 final class NullDigestService implements DigestService

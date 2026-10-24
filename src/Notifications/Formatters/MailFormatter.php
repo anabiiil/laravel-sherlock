@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications\Formatters;
+namespace Anabil\Sherlock\Notifications\Formatters;
 
-use Anabil\Tracing\Data\NotificationMessage;
+use Anabil\Sherlock\Data\NotificationMessage;
 
 /**
- * NotificationMessage -> subject + view data for the tracing::mail.notification views.
+ * NotificationMessage -> subject + view data for the sherlock::mail.notification views.
  * Escaping is left to Blade ({{ }}), the views never print raw HTML.
  */
 final class MailFormatter
 {
-    public const HTML_VIEW = 'tracing::mail.notification';
+    public const HTML_VIEW = 'sherlock::mail.notification';
 
-    public const TEXT_VIEW = 'tracing::mail.notification-text';
+    public const TEXT_VIEW = 'sherlock::mail.notification-text';
 
     private const SUBJECT_LIMIT = 180;
 
     public function subject(NotificationMessage $message): string
     {
-        // Digests / test messages carry no severity label: "[Tracing] Digest: Shop".
+        // Digests / test messages carry no severity label: "[Sherlock] Digest: Shop".
         $label = $message->severityLabel();
-        $subject = '[Tracing] '.($label !== null ? $label.': ' : '').preg_replace('/\s+/', ' ', $message->title);
+        $subject = '[Sherlock] '.($label !== null ? $label.': ' : '').preg_replace('/\s+/', ' ', $message->title);
 
         return mb_strlen($subject) <= self::SUBJECT_LIMIT ? $subject : mb_substr($subject, 0, self::SUBJECT_LIMIT - 1).'…';
     }

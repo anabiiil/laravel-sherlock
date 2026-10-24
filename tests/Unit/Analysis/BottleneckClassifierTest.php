@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Analysis\DefaultBottleneckClassifier;
-use Anabil\Tracing\Data\HttpCallRecord;
-use Anabil\Tracing\Data\Verdict;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Tests\Unit\Analysis\AnalysisFactory as F;
+use Anabil\Sherlock\Analysis\DefaultBottleneckClassifier;
+use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Data\Verdict;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Tests\Unit\Analysis\AnalysisFactory as F;
 
 beforeEach(fn () => $this->classifier = new DefaultBottleneckClassifier);
 

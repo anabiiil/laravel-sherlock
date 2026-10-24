@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications\Listeners;
+namespace Anabil\Sherlock\Notifications\Listeners;
 
-use Anabil\Tracing\Events\IssueRecurred;
-use Anabil\Tracing\Notifications\Throttler;
+use Anabil\Sherlock\Events\IssueRecurred;
+use Anabil\Sherlock\Notifications\Throttler;
 use Illuminate\Contracts\Container\Container;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -31,7 +31,7 @@ final class RecordRepeatedIssue
         } catch (Throwable $e) {
             if ($this->container->bound(LoggerInterface::class)) {
                 $this->container->make(LoggerInterface::class)
-                    ->warning('[tracing] Could not throttle repeat notification: '.$e::class, ['issue_id' => $event->outcome->issueId]);
+                    ->warning('[sherlock] Could not throttle repeat notification: '.$e::class, ['issue_id' => $event->outcome->issueId]);
             }
         }
     }

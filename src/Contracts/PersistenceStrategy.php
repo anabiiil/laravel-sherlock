@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\RecordedTrace;
+use Anabil\Sherlock\Data\RecordedTrace;
 
 /**
  * How a recorded trace reaches storage: after the response (terminating) or via a queued job.

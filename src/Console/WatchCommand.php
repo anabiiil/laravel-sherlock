@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Console;
+namespace Anabil\Sherlock\Console;
 
-use Anabil\Tracing\Contracts\WatchWindow;
-use Anabil\Tracing\Enums\TracingMode;
+use Anabil\Sherlock\Contracts\WatchWindow;
+use Anabil\Sherlock\Enums\SherlockMode;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 
@@ -15,7 +15,7 @@ use Illuminate\Contracts\Config\Repository;
 final class WatchCommand extends Command
 {
     /** @var string */
-    protected $signature = 'tracing:watch
+    protected $signature = 'sherlock:watch
         {--minutes=30 : How long to trace fully}
         {--route= : Only requests whose path (or route name) matches this Str::is() pattern, e.g. "api/orders*"}
         {--user= : Only requests of this authenticated user id}
@@ -26,16 +26,16 @@ final class WatchCommand extends Command
 
     public function handle(WatchWindow $window, Repository $config): int
     {
-        $mode = TracingMode::fromConfig($config->get('tracing.mode'));
+        $mode = SherlockMode::fromConfig($config->get('sherlock.mode'));
 
         if ($mode->isOff()) {
-            $this->components->warn('Tracing is off (TRACING_MODE=off): a watch window has no effect.');
+            $this->components->warn('Sherlock is off (SHERLOCK_MODE=off): a watch window has no effect.');
 
             return self::FAILURE;
         }
 
-        if (! $config->get('tracing.watch.enabled', true) && ! $this->option('stop')) {
-            $this->components->warn('The watch window is disabled (TRACING_WATCH_ENABLED=false): production units ignore it.');
+        if (! $config->get('sherlock.watch.enabled', true) && ! $this->option('stop')) {
+            $this->components->warn('The watch window is disabled (SHERLOCK_WATCH_ENABLED=false): production units ignore it.');
         }
 
         if ($this->option('stop')) {
@@ -53,10 +53,10 @@ final class WatchCommand extends Command
             return self::FAILURE;
         }
 
-        $max = $config->get('tracing.watch.max_minutes', 1440);
+        $max = $config->get('sherlock.watch.max_minutes', 1440);
         $max = is_numeric($max) ? (int) $max : 1440;
         if ($minutes > $max) {
-            $this->components->warn("--minutes capped to {$max} (tracing.watch.max_minutes).");
+            $this->components->warn("--minutes capped to {$max} (sherlock.watch.max_minutes).");
         }
 
         $route = $this->option('route');

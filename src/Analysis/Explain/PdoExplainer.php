@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Explain;
+namespace Anabil\Sherlock\Analysis\Explain;
 
-use Anabil\Tracing\Contracts\Explainer;
-use Anabil\Tracing\Data\ExplainPlan;
-use Anabil\Tracing\Data\QueryRecord;
+use Anabil\Sherlock\Contracts\Explainer;
+use Anabil\Sherlock\Data\ExplainPlan;
+use Anabil\Sherlock\Data\QueryRecord;
 use Illuminate\Database\Connection;
 use Illuminate\Database\ConnectionResolverInterface;
 use PDO;

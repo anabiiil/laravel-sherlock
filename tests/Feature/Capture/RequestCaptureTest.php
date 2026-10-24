@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Context\FailureReporter;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\RecordReason;
-use Anabil\Tracing\Facades\Tracing;
-use Anabil\Tracing\Tests\Feature\Capture\Support\Capture;
-use Anabil\Tracing\Tests\Feature\Capture\Support\FakeTraceRecorder;
+use Anabil\Sherlock\Context\FailureReporter;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\RecordReason;
+use Anabil\Sherlock\Facades\Sherlock;
+use Anabil\Sherlock\Tests\Feature\Capture\Support\Capture;
+use Anabil\Sherlock\Tests\Feature\Capture\Support\FakeTraceRecorder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\Route;
 const CAPTURE_PASSWORD = 'S3cret-Pass!word';
 
 beforeEach(function (): void {
-    config()->set('tracing.mode', 'production');
-    config()->set('tracing.sample_rate', 0.0);
+    config()->set('sherlock.mode', 'production');
+    config()->set('sherlock.sample_rate', 0.0);
 
     Capture::createTables();
     DB::table('capture_items')->insert([['name' => 'a'], ['name' => 'b'], ['name' => 'c']]);
@@ -88,7 +88,7 @@ it('takes one backtrace per repeated SQL string in light capture: on its second 
 });
 
 it('takes one backtrace per distinct SQL string in full capture: on its first occurrence', function (): void {
-    config()->set('tracing.mode', 'local');
+    config()->set('sherlock.mode', 'local');
     $spy = Capture::spyLocator();
 
     $this->get('/items/1')->assertOk();
@@ -105,7 +105,7 @@ it('takes one backtrace per distinct SQL string in full capture: on its first oc
 });
 
 it('takes a backtrace for every query slower than the slow-query threshold', function (): void {
-    config()->set('tracing.thresholds.slow_query.warning_ms', 0);
+    config()->set('sherlock.thresholds.slow_query.warning_ms', 0);
     $spy = Capture::spyLocator();
 
     $this->get('/items/1')->assertOk();
@@ -132,7 +132,7 @@ it('keeps no bindings in production light capture', function (): void {
 });
 
 it('keeps redacted bindings in full capture and never the password or its hash', function (): void {
-    config()->set('tracing.mode', 'local');
+    config()->set('sherlock.mode', 'local');
     $hash = password_hash(CAPTURE_PASSWORD, PASSWORD_BCRYPT);
 
     Route::post('/register', function () use ($hash) {
@@ -243,8 +243,8 @@ it('counts cache hits, misses and writes without storing keys', function (): voi
 it('never records the package\'s own paused work', function (): void {
     Route::get('/paused', function () {
         DB::select('select 1 as visible');
-        $value = Tracing::pause(fn () => DB::select('select 2 as paused_query'));
-        Tracing::pause(fn () => Log::error('paused log'));
+        $value = Sherlock::pause(fn () => DB::select('select 2 as paused_query'));
+        Sherlock::pause(fn () => Log::error('paused log'));
 
         return response()->json(['paused' => $value[0]->paused_query]);
     });
@@ -260,11 +260,11 @@ it('never records the package\'s own paused work', function (): void {
 
 it('exposes isRecording and tag through the facade', function (): void {
     Route::get('/tagged', function () {
-        Tracing::tag('order', 15);
-        Tracing::tag('customer_email', 'ann@example.com');
-        Tracing::tag('api_token', 'should-not-appear');
+        Sherlock::tag('order', 15);
+        Sherlock::tag('customer_email', 'ann@example.com');
+        Sherlock::tag('api_token', 'should-not-appear');
 
-        return response()->json(['recording' => Tracing::isRecording(), 'paused' => Tracing::pause(fn () => Tracing::isRecording())]);
+        return response()->json(['recording' => Sherlock::isRecording(), 'paused' => Sherlock::pause(fn () => Sherlock::isRecording())]);
     });
 
     $this->get('/tagged')->assertOk()->assertJson(['recording' => true, 'paused' => false]);
@@ -273,14 +273,14 @@ it('exposes isRecording and tag through the facade', function (): void {
         'order' => 15,
         'customer_email' => '[REDACTED]',
         'api_token' => '[REDACTED]',
-    ])->and(Tracing::isRecording())->toBeFalse();
+    ])->and(Sherlock::isRecording())->toBeFalse();
 });
 
 it('fully traces a request carrying the trigger header secret', function (): void {
-    config()->set('tracing.header.secret', 'let-me-in');
+    config()->set('sherlock.header.secret', 'let-me-in');
 
-    $this->get('/items/1', ['X-Tracing' => 'let-me-in'])->assertOk();
-    $this->get('/items/1', ['X-Tracing' => 'wrong'])->assertOk();
+    $this->get('/items/1', ['X-Sherlock' => 'let-me-in'])->assertOk();
+    $this->get('/items/1', ['X-Sherlock' => 'wrong'])->assertOk();
     $this->get('/items/1')->assertOk();
 
     [$triggered, $wrong, $plain] = captureRecorder()->traces;
@@ -294,15 +294,15 @@ it('fully traces a request carrying the trigger header secret', function (): voi
 });
 
 it('ignores the trigger header while the secret is empty', function (): void {
-    config()->set('tracing.header.secret', '');
+    config()->set('sherlock.header.secret', '');
 
-    $this->get('/items/1', ['X-Tracing' => ''])->assertOk();
+    $this->get('/items/1', ['X-Sherlock' => ''])->assertOk();
 
     expect(captureRecorder()->last()->full)->toBeFalse();
 });
 
 it('marks sampled traces', function (): void {
-    config()->set('tracing.sample_rate', 1.0);
+    config()->set('sherlock.sample_rate', 1.0);
 
     $this->get('/items/1')->assertOk();
 
@@ -311,14 +311,14 @@ it('marks sampled traces', function (): void {
 });
 
 it('records nothing for ignored paths, methods and route names', function (): void {
-    config()->set('tracing.ignore.routes', ['internal.*']);
+    config()->set('sherlock.ignore.routes', ['internal.*']);
     Route::get('/up', fn () => DB::select('select 1'));
-    Route::get('/tracing/issues', fn () => DB::select('select 1'));
+    Route::get('/sherlock/issues', fn () => DB::select('select 1'));
     Route::get('/internal/ping', fn () => DB::select('select 1'))->name('internal.ping');
     Route::match(['OPTIONS'], '/items/{id}', fn () => 'ok');
 
     $this->get('/up')->assertOk();
-    $this->get('/tracing/issues')->assertOk();
+    $this->get('/sherlock/issues')->assertOk();
     $this->get('/internal/ping')->assertOk();
     $this->call('OPTIONS', '/items/1')->assertOk();
 
@@ -331,7 +331,7 @@ it('records nothing for ignored paths, methods and route names', function (): vo
 it('attributes a sync job dispatched in a request to the request trace', function (): void {
     Route::get('/dispatch', function () {
         DB::select('select 1');
-        dispatch(new Anabil\Tracing\Tests\Feature\Capture\Support\CaptureJob(3));
+        dispatch(new Anabil\Sherlock\Tests\Feature\Capture\Support\CaptureJob(3));
 
         return 'ok';
     });

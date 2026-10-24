@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Providers;
+namespace Anabil\Sherlock\Providers;
 
-use Anabil\Tracing\Console\InstallCommand;
-use Anabil\Tracing\Console\ReportCommand;
+use Anabil\Sherlock\Console\InstallCommand;
+use Anabil\Sherlock\Console\ReportCommand;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Owns the general artisan commands: tracing:install and tracing:report (console only).
+ * Owns the general artisan commands: sherlock:install and sherlock:report (console only).
  * Feature commands are registered by their own providers: watch / status (capture),
  * prune / clear (storage), analyze (AI), test-notification (notifications), digest (digest).
  */

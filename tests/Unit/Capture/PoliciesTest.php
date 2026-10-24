@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\RecordingPolicy;
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Data\RecordingDecision;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\RecordReason;
-use Anabil\Tracing\Recording\PatternList;
-use Anabil\Tracing\Recording\Policies\CompositeRecordingPolicy;
-use Anabil\Tracing\Recording\Policies\HeaderTriggerPolicy;
-use Anabil\Tracing\Recording\Policies\IgnorePolicy;
-use Anabil\Tracing\Recording\Policies\LocalPolicy;
-use Anabil\Tracing\Recording\Policies\OffPolicy;
-use Anabil\Tracing\Recording\Policies\ProductionPolicy;
-use Anabil\Tracing\Recording\Policies\WatchWindowPolicy;
-use Anabil\Tracing\Support\Null\NullWatchWindow;
+use Anabil\Sherlock\Contracts\RecordingPolicy;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Data\RecordingDecision;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\RecordReason;
+use Anabil\Sherlock\Recording\PatternList;
+use Anabil\Sherlock\Recording\Policies\CompositeRecordingPolicy;
+use Anabil\Sherlock\Recording\Policies\HeaderTriggerPolicy;
+use Anabil\Sherlock\Recording\Policies\IgnorePolicy;
+use Anabil\Sherlock\Recording\Policies\LocalPolicy;
+use Anabil\Sherlock\Recording\Policies\OffPolicy;
+use Anabil\Sherlock\Recording\Policies\ProductionPolicy;
+use Anabil\Sherlock\Recording\Policies\WatchWindowPolicy;
+use Anabil\Sherlock\Support\Null\NullWatchWindow;
 
 function candidateRequest(string $path = 'api/orders', string $method = 'GET', ?string $header = null, ?string $route = null): EntryCandidate
 {
@@ -71,14 +71,14 @@ it('triggers full capture with the right header secret only', function (): void 
 
 it('ignores configured paths, methods, routes, jobs and commands', function (): void {
     $policy = new IgnorePolicy(
-        paths: ['tracing*', 'up', 'favicon.ico'],
+        paths: ['sherlock*', 'up', 'favicon.ico'],
         routes: ['internal.*'],
-        jobs: ['Anabil\Tracing\Jobs\*'],
-        commands: ['queue:work', 'tracing:*'],
+        jobs: ['Anabil\Sherlock\Jobs\*'],
+        commands: ['queue:work', 'sherlock:*'],
         methods: ['options', 'HEAD'],
     );
 
-    expect($policy->ignores(candidateRequest('tracing/issues/1')))->toBeTrue()
+    expect($policy->ignores(candidateRequest('sherlock/issues/1')))->toBeTrue()
         ->and($policy->ignores(candidateRequest('/up')))->toBeTrue()
         ->and($policy->ignores(candidateRequest('upload')))->toBeFalse()
         ->and($policy->ignores(candidateRequest('api/orders', 'OPTIONS')))->toBeTrue()
@@ -87,10 +87,10 @@ it('ignores configured paths, methods, routes, jobs and commands', function (): 
         ->and($policy->ignoresRoute('internal.ping'))->toBeTrue()
         ->and($policy->ignoresRoute(null))->toBeFalse()
         ->and($policy->ignores(candidateRequest('api/orders')))->toBeFalse()
-        ->and($policy->ignores(new EntryCandidate(EntryType::Job, 'Anabil\Tracing\Jobs\AnalyzeIssueJob')))->toBeTrue()
+        ->and($policy->ignores(new EntryCandidate(EntryType::Job, 'Anabil\Sherlock\Jobs\AnalyzeIssueJob')))->toBeTrue()
         ->and($policy->ignores(new EntryCandidate(EntryType::Job, 'App\Jobs\SendInvoice')))->toBeFalse()
         ->and($policy->ignores(new EntryCandidate(EntryType::Command, 'queue:work')))->toBeTrue()
-        ->and($policy->ignores(new EntryCandidate(EntryType::Command, 'tracing:watch')))->toBeTrue()
+        ->and($policy->ignores(new EntryCandidate(EntryType::Command, 'sherlock:watch')))->toBeTrue()
         ->and($policy->ignores(new EntryCandidate(EntryType::Command, 'app:import')))->toBeFalse()
         ->and($policy->decide(candidateRequest('up'))->capture)->toBeFalse()
         ->and($policy->decide(candidateRequest('api'))->capture)->toBeTrue();

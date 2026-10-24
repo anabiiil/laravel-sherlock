@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis;
+namespace Anabil\Sherlock\Analysis;
 
-use Anabil\Tracing\Analysis\Support\Describe;
-use Anabil\Tracing\Analysis\Support\Sql;
-use Anabil\Tracing\Contracts\BottleneckClassifier;
-use Anabil\Tracing\Data\HttpCallRecord;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Data\Verdict;
-use Anabil\Tracing\Enums\Bottleneck;
+use Anabil\Sherlock\Analysis\Support\Describe;
+use Anabil\Sherlock\Analysis\Support\Sql;
+use Anabil\Sherlock\Contracts\BottleneckClassifier;
+use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Data\Verdict;
+use Anabil\Sherlock\Enums\Bottleneck;
 
 /**
  * Splits the duration into db / external_http / cache / bootstrap / application
  * (the remainder, never negative) and applies the share rules of
- * tracing.bottleneck, in order: database, external service, cache, bootstrap,
+ * sherlock.bottleneck, in order: database, external service, cache, bootstrap,
  * application; otherwise mixed. Traces shorter than min_duration_ms are unknown.
  *
  * When measured segments overlap and exceed the duration (e.g. concurrent HTTP
@@ -37,7 +37,7 @@ final class DefaultBottleneckClassifier implements BottleneckClassifier
     private readonly array $rules;
 
     /**
-     * @param  array<array-key, mixed>  $rules  tracing.bottleneck
+     * @param  array<array-key, mixed>  $rules  sherlock.bottleneck
      */
     public function __construct(array $rules = self::DEFAULTS)
     {

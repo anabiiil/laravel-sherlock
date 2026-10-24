@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Ai\RedactingAiProvider;
-use Anabil\Tracing\Contracts\AiProvider;
-use Anabil\Tracing\Data\AiRequest;
-use Anabil\Tracing\Data\AiResponse;
-use Anabil\Tracing\Privacy\Redactor;
+use Anabil\Sherlock\Ai\RedactingAiProvider;
+use Anabil\Sherlock\Contracts\AiProvider;
+use Anabil\Sherlock\Data\AiRequest;
+use Anabil\Sherlock\Data\AiResponse;
+use Anabil\Sherlock\Privacy\Redactor;
 
 function aiSpyProvider(): AiProvider
 {

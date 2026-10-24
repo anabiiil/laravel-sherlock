@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
-use Anabil\Tracing\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\Bottleneck;
 
 /**
  * Where the time of a trace went and what the bottleneck is.

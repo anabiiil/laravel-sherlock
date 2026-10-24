@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Support;
+namespace Anabil\Sherlock\Analysis\Support;
 
 /**
  * Cheap, regex-based SQL inspection used for titles, recommendations, index

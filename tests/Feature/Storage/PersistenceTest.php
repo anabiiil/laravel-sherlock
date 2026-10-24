@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\IssueService;
-use Anabil\Tracing\Contracts\PersistenceStrategy;
-use Anabil\Tracing\Contracts\TraceRecorder;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Events\IssueDetected;
-use Anabil\Tracing\Events\TraceRecorded;
-use Anabil\Tracing\Jobs\PersistTraceJob;
-use Anabil\Tracing\Storage\Persistence\AfterResponsePersistence;
-use Anabil\Tracing\Storage\Persistence\QueuedPersistence;
-use Anabil\Tracing\Storage\Persistence\TraceWriter;
-use Anabil\Tracing\Storage\Support\QuietReporter;
-use Anabil\Tracing\Storage\Support\RecordingPauser;
-use Anabil\Tracing\Support\Null\NullTraceRepository;
-use Anabil\Tracing\Tests\Feature\Storage\StorageFixtures as F;
-use Anabil\Tracing\Tracing;
+use Anabil\Sherlock\Contracts\IssueService;
+use Anabil\Sherlock\Contracts\PersistenceStrategy;
+use Anabil\Sherlock\Contracts\TraceRecorder;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Events\IssueDetected;
+use Anabil\Sherlock\Events\TraceRecorded;
+use Anabil\Sherlock\Jobs\PersistTraceJob;
+use Anabil\Sherlock\Sherlock;
+use Anabil\Sherlock\Storage\Persistence\AfterResponsePersistence;
+use Anabil\Sherlock\Storage\Persistence\QueuedPersistence;
+use Anabil\Sherlock\Storage\Persistence\TraceWriter;
+use Anabil\Sherlock\Storage\Support\QuietReporter;
+use Anabil\Sherlock\Storage\Support\RecordingPauser;
+use Anabil\Sherlock\Support\Null\NullTraceRepository;
+use Anabil\Sherlock\Tests\Feature\Storage\StorageFixtures as F;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -51,65 +51,65 @@ function memoryLogger(): AbstractLogger
 beforeEach(fn () => QuietReporter::flush());
 
 it('selects the persistence strategy from config', function (): void {
-    config()->set('tracing.storage.persistence', 'after_response');
+    config()->set('sherlock.storage.persistence', 'after_response');
     expect(freshPersistence())->toBeInstanceOf(AfterResponsePersistence::class);
 
-    config()->set('tracing.storage.persistence', 'queue');
+    config()->set('sherlock.storage.persistence', 'queue');
     expect(freshPersistence())->toBeInstanceOf(QueuedPersistence::class);
 });
 
 it('writes after the response: trace, issues, then TraceRecorded', function (): void {
     Event::fake([TraceRecorded::class, IssueDetected::class]);
-    config()->set('tracing.storage.persistence', 'after_response');
+    config()->set('sherlock.storage.persistence', 'after_response');
     $recorded = F::recorded(findings: [F::finding()]);
 
     freshPersistence()->persist($recorded);
 
-    expect(DB::table('tracing_traces')->where('id', $recorded->trace->id)->exists())->toBeTrue()
-        ->and(DB::table('tracing_issues')->count())->toBe(1)
-        ->and(DB::table('tracing_issue_traces')->value('trace_id'))->toBe($recorded->trace->id);
+    expect(DB::table('sherlock_traces')->where('id', $recorded->trace->id)->exists())->toBeTrue()
+        ->and(DB::table('sherlock_issues')->count())->toBe(1)
+        ->and(DB::table('sherlock_issue_traces')->value('trace_id'))->toBe($recorded->trace->id);
     Event::assertDispatched(TraceRecorded::class, fn (TraceRecorded $e): bool => $e->traceId === $recorded->trace->id && $e->trace === $recorded);
     Event::assertDispatched(IssueDetected::class);
 });
 
 it('is reached through the core TraceRecorder', function (): void {
-    config()->set('tracing.storage.persistence', 'after_response');
+    config()->set('sherlock.storage.persistence', 'after_response');
     freshPersistence();
     app()->forgetInstance(TraceRecorder::class);
 
     $trace = F::traceData([F::query()]);
     app(TraceRecorder::class)->record($trace);
 
-    expect(DB::table('tracing_traces')->where('id', $trace->id)->exists())->toBeTrue()
-        ->and(DB::table('tracing_queries')->where('trace_id', $trace->id)->count())->toBe(1);
+    expect(DB::table('sherlock_traces')->where('id', $trace->id)->exists())->toBeTrue()
+        ->and(DB::table('sherlock_queries')->where('trace_id', $trace->id)->count())->toBe(1);
 });
 
 it('queues a PersistTraceJob on the configured queue', function (): void {
     Queue::fake();
-    config()->set('tracing.storage.persistence', 'queue');
-    config()->set('tracing.queue.connection', 'redis');
-    config()->set('tracing.queue.name', 'tracing');
+    config()->set('sherlock.storage.persistence', 'queue');
+    config()->set('sherlock.queue.connection', 'redis');
+    config()->set('sherlock.queue.name', 'sherlock');
     $recorded = F::recorded();
 
     freshPersistence()->persist($recorded);
 
     Queue::assertPushed(PersistTraceJob::class, fn (PersistTraceJob $job): bool => $job->trace === $recorded
         && $job->connection === 'redis'
-        && $job->queue === 'tracing');
-    expect(DB::table('tracing_traces')->count())->toBe(0);
+        && $job->queue === 'sherlock');
+    expect(DB::table('sherlock_traces')->count())->toBe(0);
 });
 
 it('persists through a real (sync) queue run', function (): void {
     config()->set('queue.default', 'sync');
-    config()->set('tracing.storage.persistence', 'queue');
-    config()->set('tracing.queue.connection', 'sync');
+    config()->set('sherlock.storage.persistence', 'queue');
+    config()->set('sherlock.queue.connection', 'sync');
     $recorded = F::recorded(findings: [F::finding()]);
 
     freshPersistence()->persist($recorded);
 
-    expect(DB::table('tracing_traces')->where('id', $recorded->trace->id)->exists())->toBeTrue()
-        ->and(DB::table('tracing_queries')->count())->toBe(1)
-        ->and(DB::table('tracing_issues')->count())->toBe(1);
+    expect(DB::table('sherlock_traces')->where('id', $recorded->trace->id)->exists())->toBeTrue()
+        ->and(DB::table('sherlock_queries')->count())->toBe(1)
+        ->and(DB::table('sherlock_issues')->count())->toBe(1);
 });
 
 it('serializes the RecordedTrace losslessly for the queue', function (): void {
@@ -139,7 +139,7 @@ it('swallows failures and logs each distinct error once', function (): void {
             throw new RuntimeException('database is down');
         }
 
-        public function find(string $id): ?Anabil\Tracing\Data\StoredTrace
+        public function find(string $id): ?Anabil\Sherlock\Data\StoredTrace
         {
             return null;
         }
@@ -149,12 +149,12 @@ it('swallows failures and logs each distinct error once', function (): void {
             return [];
         }
 
-        public function paginate(Anabil\Tracing\Data\TraceFilter $filter, int $perPage = 25, int $page = 1): Illuminate\Contracts\Pagination\LengthAwarePaginator
+        public function paginate(Anabil\Sherlock\Data\TraceFilter $filter, int $perPage = 25, int $page = 1): Illuminate\Contracts\Pagination\LengthAwarePaginator
         {
             return (new NullTraceRepository)->paginate($filter);
         }
 
-        public function slowestEntries(DateTimeImmutable $since, int $limit = 10, ?Anabil\Tracing\Enums\EntryType $type = null): array
+        public function slowestEntries(DateTimeImmutable $since, int $limit = 10, ?Anabil\Sherlock\Enums\EntryType $type = null): array
         {
             return [];
         }
@@ -169,7 +169,7 @@ it('swallows failures and logs each distinct error once', function (): void {
             return [];
         }
 
-        public function countSince(DateTimeImmutable $since, ?Anabil\Tracing\Enums\EntryType $type = null): int
+        public function countSince(DateTimeImmutable $since, ?Anabil\Sherlock\Enums\EntryType $type = null): int
         {
             return 0;
         }
@@ -200,7 +200,7 @@ it('keeps the stored trace when the issue upsert fails', function (): void {
             throw new RuntimeException('issues broke');
         }
 
-        public function changeStatus(int|string $issueId, Anabil\Tracing\Enums\IssueStatus $status): void {}
+        public function changeStatus(int|string $issueId, Anabil\Sherlock\Enums\IssueStatus $status): void {}
     };
     Event::fake([TraceRecorded::class]);
     $logger = memoryLogger();
@@ -208,7 +208,7 @@ it('keeps the stored trace when the issue upsert fails', function (): void {
     $recorded = F::recorded();
 
     expect($writer->write($recorded))->toBe($recorded->trace->id)
-        ->and(DB::table('tracing_traces')->count())->toBe(1)
+        ->and(DB::table('sherlock_traces')->count())->toBe(1)
         ->and($logger->records[0][1])->toContain('issues broke');
     Event::assertDispatched(TraceRecorded::class);
 });
@@ -232,12 +232,12 @@ it('runs storage work through the capture pause hook when one exists', function 
             }
         }
     };
-    app()->instance(Tracing::class, $hook);
-    config()->set('tracing.storage.persistence', 'after_response');
+    app()->instance(Sherlock::class, $hook);
+    config()->set('sherlock.storage.persistence', 'after_response');
 
     $insideDuringInsert = null;
     DB::listen(function ($query) use ($hook, &$insideDuringInsert): void {
-        if (str_contains($query->sql, 'insert into `tracing_traces`')) {
+        if (str_contains($query->sql, 'insert into `sherlock_traces`')) {
             $insideDuringInsert = $hook->inside;
         }
     });
@@ -246,5 +246,5 @@ it('runs storage work through the capture pause hook when one exists', function 
 
     expect($hook->paused)->toBe(1)
         ->and($insideDuringInsert)->toBeTrue()
-        ->and(DB::table('tracing_traces')->count())->toBe(1);
+        ->and(DB::table('sherlock_traces')->count())->toBe(1);
 });

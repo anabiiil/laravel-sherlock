@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\IssueService;
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Enums\IssueStatus;
+use Anabil\Sherlock\Contracts\IssueService;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Enums\IssueStatus;
 
 final class NullIssueService implements IssueService
 {

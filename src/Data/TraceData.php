@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\RecordReason;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\RecordReason;
 use DateTimeImmutable;
 use DateTimeInterface;
 
@@ -30,7 +30,7 @@ final readonly class TraceData
      * @param  list<LogRecord>  $logs
      * @param  list<RecordReason>  $recordReasons  reasons known before analysis (local/watch/header/sample)
      * @param  bool  $full  full capture (bindings, source locations) vs lightweight
-     * @param  array<string, scalar|null>  $tags  user tags (Tracing::tag())
+     * @param  array<string, scalar|null>  $tags  user tags (Sherlock::tag())
      * @param  array<string, scalar|null>  $metadata  e.g. queue, connection, attempts, route action
      * @param  int|null  $totalQueryCount  real count when capture caps dropped records; null = count($queries)
      * @param  float|null  $totalDbMs  real db time when capture caps dropped records; null = sum of $queries

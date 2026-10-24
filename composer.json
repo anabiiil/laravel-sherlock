@@ -1,8 +1,9 @@
 {
-    "name": "anabil/laravel-tracing",
-    "description": "Self-hosted performance diagnosis for Laravel: detects slow queries, N+1, bottlenecks and explains why, with strict privacy.",
+    "name": "anabiiil/laravel-sherlock",
+    "description": "Laravel Sherlock: the detective that finds where your Laravel app is slow and why. Self-hosted performance diagnosis (slow queries, N+1, bottlenecks) with strict privacy.",
     "keywords": [
         "laravel",
+        "sherlock",
         "performance",
         "tracing",
         "n-plus-one",
@@ -10,6 +11,11 @@
         "apm",
         "diagnosis"
     ],
+    "homepage": "https://github.com/anabiiil/laravel-sherlock",
+    "support": {
+        "issues": "https://github.com/anabiiil/laravel-sherlock/issues",
+        "source": "https://github.com/anabiiil/laravel-sherlock"
+    },
     "type": "library",
     "license": "MIT",
     "require": {
@@ -39,12 +45,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Anabil\\Tracing\\": "src/"
+            "Anabil\\Sherlock\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Anabil\\Tracing\\Tests\\": "tests/"
+            "Anabil\\Sherlock\\Tests\\": "tests/"
         }
     },
     "scripts": {
@@ -55,10 +61,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Anabil\\Tracing\\TracingServiceProvider"
+                "Anabil\\Sherlock\\SherlockServiceProvider"
             ],
             "aliases": {
-                "Tracing": "Anabil\\Tracing\\Facades\\Tracing"
+                "Sherlock": "Anabil\\Sherlock\\Facades\\Sherlock"
             }
         }
     },
@@ -71,6 +77,6 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "suggest": {
-        "ext-apcu": "Shares the tracing:watch window check between PHP-FPM workers (one cache read per 5s per server)"
+        "ext-apcu": "Shares the sherlock:watch window check between PHP-FPM workers (one cache read per 5s per server)"
     }
 }

@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Analyzers;
+namespace Anabil\Sherlock\Analysis\Analyzers;
 
-use Anabil\Tracing\Analysis\Support\Describe;
-use Anabil\Tracing\Contracts\Analyzer;
-use Anabil\Tracing\Contracts\Fingerprinter;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Analysis\Support\Describe;
+use Anabil\Sherlock\Contracts\Analyzer;
+use Anabil\Sherlock\Contracts\Fingerprinter;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\Severity;
 
 /**
  * Request / job / command duration over the per-entry-type threshold
- * (tracing.thresholds.entries.{request|job|command}.{warning_ms|critical_ms}).
+ * (sherlock.thresholds.entries.{request|job|command}.{warning_ms|critical_ms}).
  */
 final class SlowEntryAnalyzer implements Analyzer
 {

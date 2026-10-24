@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Notifications;
+namespace Anabil\Sherlock\Tests\Feature\Notifications;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\IssueOutcome;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\IssueOutcome;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Config + issue builders for notification tests (real tracing_issues table).
+ * Config + issue builders for notification tests (real sherlock_issues table).
  */
 final class NotificationFixtures
 {
@@ -24,7 +24,7 @@ final class NotificationFixtures
     public const TELEGRAM_TOKEN = '123456:telegram-secret-token';
 
     /**
-     * @param  array<string, mixed>  $overrides  merged into tracing.notifications
+     * @param  array<string, mixed>  $overrides  merged into sherlock.notifications
      */
     public static function configure(array $overrides = []): void
     {
@@ -36,7 +36,7 @@ final class NotificationFixtures
             'notify_on' => ['new' => true, 'regressed' => true, 'exceptions' => true],
             'dashboard_url' => null,
             'timeout' => 5,
-            'slack' => ['webhook_url' => self::SLACK_URL, 'min_severity' => 'warning', 'username' => 'Tracing', 'channel' => null],
+            'slack' => ['webhook_url' => self::SLACK_URL, 'min_severity' => 'warning', 'username' => 'Sherlock', 'channel' => null],
             'telegram' => ['bot_token' => self::TELEGRAM_TOKEN, 'chat_id' => '-100200300', 'min_severity' => 'warning', 'api_url' => 'https://api.telegram.org'],
             'mail' => ['to' => ['ops@example.test'], 'min_severity' => 'warning', 'mailer' => null],
         ], $overrides);
@@ -49,7 +49,7 @@ final class NotificationFixtures
             $config['mail']['to'] = $overrides['mail']['to'];
         }
 
-        config()->set('tracing.notifications', $config);
+        config()->set('sherlock.notifications', $config);
     }
 
     public static function finding(

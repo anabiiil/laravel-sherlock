@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Jobs;
+namespace Anabil\Sherlock\Jobs;
 
-use Anabil\Tracing\Contracts\DigestService;
+use Anabil\Sherlock\Contracts\DigestService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;

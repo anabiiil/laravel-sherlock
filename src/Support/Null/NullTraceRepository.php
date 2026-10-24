@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Data\StoredTrace;
-use Anabil\Tracing\Data\TraceFilter;
-use Anabil\Tracing\Enums\EntryType;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Data\StoredTrace;
+use Anabil\Sherlock\Data\TraceFilter;
+use Anabil\Sherlock\Enums\EntryType;
 use DateTimeImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator as LengthAwarePaginatorContract;
 use Illuminate\Pagination\LengthAwarePaginator;

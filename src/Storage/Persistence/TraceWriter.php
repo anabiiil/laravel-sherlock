@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Storage\Persistence;
+namespace Anabil\Sherlock\Storage\Persistence;
 
-use Anabil\Tracing\Contracts\IssueService;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Events\TraceRecorded;
-use Anabil\Tracing\Storage\Support\QuietReporter;
-use Anabil\Tracing\Storage\Support\RecordingPauser;
+use Anabil\Sherlock\Contracts\IssueService;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Events\TraceRecorded;
+use Anabil\Sherlock\Storage\Support\QuietReporter;
+use Anabil\Sherlock\Storage\Support\RecordingPauser;
 use Illuminate\Contracts\Events\Dispatcher;
 use Throwable;
 

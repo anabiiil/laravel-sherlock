@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Recording\Policies;
+namespace Anabil\Sherlock\Recording\Policies;
 
-use Anabil\Tracing\Contracts\RecordingPolicy;
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Data\RecordingDecision;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\RecordReason;
+use Anabil\Sherlock\Contracts\RecordingPolicy;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Data\RecordingDecision;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\RecordReason;
 
 /**
- * "X-Tracing: <secret>" fully traces that single request. Constant-time comparison;
+ * "X-Sherlock: <secret>" fully traces that single request. Constant-time comparison;
  * disabled while the secret is empty.
  */
 final class HeaderTriggerPolicy implements RecordingPolicy

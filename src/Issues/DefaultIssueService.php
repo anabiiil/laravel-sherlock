@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Issues;
+namespace Anabil\Sherlock\Issues;
 
-use Anabil\Tracing\Ai\AiEligibility;
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\IssueService;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\IssueOutcome;
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\OccurrenceType;
-use Anabil\Tracing\Events\IssueDetected;
-use Anabil\Tracing\Events\IssueRecurred;
-use Anabil\Tracing\Events\IssueRegressed;
-use Anabil\Tracing\Jobs\AnalyzeIssueJob;
-use Anabil\Tracing\Jobs\NotifyIssueJob;
+use Anabil\Sherlock\Ai\AiEligibility;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\IssueService;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\IssueOutcome;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Enums\AiStatus;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\OccurrenceType;
+use Anabil\Sherlock\Events\IssueDetected;
+use Anabil\Sherlock\Events\IssueRecurred;
+use Anabil\Sherlock\Events\IssueRegressed;
+use Anabil\Sherlock\Jobs\AnalyzeIssueJob;
+use Anabil\Sherlock\Jobs\NotifyIssueJob;
 use Illuminate\Contracts\Bus\Dispatcher as Bus;
 use Illuminate\Contracts\Events\Dispatcher;
 
@@ -32,7 +32,7 @@ use Illuminate\Contracts\Events\Dispatcher;
  * The ai_status stored for a new / regressed issue reflects what will happen: skipped_disabled
  * or skipped_severity (AiEligibility, config only), pending only when an analysis job is
  * actually dispatched, null ("not analyzed") when AI is on but no job runs here (sync queue
- * inside an HTTP request; tracing:analyze / Re-analyze still work).
+ * inside an HTTP request; sherlock:analyze / Re-analyze still work).
  */
 final class DefaultIssueService implements IssueService
 {

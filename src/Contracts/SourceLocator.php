@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\SourceLocation;
+use Anabil\Sherlock\Data\SourceLocation;
 
 /**
  * Finds the first application frame (skipping vendor/ and this package).

@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Analysis\Analyzers\MissingIndexAnalyzer;
-use Anabil\Tracing\Analysis\Explain\DefaultPlanInterpreter;
-use Anabil\Tracing\Analysis\Explain\ExplainService;
-use Anabil\Tracing\Contracts\Explainer;
-use Anabil\Tracing\Data\ExplainPlan;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Enums\ExplainInsightType;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Tests\Unit\Analysis\AnalysisFactory as F;
+use Anabil\Sherlock\Analysis\Analyzers\MissingIndexAnalyzer;
+use Anabil\Sherlock\Analysis\Explain\DefaultPlanInterpreter;
+use Anabil\Sherlock\Analysis\Explain\ExplainService;
+use Anabil\Sherlock\Contracts\Explainer;
+use Anabil\Sherlock\Data\ExplainPlan;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Enums\ExplainInsightType;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Tests\Unit\Analysis\AnalysisFactory as F;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Explain;
+namespace Anabil\Sherlock\Analysis\Explain;
 
-use Anabil\Tracing\Analysis\Support\Sql;
+use Anabil\Sherlock\Analysis\Support\Sql;
 
 /**
  * Suggests index columns for one table of a normalized query, in the order a

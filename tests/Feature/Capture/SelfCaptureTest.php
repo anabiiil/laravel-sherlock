@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Context\ContextManager;
-use Anabil\Tracing\Contracts\AiAnalyzer;
-use Anabil\Tracing\Contracts\NotificationDispatcher;
-use Anabil\Tracing\Contracts\RecordingPolicy;
-use Anabil\Tracing\Data\AiAnalysisResult;
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Data\NotificationMessage;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Facades\Tracing;
-use Anabil\Tracing\Jobs\AnalyzeIssueJob;
-use Anabil\Tracing\Jobs\NotifyIssueJob;
-use Anabil\Tracing\Notifications\Jobs\SendThrottledSummaryJob;
-use Anabil\Tracing\Recording\Policies\CompositeRecordingPolicy;
-use Anabil\Tracing\Recording\Policies\IgnorePolicy;
-use Anabil\Tracing\Recording\Policies\WatchWindowPolicy;
-use Anabil\Tracing\Tests\Feature\Capture\Support\Capture;
-use Anabil\Tracing\Tests\Feature\Capture\Support\CaptureJob;
+use Anabil\Sherlock\Context\ContextManager;
+use Anabil\Sherlock\Contracts\AiAnalyzer;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Contracts\RecordingPolicy;
+use Anabil\Sherlock\Data\AiAnalysisResult;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Data\NotificationMessage;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Facades\Sherlock;
+use Anabil\Sherlock\Jobs\AnalyzeIssueJob;
+use Anabil\Sherlock\Jobs\NotifyIssueJob;
+use Anabil\Sherlock\Notifications\Jobs\SendThrottledSummaryJob;
+use Anabil\Sherlock\Recording\Policies\CompositeRecordingPolicy;
+use Anabil\Sherlock\Recording\Policies\IgnorePolicy;
+use Anabil\Sherlock\Recording\Policies\WatchWindowPolicy;
+use Anabil\Sherlock\Tests\Feature\Capture\Support\Capture;
+use Anabil\Sherlock\Tests\Feature\Capture\Support\CaptureJob;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -27,17 +27,17 @@ use Illuminate\Support\Facades\Route;
 
 /*
 | The package must never report on itself: its own queue jobs (AI provider / webhook HTTP
-| calls, warnings, failures reported by the worker) and tracing:* commands never become
+| calls, warnings, failures reported by the worker) and sherlock:* commands never become
 | traces, orphan traces or issues, whatever the ignore lists say.
 */
 
 beforeEach(function (): void {
-    config()->set('tracing.mode', 'production');
-    config()->set('tracing.sample_rate', 0.0);
-    config()->set('tracing.capture.log_level', 'warning');
+    config()->set('sherlock.mode', 'production');
+    config()->set('sherlock.sample_rate', 0.0);
+    config()->set('sherlock.capture.log_level', 'warning');
     // Even with the default ignore lists emptied by the user.
-    config()->set('tracing.ignore.jobs', []);
-    config()->set('tracing.ignore.commands', []);
+    config()->set('sherlock.ignore.jobs', []);
+    config()->set('sherlock.ignore.commands', []);
     app()->forgetInstance(IgnorePolicy::class);
     app()->forgetInstance(RecordingPolicy::class);
 
@@ -52,7 +52,7 @@ it('records nothing from the package\'s own jobs: no unit, no orphan logs, no HT
         {
             Http::post('https://api.anthropic.test/v1/messages', ['prompt' => 'x']);
             DB::select('select 1');
-            Log::warning('[tracing] AI analysis failed');
+            Log::warning('[sherlock] AI analysis failed');
             Log::error('provider exploded');
 
             return AiAnalysisResult::failed('boom');
@@ -104,12 +104,12 @@ it('never records the exception of a failing package job, even when the worker r
         ->and(app(ContextManager::class)->isPaused())->toBeFalse();
 });
 
-it('always ignores package jobs (summaries included) and tracing commands', function (): void {
+it('always ignores package jobs (summaries included) and Sherlock commands', function (): void {
     $policy = IgnorePolicy::fromConfig([]);
 
     expect($policy->ignores(new EntryCandidate(EntryType::Job, SendThrottledSummaryJob::class)))->toBeTrue()
         ->and($policy->ignores(new EntryCandidate(EntryType::Job, AnalyzeIssueJob::class)))->toBeTrue()
-        ->and($policy->ignores(new EntryCandidate(EntryType::Command, 'tracing:prune')))->toBeTrue()
+        ->and($policy->ignores(new EntryCandidate(EntryType::Command, 'sherlock:prune')))->toBeTrue()
         ->and($policy->ignores(new EntryCandidate(EntryType::Job, CaptureJob::class)))->toBeFalse()
         ->and($policy->ignores(new EntryCandidate(EntryType::Command, 'app:import')))->toBeFalse();
 });
@@ -134,9 +134,9 @@ it('keeps the route pattern as the name of a matched request', function (): void
 });
 
 it('reads no cache at all when the watch window is disabled', function (): void {
-    config()->set('tracing.watch.enabled', false);
+    config()->set('sherlock.watch.enabled', false);
     app()->forgetInstance(RecordingPolicy::class);
-    Tracing::watch(10);
+    Sherlock::watch(10);
     Route::get('/other', fn () => 'ok');
 
     $policy = app(RecordingPolicy::class);

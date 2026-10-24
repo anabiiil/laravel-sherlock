@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications;
+namespace Anabil\Sherlock\Notifications;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\NotificationChannel;
-use Anabil\Tracing\Contracts\NotificationDispatcher;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Data\NotificationMessage;
-use Anabil\Tracing\Digest\DigestBuilder;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Notifications\Channels\RedactingChannel;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\NotificationChannel;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Data\NotificationMessage;
+use Anabil\Sherlock\Digest\DigestBuilder;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Notifications\Channels\RedactingChannel;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Psr\Log\LoggerInterface;
@@ -79,7 +79,7 @@ final class DefaultNotificationDispatcher implements NotificationDispatcher
             return;
         }
 
-        if (! $this->claim('tracing:notifications:issue:'.$issue->id.':'.$event->getTimestamp())) {
+        if (! $this->claim('sherlock:notifications:issue:'.$issue->id.':'.$event->getTimestamp())) {
             return;
         }
 
@@ -101,7 +101,7 @@ final class DefaultNotificationDispatcher implements NotificationDispatcher
 
     /**
      * Send to the eligible channels and report per channel (null = sent, Throwable = failed).
-     * Never throws. $force (tracing:test-notification) ignores the global switch, the
+     * Never throws. $force (sherlock:test-notification) ignores the global switch, the
      * configured channel list and severity thresholds, but still requires credentials and
      * still redacts. Digests (DigestBuilder::FINGERPRINT) skip severity thresholds; explicit
      * $names are honoured even when not in notifications.channels, null / [] = enabled channels.
@@ -255,14 +255,14 @@ final class DefaultNotificationDispatcher implements NotificationDispatcher
         }
 
         try {
-            if (! $this->cache->add('tracing:notifications:failed:'.$channel, 1, self::FAILURE_LOG_SECONDS)) {
+            if (! $this->cache->add('sherlock:notifications:failed:'.$channel, 1, self::FAILURE_LOG_SECONDS)) {
                 return;
             }
         } catch (Throwable) {
             // Fall through and log.
         }
 
-        $this->logger->warning('[tracing] Notification channel failed: '.$this->redactor->redactString(NotificationFailed::scrub($e->getMessage(), [])), [
+        $this->logger->warning('[sherlock] Notification channel failed: '.$this->redactor->redactString(NotificationFailed::scrub($e->getMessage(), [])), [
             'channel' => $channel,
             'exception' => $e::class,
         ]);

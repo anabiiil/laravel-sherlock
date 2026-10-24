@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Privacy\Rules\BearerTokenRule;
-use Anabil\Tracing\Privacy\Rules\CardNumberRule;
-use Anabil\Tracing\Privacy\Rules\CustomPatternRule;
-use Anabil\Tracing\Privacy\Rules\EmailRule;
-use Anabil\Tracing\Privacy\Rules\IpAddressRule;
-use Anabil\Tracing\Privacy\Rules\LongSecretRule;
-use Anabil\Tracing\Privacy\Rules\PasswordHashRule;
-use Anabil\Tracing\Privacy\Rules\PhoneRule;
-use Anabil\Tracing\Privacy\Rules\SensitiveKeyRule;
-use Anabil\Tracing\Privacy\SensitiveKeys;
+use Anabil\Sherlock\Privacy\Rules\BearerTokenRule;
+use Anabil\Sherlock\Privacy\Rules\CardNumberRule;
+use Anabil\Sherlock\Privacy\Rules\CustomPatternRule;
+use Anabil\Sherlock\Privacy\Rules\EmailRule;
+use Anabil\Sherlock\Privacy\Rules\IpAddressRule;
+use Anabil\Sherlock\Privacy\Rules\LongSecretRule;
+use Anabil\Sherlock\Privacy\Rules\PasswordHashRule;
+use Anabil\Sherlock\Privacy\Rules\PhoneRule;
+use Anabil\Sherlock\Privacy\Rules\SensitiveKeyRule;
+use Anabil\Sherlock\Privacy\SensitiveKeys;
 
 const R = '[REDACTED]';
 

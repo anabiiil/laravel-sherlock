@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Enums;
+namespace Anabil\Sherlock\Enums;
 
 enum ExplainInsightType: string
 {

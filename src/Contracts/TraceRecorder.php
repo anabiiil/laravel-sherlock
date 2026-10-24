@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
-use Anabil\Tracing\Data\TraceData;
+use Anabil\Sherlock\Data\TraceData;
 
 /**
  * Terminate-time orchestration: analyze, decide whether to persist, hand to the PersistenceStrategy.

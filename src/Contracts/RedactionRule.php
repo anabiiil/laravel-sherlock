@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Contracts;
+namespace Anabil\Sherlock\Contracts;
 
 /**
  * One text redaction strategy in the Redactor chain. Must be fast: do a cheap

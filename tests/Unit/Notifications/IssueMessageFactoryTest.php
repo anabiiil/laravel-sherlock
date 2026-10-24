@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Data\NotificationMessage;
-use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Notifications\IssueMessageFactory;
-use Anabil\Tracing\Notifications\NotificationPolicy;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Data\NotificationMessage;
+use Anabil\Sherlock\Enums\AiStatus;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Notifications\IssueMessageFactory;
+use Anabil\Sherlock\Notifications\NotificationPolicy;
 use Illuminate\Config\Repository;
 
 function notifFactory(array $config = []): IssueMessageFactory
 {
     $repository = new Repository(array_replace_recursive([
         'app' => ['name' => 'Shop', 'env' => 'production'],
-        'tracing' => ['notifications' => ['throttle_minutes' => 60], 'dashboard' => ['enabled' => true]],
+        'sherlock' => ['notifications' => ['throttle_minutes' => 60], 'dashboard' => ['enabled' => true]],
     ], $config));
 
     return new IssueMessageFactory(new NotificationPolicy($repository), $repository);
@@ -71,7 +71,7 @@ it('builds a new-issue message from the issue context', function (): void {
         ->and($message->aiRecommendation)->toBeNull()
         ->and($message->url)->toBeNull()
         ->and($message->occurrences)->toBe(5)
-        ->and($message->footer)->toBe('Tracing · Shop (production)')
+        ->and($message->footer)->toBe('Sherlock · Shop (production)')
         ->and($message->issueId)->toBe(12)
         ->and($message->fingerprint)->toBe('issue-fp');
 });

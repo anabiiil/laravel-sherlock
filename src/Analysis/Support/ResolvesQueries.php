@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Support;
+namespace Anabil\Sherlock\Analysis\Support;
 
-use Anabil\Tracing\Contracts\Fingerprinter;
-use Anabil\Tracing\Data\QueryRecord;
+use Anabil\Sherlock\Contracts\Fingerprinter;
+use Anabil\Sherlock\Data\QueryRecord;
 
 /**
  * Analyzers receive enriched queries from the pipeline; these fall back to computing

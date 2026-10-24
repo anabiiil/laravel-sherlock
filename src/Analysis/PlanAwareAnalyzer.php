@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis;
+namespace Anabil\Sherlock\Analysis;
 
-use Anabil\Tracing\Contracts\Analyzer;
-use Anabil\Tracing\Data\ExplainPlan;
-use Anabil\Tracing\Data\Finding;
-use Anabil\Tracing\Data\TraceData;
+use Anabil\Sherlock\Contracts\Analyzer;
+use Anabil\Sherlock\Data\ExplainPlan;
+use Anabil\Sherlock\Data\Finding;
+use Anabil\Sherlock\Data\TraceData;
 
 /**
  * An analyzer that also needs the EXPLAIN plans gathered for the trace

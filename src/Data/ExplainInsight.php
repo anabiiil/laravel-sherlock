@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
-use Anabil\Tracing\Enums\ExplainInsightType;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Enums\ExplainInsightType;
+use Anabil\Sherlock\Enums\Severity;
 
 /**
  * One interpreted finding from an EXPLAIN plan, e.g.

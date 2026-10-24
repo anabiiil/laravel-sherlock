@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\ContextManager;
-use Anabil\Tracing\Contracts\TraceContext;
-use Anabil\Tracing\Data\RecordingDecision;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\EntryType;
+use Anabil\Sherlock\Contracts\ContextManager;
+use Anabil\Sherlock\Contracts\TraceContext;
+use Anabil\Sherlock\Data\RecordingDecision;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\EntryType;
 use Closure;
 
 final class NullContextManager implements ContextManager

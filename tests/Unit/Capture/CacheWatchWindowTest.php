@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\RecordReason;
-use Anabil\Tracing\Recording\CacheWatchWindow;
-use Anabil\Tracing\Recording\Policies\WatchWindowPolicy;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\RecordReason;
+use Anabil\Sherlock\Recording\CacheWatchWindow;
+use Anabil\Sherlock\Recording\Policies\WatchWindowPolicy;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository;
 use Illuminate\Contracts\Cache\Factory;
@@ -53,7 +53,7 @@ final class CaptureCountingCacheFactory implements Factory
 
 function captureWindow(CaptureCountingCacheFactory $cache, float &$now, int $memo = 5): CacheWatchWindow
 {
-    return new CacheWatchWindow($cache, null, 'tracing:watch', 60, $memo, static function () use (&$now): float {
+    return new CacheWatchWindow($cache, null, 'sherlock:watch', 60, $memo, static function () use (&$now): float {
         return $now;
     });
 }
@@ -71,7 +71,7 @@ it('starts a window that expires on its own', function (): void {
     $state = $window->start(10);
 
     expect($state->remainingSeconds((new DateTimeImmutable)->setTimestamp((int) $now)))->toBe(600)
-        ->and($cache->repository->getStore()->get('tracing:watch'))->toBe($state->toArray())
+        ->and($cache->repository->getStore()->get('sherlock:watch'))->toBe($state->toArray())
         ->and($window->current())->not->toBeNull()
         ->and($window->matches(new EntryCandidate(EntryType::Job, 'App\Jobs\X')))->toBeTrue();
 
@@ -98,7 +98,7 @@ it('stops a window early', function (): void {
     $window->stop();
 
     expect($window->current())->toBeNull()
-        ->and($cache->repository->getStore()->get('tracing:watch'))->toBeNull();
+        ->and($cache->repository->getStore()->get('sherlock:watch'))->toBeNull();
 });
 
 it('reads the cache at most once per memo period', function (): void {
@@ -179,7 +179,7 @@ it('shares the last read between processes through APCu (one cache get per memo 
         return $now;
     };
     $cache = new CaptureCountingCacheFactory;
-    $key = 'tracing:watch:apcu-'.bin2hex(random_bytes(4));
+    $key = 'sherlock:watch:apcu-'.bin2hex(random_bytes(4));
     $make = static fn (): CacheWatchWindow => new CacheWatchWindow($cache, null, $key, 60, 5, $clock, true);
 
     try {
@@ -197,7 +197,7 @@ it('shares the last read between processes through APCu (one cache get per memo 
         expect($make()->current())->not->toBeNull()
             ->and($cache->gets)->toBe(3);
     } finally {
-        apcu_delete('tracing:watch-memo:::'.$key);
+        apcu_delete('sherlock:watch-memo:::'.$key);
     }
 })->skip(! CacheWatchWindow::sharedMemoAvailable(), 'APCu is not enabled (run with -d apc.enable_cli=1)');
 

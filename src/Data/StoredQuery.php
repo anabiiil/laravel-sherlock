@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
 use DateTimeImmutable;
 
 /**
- * Read model of a row in tracing_queries.
+ * Read model of a row in sherlock_queries.
  */
 final readonly class StoredQuery
 {

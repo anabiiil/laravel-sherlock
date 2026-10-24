@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Data\AiAnalysisResult;
-use Anabil\Tracing\Data\IssueFilter;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\OccurrenceType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Storage\Repositories\DatabaseIssueRepository;
-use Anabil\Tracing\Tests\Feature\Storage\StorageFixtures as F;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Data\AiAnalysisResult;
+use Anabil\Sherlock\Data\IssueFilter;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Enums\AiStatus;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\OccurrenceType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Storage\Repositories\DatabaseIssueRepository;
+use Anabil\Sherlock\Tests\Feature\Storage\StorageFixtures as F;
 use Carbon\CarbonImmutable;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -67,7 +67,7 @@ it('counts recurring occurrences atomically and updates context and last seen', 
         ->and($issue->context)->toBe(['v' => 2])
         ->and($issue->firstSeenAt->format('H:i'))->toBe('10:00')
         ->and($issue->lastSeenAt->format('H:i'))->toBe('11:00')
-        ->and(DB::table('tracing_issues')->count())->toBe(1);
+        ->and(DB::table('sherlock_issues')->count())->toBe(1);
 });
 
 it('only escalates severity', function (): void {
@@ -131,7 +131,7 @@ it('only counts occurrences of ignored issues', function (): void {
 });
 
 it('counts a pre-existing fingerprint as recurring without creating a duplicate', function (): void {
-    DB::table('tracing_issues')->insert([
+    DB::table('sherlock_issues')->insert([
         'fingerprint' => 'issue-slow-users', 'type' => 'slow_query', 'severity' => 'warning', 'status' => 'open',
         'title' => 'Existing', 'context' => '{}', 'occurrences' => 4,
         'first_seen_at' => '2026-10-01 00:00:00', 'last_seen_at' => '2026-10-01 00:00:00',
@@ -143,19 +143,19 @@ it('counts a pre-existing fingerprint as recurring without creating a duplicate'
     expect($a->occurrence)->toBe(OccurrenceType::Recurring)
         ->and($b->occurrence)->toBe(OccurrenceType::Recurring)
         ->and($b->occurrences)->toBe(6)
-        ->and(DB::table('tracing_issues')->count())->toBe(1);
+        ->and(DB::table('sherlock_issues')->count())->toBe(1);
 });
 
 it('is race safe when another worker inserts the same new fingerprint first', function (): void {
     $raced = false;
     DB::connection()->beforeExecuting(function (string $sql) use (&$raced): void {
-        if ($raced || ! str_contains($sql, 'insert ignore into `tracing_issues`')) {
+        if ($raced || ! str_contains($sql, 'insert ignore into `sherlock_issues`')) {
             return;
         }
 
         $raced = true;
         // The "other worker" wins the insert between our SELECT and our INSERT IGNORE.
-        DB::table('tracing_issues')->insert([
+        DB::table('sherlock_issues')->insert([
             'fingerprint' => 'issue-slow-users', 'type' => 'slow_query', 'severity' => 'warning', 'status' => 'open',
             'title' => 'Other worker', 'context' => '{}', 'occurrences' => 1,
             'first_seen_at' => '2026-10-01 00:00:00', 'last_seen_at' => '2026-10-01 00:00:00',
@@ -167,8 +167,8 @@ it('is race safe when another worker inserts the same new fingerprint first', fu
     expect($raced)->toBeTrue()
         ->and($outcome->occurrence)->toBe(OccurrenceType::Recurring)
         ->and($outcome->occurrences)->toBe(2)
-        ->and(DB::table('tracing_issues')->count())->toBe(1)
-        ->and((int) DB::table('tracing_issues')->value('occurrences'))->toBe(2);
+        ->and(DB::table('sherlock_issues')->count())->toBe(1)
+        ->and((int) DB::table('sherlock_issues')->value('occurrences'))->toBe(2);
 });
 
 it('lets only one worker report a regression', function (): void {
@@ -177,13 +177,13 @@ it('lets only one worker report a regression', function (): void {
 
     $raced = false;
     DB::connection()->beforeExecuting(function (string $sql) use (&$raced, $id): void {
-        if ($raced || ! str_contains($sql, 'update `tracing_issues`') || ! str_contains($sql, '`status` = ?')) {
+        if ($raced || ! str_contains($sql, 'update `sherlock_issues`') || ! str_contains($sql, '`status` = ?')) {
             return;
         }
 
         $raced = true;
         // Another worker already reopened it.
-        DB::table('tracing_issues')->where('id', $id)->update(['status' => 'open', 'regressed_at' => now()]);
+        DB::table('sherlock_issues')->where('id', $id)->update(['status' => 'open', 'regressed_at' => now()]);
     });
 
     $outcome = storageIssues()->recordOccurrence(F::finding(), [], CarbonImmutable::now());
@@ -204,7 +204,7 @@ it('attaches example traces keeping only the most recent ones', function (): voi
 
     expect(storageIssues()->traceIds($id))->toBe(['t5', 't4', 't3'])
         ->and(storageIssues()->traceIds($id, 2))->toBe(['t5', 't4'])
-        ->and(DB::table('tracing_issue_traces')->where('issue_id', $id)->count())->toBe(3);
+        ->and(DB::table('sherlock_issue_traces')->where('issue_id', $id)->count())->toBe(3);
 });
 
 it('paginates issues with filters, search and sorting', function (): void {
@@ -304,6 +304,6 @@ it('prunes issues last seen before the cutoff with their trace links', function 
     storageIssues()->attachTrace($keep, 'tk');
 
     expect(storageIssues()->pruneOlderThan($now->subDays(90), 2))->toBe(5)
-        ->and(DB::table('tracing_issues')->pluck('id')->all())->toBe([$keep])
-        ->and(DB::table('tracing_issue_traces')->pluck('trace_id')->all())->toBe(['tk']);
+        ->and(DB::table('sherlock_issues')->pluck('id')->all())->toBe([$keep])
+        ->and(DB::table('sherlock_issue_traces')->pluck('trace_id')->all())->toBe(['tk']);
 });

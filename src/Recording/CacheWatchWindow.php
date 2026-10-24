@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Recording;
+namespace Anabil\Sherlock\Recording;
 
-use Anabil\Tracing\Contracts\WatchWindow;
-use Anabil\Tracing\Data\EntryCandidate;
-use Anabil\Tracing\Data\WatchState;
-use Anabil\Tracing\Enums\EntryType;
+use Anabil\Sherlock\Contracts\WatchWindow;
+use Anabil\Sherlock\Data\EntryCandidate;
+use Anabil\Sherlock\Data\WatchState;
+use Anabil\Sherlock\Enums\EntryType;
 use Closure;
 use DateTimeImmutable;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Cache-backed "tracing:watch" window. Use a shared store (redis) so every server sees it.
+ * Cache-backed "sherlock:watch" window. Use a shared store (redis) so every server sees it.
  * The entry is written with a TTL equal to the window, so it expires on its own; the
  * expiry timestamp is also checked on read.
  *
@@ -46,7 +46,7 @@ final class CacheWatchWindow implements WatchWindow
     public function __construct(
         private readonly CacheFactory $cache,
         private readonly ?string $store = null,
-        private readonly string $key = 'tracing:watch',
+        private readonly string $key = 'sherlock:watch',
         private readonly int $maxMinutes = 1440,
         private readonly int $memoSeconds = 5,
         ?Closure $clock = null,
@@ -183,7 +183,7 @@ final class CacheWatchWindow implements WatchWindow
 
     private function sharedKey(): string
     {
-        return 'tracing:watch-memo:'.$this->sharedScope.':'.($this->store ?? '').':'.$this->key;
+        return 'sherlock:watch-memo:'.$this->sharedScope.':'.($this->store ?? '').':'.$this->key;
     }
 
     private function fetch(): ?WatchState

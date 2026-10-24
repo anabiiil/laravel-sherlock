@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Analysis\Explain\ExplainGuard;
-use Anabil\Tracing\Analysis\Explain\MySqlExplainer;
-use Anabil\Tracing\Analysis\Explain\PostgresExplainer;
-use Anabil\Tracing\Analysis\Explain\SqliteExplainer;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Tests\Unit\Analysis\AnalysisFactory as F;
+use Anabil\Sherlock\Analysis\Explain\ExplainGuard;
+use Anabil\Sherlock\Analysis\Explain\MySqlExplainer;
+use Anabil\Sherlock\Analysis\Explain\PostgresExplainer;
+use Anabil\Sherlock\Analysis\Explain\SqliteExplainer;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Tests\Unit\Analysis\AnalysisFactory as F;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\ConnectionResolverInterface;
 

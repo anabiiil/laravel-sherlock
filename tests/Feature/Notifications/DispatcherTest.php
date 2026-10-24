@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\NotificationDispatcher;
-use Anabil\Tracing\Data\NotificationMessage;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Enums\Severity;
-use Anabil\Tracing\Jobs\NotifyIssueJob;
-use Anabil\Tracing\Notifications\Channels\MailChannel;
-use Anabil\Tracing\Notifications\Channels\RedactingChannel;
-use Anabil\Tracing\Notifications\Channels\SlackChannel;
-use Anabil\Tracing\Notifications\Channels\TelegramChannel;
-use Anabil\Tracing\Notifications\DefaultNotificationDispatcher;
-use Anabil\Tracing\Notifications\Mail\IssueNotificationMail;
-use Anabil\Tracing\Notifications\NotificationFailed;
-use Anabil\Tracing\Tests\Feature\Notifications\NotificationFixtures as N;
+use Anabil\Sherlock\Contracts\NotificationDispatcher;
+use Anabil\Sherlock\Data\NotificationMessage;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Enums\Severity;
+use Anabil\Sherlock\Jobs\NotifyIssueJob;
+use Anabil\Sherlock\Notifications\Channels\MailChannel;
+use Anabil\Sherlock\Notifications\Channels\RedactingChannel;
+use Anabil\Sherlock\Notifications\Channels\SlackChannel;
+use Anabil\Sherlock\Notifications\Channels\TelegramChannel;
+use Anabil\Sherlock\Notifications\DefaultNotificationDispatcher;
+use Anabil\Sherlock\Notifications\Mail\IssueNotificationMail;
+use Anabil\Sherlock\Notifications\NotificationFailed;
+use Anabil\Sherlock\Tests\Feature\Notifications\NotificationFixtures as N;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
@@ -77,13 +77,13 @@ it('sends to every enabled channel', function (): void {
     notifDispatcher()->send(notifMessage());
 
     Mail::assertSent(IssueNotificationMail::class, fn (IssueNotificationMail $mail): bool => $mail->hasTo('ops@example.test')
-        && $mail->subjectLine === '[Tracing] Critical: Slow query on orders');
+        && $mail->subjectLine === '[Sherlock] Critical: Slow query on orders');
 
     expect(notifHosts())->toBe(['hooks.slack.test', 'api.telegram.org']);
 
     Http::assertSent(fn (Request $request): bool => $request->url() === N::SLACK_URL
         && $request['attachments'][0]['blocks'][0]['type'] === 'header'
-        && $request['username'] === 'Tracing');
+        && $request['username'] === 'Sherlock');
 
     Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.telegram.org/bot'.N::TELEGRAM_TOKEN.'/sendMessage'
         && $request['chat_id'] === '-100200300'

@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Analysis\Explain;
+namespace Anabil\Sherlock\Analysis\Explain;
 
-use Anabil\Tracing\Contracts\Explainer;
-use Anabil\Tracing\Contracts\PlanInterpreter;
-use Anabil\Tracing\Data\ExplainInsight;
-use Anabil\Tracing\Data\ExplainPlan;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\ExplainInsightType;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Contracts\Explainer;
+use Anabil\Sherlock\Contracts\PlanInterpreter;
+use Anabil\Sherlock\Data\ExplainInsight;
+use Anabil\Sherlock\Data\ExplainPlan;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\ExplainInsightType;
+use Anabil\Sherlock\Enums\Severity;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Throwable;
 
@@ -32,7 +32,7 @@ use Throwable;
  */
 final class ExplainService
 {
-    public const CACHE_PREFIX = 'tracing:explain:';
+    public const CACHE_PREFIX = 'sherlock:explain:';
 
     private const NONE = 'none';
 

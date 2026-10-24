@@ -2,36 +2,36 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\ContextManager;
-use Anabil\Tracing\Contracts\Fingerprinter;
-use Anabil\Tracing\Contracts\QueryNormalizer;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Contracts\SourceLocator;
-use Anabil\Tracing\Contracts\TraceRecorder;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Enums\TracingMode;
-use Anabil\Tracing\Facades\Tracing;
-use Anabil\Tracing\Pipeline\DefaultTraceRecorder;
-use Anabil\Tracing\Privacy\Redactor as PrivacyRedactor;
-use Anabil\Tracing\TracingServiceProvider;
+use Anabil\Sherlock\Contracts\ContextManager;
+use Anabil\Sherlock\Contracts\Fingerprinter;
+use Anabil\Sherlock\Contracts\QueryNormalizer;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\SourceLocator;
+use Anabil\Sherlock\Contracts\TraceRecorder;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Enums\SherlockMode;
+use Anabil\Sherlock\Facades\Sherlock;
+use Anabil\Sherlock\Pipeline\DefaultTraceRecorder;
+use Anabil\Sherlock\Privacy\Redactor as PrivacyRedactor;
+use Anabil\Sherlock\SherlockServiceProvider;
 use Illuminate\Support\Facades\DB;
 
 it('merges the package config', function (): void {
-    expect(config('tracing.mode'))->toBeString()
-        ->and(config('tracing.thresholds.slow_query.warning_ms'))->toBe(100)
-        ->and(config('tracing.ai.drivers.anthropic.base_url'))->toBe('https://api.anthropic.com/v1')
-        ->and(config('tracing.dashboard.path'))->toBe('tracing');
+    expect(config('sherlock.mode'))->toBeString()
+        ->and(config('sherlock.thresholds.slow_query.warning_ms'))->toBe(100)
+        ->and(config('sherlock.ai.drivers.anthropic.base_url'))->toBe('https://api.anthropic.com/v1')
+        ->and(config('sherlock.dashboard.path'))->toBe('sherlock');
 });
 
 it('registers every feature provider', function (): void {
-    foreach (TracingServiceProvider::FEATURE_PROVIDERS as $provider) {
+    foreach (SherlockServiceProvider::FEATURE_PROVIDERS as $provider) {
         expect(app()->getProvider($provider))->not->toBeNull();
     }
 });
 
 it('binds a Null Object (or real implementation) for every contract', function (): void {
-    foreach (array_keys(TracingServiceProvider::NULL_BINDINGS) as $contract) {
+    foreach (array_keys(SherlockServiceProvider::NULL_BINDINGS) as $contract) {
         expect(app($contract))->toBeInstanceOf($contract);
     }
 });
@@ -46,7 +46,7 @@ it('binds the core services', function (): void {
 });
 
 it('applies user sensitive keys from config to the redactor', function (): void {
-    config()->set('tracing.privacy.sensitive_keys', ['national_id']);
+    config()->set('sherlock.privacy.sensitive_keys', ['national_id']);
     app()->forgetInstance(Redactor::class);
 
     expect(app(Redactor::class)->redactArray(['national_id' => '123', 'password' => 'x', 'name' => 'Ann']))
@@ -54,13 +54,13 @@ it('applies user sensitive keys from config to the redactor', function (): void 
 });
 
 it('exposes the facade', function (): void {
-    config()->set('tracing.mode', 'off');
+    config()->set('sherlock.mode', 'off');
 
-    expect(Tracing::mode())->toBe(TracingMode::Off)
-        ->and(Tracing::enabled())->toBeFalse()
-        ->and(Tracing::isRecording())->toBeFalse();
+    expect(Sherlock::mode())->toBe(SherlockMode::Off)
+        ->and(Sherlock::enabled())->toBeFalse()
+        ->and(Sherlock::isRecording())->toBeFalse();
 
-    Tracing::tag('order', 15); // no-op on the null context
+    Sherlock::tag('order', 15); // no-op on the null context
 });
 
 it('records nothing through the null pipeline without throwing', function (): void {

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications;
+namespace Anabil\Sherlock\Notifications;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Data\IssueOutcome;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Enums\IssueStatus;
-use Anabil\Tracing\Notifications\Jobs\SendThrottledSummaryJob;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Data\IssueOutcome;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Enums\IssueStatus;
+use Anabil\Sherlock\Notifications\Jobs\SendThrottledSummaryJob;
 use Carbon\CarbonImmutable;
 use DateTimeImmutable;
 use Illuminate\Contracts\Bus\Dispatcher as Bus;
@@ -137,7 +137,7 @@ final class Throttler
 
     public function lockKey(IssueRecord $issue): string
     {
-        return 'tracing:notifications:summary:'.$issue->fingerprint.':'.$this->reference($issue)->getTimestamp();
+        return 'sherlock:notifications:summary:'.$issue->fingerprint.':'.$this->reference($issue)->getTimestamp();
     }
 
     /** Cheap pre-checks (config only) so untracked repeats cost no query. */

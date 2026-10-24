@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Support;
+namespace Anabil\Sherlock\Http\Support;
 
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use InvalidArgumentException;
 
 /**
- * Renders the dashboard views ("tracing::dashboard.*", namespace registered by
+ * Renders the dashboard views ("sherlock::dashboard.*", namespace registered by
  * DashboardServiceProvider; publishable / overridable like any package view).
  */
 final class Views

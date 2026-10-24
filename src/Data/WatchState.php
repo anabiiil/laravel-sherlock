@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Data;
+namespace Anabil\Sherlock\Data;
 
 use DateTimeImmutable;
 use DateTimeInterface;
 
 /**
- * An active "tracing:watch" window (temporary full tracing).
+ * An active "sherlock:watch" window (temporary full tracing).
  */
 final readonly class WatchState
 {

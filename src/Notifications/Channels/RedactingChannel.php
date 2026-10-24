@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications\Channels;
+namespace Anabil\Sherlock\Notifications\Channels;
 
-use Anabil\Tracing\Contracts\NotificationChannel;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Data\NotificationMessage;
+use Anabil\Sherlock\Contracts\NotificationChannel;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Data\NotificationMessage;
 
 /**
  * Decorator: every outgoing message passes through the Redactor again before the wrapped

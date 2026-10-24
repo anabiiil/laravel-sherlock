@@ -1,6 +1,6 @@
-@extends('tracing::dashboard.layout')
+@extends('sherlock::dashboard.layout')
 
-@use('Anabil\Tracing\Http\Support\Format')
+@use('Anabil\Sherlock\Http\Support\Format')
 
 @section('title', 'Queries')
 
@@ -13,7 +13,7 @@
         <div class="flex flex-wrap items-center gap-2">
             <div class="inline-flex rounded-lg border border-zinc-200 bg-white p-0.5 text-sm dark:border-zinc-800 dark:bg-zinc-900" role="group" aria-label="Order">
                 @foreach ($orders as $key => $label)
-                    <a href="{{ route('tracing.queries.index', ['period' => $period->key, 'order' => $key]) }}"
+                    <a href="{{ route('sherlock.queries.index', ['period' => $period->key, 'order' => $key]) }}"
                        @class([
                            'rounded-md px-3 py-1 font-medium',
                            'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' => $order === $key,
@@ -21,12 +21,12 @@
                        ])>{{ $label }}</a>
                 @endforeach
             </div>
-            @include('tracing::dashboard.partials.period', ['route' => 'tracing.queries.index', 'params' => ['order' => $order]])
+            @include('sherlock::dashboard.partials.period', ['route' => 'sherlock.queries.index', 'params' => ['order' => $order]])
         </div>
     </div>
 
     @if ($rows === [])
-        @include('tracing::dashboard.partials.empty', [
+        @include('sherlock::dashboard.partials.empty', [
             'message' => 'No queries recorded in this period.',
             'hint' => 'Query rows are stored with recorded traces only.',
         ])
@@ -50,7 +50,7 @@
                                 <span class="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                                     <span class="font-mono" title="{{ $row['stat']->fingerprint }}">{{ Format::short($row['stat']->fingerprint) }}</span>
                                     @if ($row['issue'])
-                                        <a href="{{ route('tracing.issues.show', ['issue' => $row['issue']->id]) }}" class="text-sky-700 hover:underline dark:text-sky-400">Missing index issue &rarr;</a>
+                                        <a href="{{ route('sherlock.issues.show', ['issue' => $row['issue']->id]) }}" class="text-sky-700 hover:underline dark:text-sky-400">Missing index issue &rarr;</a>
                                     @endif
                                 </span>
                             </td>

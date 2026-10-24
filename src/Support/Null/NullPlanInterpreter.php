@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\PlanInterpreter;
+use Anabil\Sherlock\Contracts\PlanInterpreter;
 
 final class NullPlanInterpreter implements PlanInterpreter
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Ai\Drivers;
+namespace Anabil\Sherlock\Ai\Drivers;
 
 /**
  * One class for every OpenAI-compatible preset: openai, deepseek, qwen, groq, openrouter,

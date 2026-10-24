@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Enums;
+namespace Anabil\Sherlock\Enums;
 
-enum TracingMode: string
+enum SherlockMode: string
 {
     case Off = 'off';
     case Local = 'local';

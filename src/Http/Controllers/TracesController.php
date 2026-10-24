@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Controllers;
+namespace Anabil\Sherlock\Http\Controllers;
 
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Enums\Bottleneck;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Http\Filters\Input;
-use Anabil\Tracing\Http\Filters\TraceFilters;
-use Anabil\Tracing\Http\Presenters\TracePresenter;
-use Anabil\Tracing\Http\Support\Views;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Enums\Bottleneck;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Http\Filters\Input;
+use Anabil\Sherlock\Http\Filters\TraceFilters;
+use Anabil\Sherlock\Http\Presenters\TracePresenter;
+use Anabil\Sherlock\Http\Support\Views;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -33,13 +33,13 @@ final class TracesController
     public function index(Request $request): View
     {
         $filters = TraceFilters::fromRequest($request);
-        $perPage = $this->config->get('tracing.dashboard.per_page', 25);
+        $perPage = $this->config->get('sherlock.dashboard.per_page', 25);
 
         $traces = $this->traces
             ->paginate($filters->toFilter(), is_numeric($perPage) ? max(1, (int) $perPage) : 25, Input::page($request))
             ->appends($filters->query());
 
-        return $this->views->make('tracing::dashboard.traces.index', [
+        return $this->views->make('sherlock::dashboard.traces.index', [
             'traces' => $traces,
             'filters' => $filters,
             'issue' => $filters->issueId === null ? null : $this->issues->find($filters->issueId),
@@ -52,7 +52,7 @@ final class TracesController
     public function show(string $trace): View
     {
         $record = $this->traces->find($trace) ?? throw new NotFoundHttpException('Trace not found.');
-        $threshold = $this->config->get('tracing.thresholds.n_plus_one.warning_count', 5);
+        $threshold = $this->config->get('sherlock.thresholds.n_plus_one.warning_count', 5);
 
         // Link findings to their issues: one indexed lookup per distinct finding (capped).
         $issues = [];
@@ -63,7 +63,7 @@ final class TracesController
             }
         }
 
-        return $this->views->make('tracing::dashboard.traces.show', [
+        return $this->views->make('sherlock::dashboard.traces.show', [
             'trace' => $record,
             'presenter' => new TracePresenter(
                 $record,

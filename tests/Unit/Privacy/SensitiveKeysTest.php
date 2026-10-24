@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Privacy\SensitiveKeys;
+use Anabil\Sherlock\Privacy\SensitiveKeys;
 
 it('matches locked keys and keys containing them', function (string $key): void {
     expect((new SensitiveKeys)->matches($key))->toBeTrue();

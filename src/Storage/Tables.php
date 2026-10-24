@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Storage;
+namespace Anabil\Sherlock\Storage;
 
 /**
- * Names of the package tables. The prefix comes from config("tracing.storage.table_prefix")
- * (default "tracing_") and is applied on top of the connection's own prefix.
+ * Names of the package tables. The prefix comes from config("sherlock.storage.table_prefix")
+ * (default "sherlock_") and is applied on top of the connection's own prefix.
  */
 final class Tables
 {
-    public const DEFAULT_PREFIX = 'tracing_';
+    public const DEFAULT_PREFIX = 'sherlock_';
 
     public function __construct(
         private readonly string $prefix = self::DEFAULT_PREFIX,
@@ -18,15 +18,15 @@ final class Tables
 
     public static function fromConfig(): self
     {
-        $prefix = function_exists('config') ? config('tracing.storage.table_prefix', self::DEFAULT_PREFIX) : null;
+        $prefix = function_exists('config') ? config('sherlock.storage.table_prefix', self::DEFAULT_PREFIX) : null;
 
         return new self(is_string($prefix) ? $prefix : self::DEFAULT_PREFIX);
     }
 
-    /** The configured tracing connection name (null = the application's default connection). */
+    /** The configured Sherlock connection name (null = the application's default connection). */
     public static function connection(): ?string
     {
-        $connection = function_exists('config') ? config('tracing.storage.connection') : null;
+        $connection = function_exists('config') ? config('sherlock.storage.connection') : null;
 
         return is_string($connection) && $connection !== '' ? $connection : null;
     }

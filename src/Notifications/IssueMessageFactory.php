@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Notifications;
+namespace Anabil\Sherlock\Notifications;
 
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Data\NotificationMessage;
-use Anabil\Tracing\Enums\Severity;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Data\NotificationMessage;
+use Anabil\Sherlock\Enums\Severity;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Routing\UrlGenerator;
@@ -21,7 +21,7 @@ use Throwable;
 final class IssueMessageFactory
 {
     /** Dashboard route names tried, in order, for the issue link. */
-    public const DASHBOARD_ROUTES = ['tracing.issues.show', 'tracing.issue'];
+    public const DASHBOARD_ROUTES = ['sherlock.issues.show', 'sherlock.issue'];
 
     private const MAX_METRICS = 4;
 
@@ -265,7 +265,7 @@ final class IssueMessageFactory
         $app = self::str($this->config->get('app.name')) ?? 'Laravel';
         $env = self::str($this->config->get('app.env'));
 
-        return 'Tracing · '.$app.($env !== null ? ' ('.$env.')' : '');
+        return 'Sherlock · '.$app.($env !== null ? ' ('.$env.')' : '');
     }
 
     /**
@@ -344,7 +344,7 @@ final class IssueMessageFactory
         return is_string($value) && trim($value) !== '' ? trim($value) : null;
     }
 
-    /** Sample message for tracing:test-notification (critical, so every channel accepts it; never labeled as such). */
+    /** Sample message for sherlock:test-notification (critical, so every channel accepts it; never labeled as such). */
     public function sample(): NotificationMessage
     {
         return new NotificationMessage(

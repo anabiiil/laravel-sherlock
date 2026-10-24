@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Anabil\Tracing\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\Redactor;
 use Illuminate\Support\Facades\Hash;
 
 /*
@@ -59,14 +59,14 @@ it('never keeps credential headers', function (): void {
         'authorization' => ['Bearer '.$this->password],
         'cookie' => ['session='.$this->password],
         'x-api-key' => [$this->password],
-        'x-tracing' => [$this->password],
+        'x-sherlock' => [$this->password],
     ]);
 
     expect($headers)->toBe([]);
 });
 
 it('cannot have its locked keys removed via config', function (): void {
-    config()->set('tracing.privacy.sensitive_keys', []);
+    config()->set('sherlock.privacy.sensitive_keys', []);
     app()->forgetInstance(Redactor::class);
 
     expect(app(Redactor::class)->redactArray(['password' => 'x', 'token' => 'y', 'otp' => '1', 'ssn' => '2']))

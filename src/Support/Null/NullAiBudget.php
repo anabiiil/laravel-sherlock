@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Support\Null;
+namespace Anabil\Sherlock\Support\Null;
 
-use Anabil\Tracing\Contracts\AiBudget;
+use Anabil\Sherlock\Contracts\AiBudget;
 
 final class NullAiBudget implements AiBudget
 {

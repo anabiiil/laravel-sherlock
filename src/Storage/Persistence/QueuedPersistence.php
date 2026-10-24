@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Storage\Persistence;
+namespace Anabil\Sherlock\Storage\Persistence;
 
-use Anabil\Tracing\Contracts\PersistenceStrategy;
-use Anabil\Tracing\Data\RecordedTrace;
-use Anabil\Tracing\Jobs\PersistTraceJob;
-use Anabil\Tracing\Storage\Support\QuietReporter;
-use Anabil\Tracing\Storage\Support\RecordingPauser;
+use Anabil\Sherlock\Contracts\PersistenceStrategy;
+use Anabil\Sherlock\Data\RecordedTrace;
+use Anabil\Sherlock\Jobs\PersistTraceJob;
+use Anabil\Sherlock\Storage\Support\QuietReporter;
+use Anabil\Sherlock\Storage\Support\RecordingPauser;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Throwable;
 
 /**
- * Hands the trace to a PersistTraceJob on config("tracing.queue"). Dispatching runs with
+ * Hands the trace to a PersistTraceJob on config("sherlock.queue"). Dispatching runs with
  * capture paused (a database queue driver would otherwise record its own INSERT).
  */
 final class QueuedPersistence implements PersistenceStrategy

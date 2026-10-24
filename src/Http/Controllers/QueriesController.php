@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Http\Controllers;
+namespace Anabil\Sherlock\Http\Controllers;
 
-use Anabil\Tracing\Contracts\Fingerprinter;
-use Anabil\Tracing\Contracts\IssueRepository;
-use Anabil\Tracing\Contracts\TraceRepository;
-use Anabil\Tracing\Data\IssueRecord;
-use Anabil\Tracing\Data\QueryStat;
-use Anabil\Tracing\Enums\IssueType;
-use Anabil\Tracing\Http\Filters\Input;
-use Anabil\Tracing\Http\Support\Period;
-use Anabil\Tracing\Http\Support\SqlHighlighter;
-use Anabil\Tracing\Http\Support\Views;
+use Anabil\Sherlock\Contracts\Fingerprinter;
+use Anabil\Sherlock\Contracts\IssueRepository;
+use Anabil\Sherlock\Contracts\TraceRepository;
+use Anabil\Sherlock\Data\IssueRecord;
+use Anabil\Sherlock\Data\QueryStat;
+use Anabil\Sherlock\Enums\IssueType;
+use Anabil\Sherlock\Http\Filters\Input;
+use Anabil\Sherlock\Http\Support\Period;
+use Anabil\Sherlock\Http\Support\SqlHighlighter;
+use Anabil\Sherlock\Http\Support\Views;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\HtmlString;
@@ -47,7 +47,7 @@ final class QueriesController
 
         $stats = $this->traces->topQueries($period->since, $order, self::LIMIT);
 
-        return $this->views->make('tracing::dashboard.queries.index', [
+        return $this->views->make('sherlock::dashboard.queries.index', [
             'period' => $period,
             'order' => $order,
             'orders' => self::ORDERS,

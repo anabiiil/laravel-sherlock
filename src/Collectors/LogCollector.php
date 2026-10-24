@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Collectors;
+namespace Anabil\Sherlock\Collectors;
 
-use Anabil\Tracing\Context\UnitLifecycle;
-use Anabil\Tracing\Contracts\Collector;
-use Anabil\Tracing\Contracts\Redactor;
-use Anabil\Tracing\Contracts\SourceLocator;
-use Anabil\Tracing\Contracts\TraceContext;
-use Anabil\Tracing\Data\LogRecord;
+use Anabil\Sherlock\Context\UnitLifecycle;
+use Anabil\Sherlock\Contracts\Collector;
+use Anabil\Sherlock\Contracts\Redactor;
+use Anabil\Sherlock\Contracts\SourceLocator;
+use Anabil\Sherlock\Contracts\TraceContext;
+use Anabil\Sherlock\Data\LogRecord;
 use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\QueryException;

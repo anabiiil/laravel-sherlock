@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <meta name="color-scheme" content="light dark">
-    <title>@hasSection('title')@yield('title') · @endif Tracing</title>
+    <title>@hasSection('title')@yield('title') · @endif Sherlock</title>
     {{-- Pinned CDN builds with SRI; no npm / build step. --}}
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18/dist/index.global.js" integrity="sha384-y0axVOJIfo0bJOmTOnyRyUjrqjUotl7L/k6mzSwu2SSrB3r7P+b0cSFkiod+js0X" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" integrity="sha384-X9kJyAubVxnP0hcA+AMMs21U445qsnqhnUF8EBlEpP3a42Kh/JwWjlv2ZcvGfphb" crossorigin="anonymous" defer></script>
@@ -26,17 +26,17 @@
 <body class="min-h-full bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
 @php
     $nav = [
-        'tracing.overview' => ['Overview', 'tracing.overview'],
-        'tracing.issues.index' => ['Issues', 'tracing.issues.*'],
-        'tracing.traces.index' => ['Traces', 'tracing.traces.*'],
-        'tracing.queries.index' => ['Queries', 'tracing.queries.*'],
+        'sherlock.overview' => ['Overview', 'sherlock.overview'],
+        'sherlock.issues.index' => ['Issues', 'sherlock.issues.*'],
+        'sherlock.traces.index' => ['Traces', 'sherlock.traces.*'],
+        'sherlock.queries.index' => ['Queries', 'sherlock.queries.*'],
     ];
 @endphp
 <header class="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900" x-data="{ open: false }">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <a href="{{ route('tracing.overview') }}" class="flex items-center gap-2 font-semibold tracking-tight">
+        <a href="{{ route('sherlock.overview') }}" class="flex items-center gap-2 font-semibold tracking-tight">
             <span class="inline-block h-2.5 w-2.5 rounded-full bg-sky-500"></span>
-            Tracing
+            Sherlock
         </a>
         <nav class="hidden gap-1 sm:flex" aria-label="Main">
             @foreach ($nav as $routeName => [$label, $pattern])
@@ -61,9 +61,9 @@
 </header>
 
 <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-    @if (session('tracing.status'))
+    @if (session('sherlock.status'))
         <div class="mb-4 flex items-start justify-between gap-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200" role="status" x-data="{ show: true }" x-show="show">
-            <span>{{ session('tracing.status') }}</span>
+            <span>{{ session('sherlock.status') }}</span>
             <button type="button" class="text-emerald-700 dark:text-emerald-300" x-on:click="show = false" aria-label="Dismiss">&times;</button>
         </div>
     @endif

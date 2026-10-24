@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Unit\Analysis;
+namespace Anabil\Sherlock\Tests\Unit\Analysis;
 
-use Anabil\Tracing\Analysis\DefaultBottleneckClassifier;
-use Anabil\Tracing\Analysis\TraceAnalysisPipeline;
-use Anabil\Tracing\Data\HttpCallRecord;
-use Anabil\Tracing\Data\LogRecord;
-use Anabil\Tracing\Data\QueryRecord;
-use Anabil\Tracing\Data\SourceLocation;
-use Anabil\Tracing\Data\TraceData;
-use Anabil\Tracing\Enums\EntryType;
-use Anabil\Tracing\Support\HashFingerprinter;
-use Anabil\Tracing\Support\SqlQueryNormalizer;
+use Anabil\Sherlock\Analysis\DefaultBottleneckClassifier;
+use Anabil\Sherlock\Analysis\TraceAnalysisPipeline;
+use Anabil\Sherlock\Data\HttpCallRecord;
+use Anabil\Sherlock\Data\LogRecord;
+use Anabil\Sherlock\Data\QueryRecord;
+use Anabil\Sherlock\Data\SourceLocation;
+use Anabil\Sherlock\Data\TraceData;
+use Anabil\Sherlock\Enums\EntryType;
+use Anabil\Sherlock\Support\HashFingerprinter;
+use Anabil\Sherlock\Support\SqlQueryNormalizer;
 use DateTimeImmutable;
 
 /**

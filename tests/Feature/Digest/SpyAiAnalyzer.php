@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Anabil\Tracing\Tests\Feature\Digest;
+namespace Anabil\Sherlock\Tests\Feature\Digest;
 
-use Anabil\Tracing\Contracts\AiAnalyzer;
-use Anabil\Tracing\Data\AiAnalysisResult;
-use Anabil\Tracing\Data\IssueRecord;
+use Anabil\Sherlock\Contracts\AiAnalyzer;
+use Anabil\Sherlock\Data\AiAnalysisResult;
+use Anabil\Sherlock\Data\IssueRecord;
 use RuntimeException;
 
 /**
