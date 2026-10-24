@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Anabil\Tracing\Data;
+
+use DateTimeImmutable;
+
+/**
+ * Read model of a row in tracing_queries.
+ */
+final readonly class StoredQuery
+{
+    /**
+     * @param  array<int|string, scalar|null>|null  $bindings  redacted; null when not stored (production)
+     */
+    public function __construct(
+        public int|string $id,
+        public string $traceId,
+        public string $fingerprint,
+        public string $normalizedSql,
+        public ?array $bindings,
+        public float $durationMs,
+        public string $connection,
+        public ?string $file,
+        public ?int $line,
+        public DateTimeImmutable $createdAt,
+    ) {}
+}
