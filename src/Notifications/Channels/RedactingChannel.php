@@ -63,6 +63,7 @@ final class RedactingChannel implements NotificationChannel
             footer: $text($message->footer),
             issueId: $message->issueId,
             fingerprint: $message->fingerprint,
+            kind: $message->kind,
         );
     }
 }

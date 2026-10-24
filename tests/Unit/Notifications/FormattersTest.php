@@ -154,3 +154,25 @@ it('truncates long multi-line digests for telegram and slack', function (): void
         ->and(substr_count($text, '<b>'))->toBe(substr_count($text, '</b>'))
         ->and(collect($slack['attachments'][0]['blocks'][2]['fields'])->every(fn (array $f): bool => mb_strlen($f['text']) <= 2000))->toBeTrue();
 });
+
+describe('digest and test messages', function (): void {
+    it('never label a digest or a test message with its routing severity', function (string $kind, string $title, string $subject): void {
+        $message = notifFormatterMessage(['title' => $title, 'kind' => $kind, 'severity' => Severity::Critical]);
+
+        $slack = (new SlackFormatter)->format($message);
+        $telegram = (new TelegramFormatter)->text($message);
+        $mail = new MailFormatter;
+
+        expect($mail->subject($message))->toBe($subject)
+            ->and($mail->data($message)['severity'])->toBe('')
+            ->and($mail->data($message)['emoji'])->not->toBe('🚨')
+            ->and($mail->data($message)['color'])->not->toBe('#E01E5A')
+            ->and($slack['text'])->toBe($title)
+            ->and($slack['attachments'][0]['blocks'][0]['text']['text'])->not->toContain('🚨')
+            ->and($slack['attachments'][0]['color'])->not->toBe('#E01E5A')
+            ->and($telegram)->not->toContain('🚨')->not->toContain('Critical');
+    })->with([
+        'digest' => [NotificationMessage::KIND_DIGEST, 'Digest: Shop', '[Tracing] Digest: Shop'],
+        'test' => [NotificationMessage::KIND_TEST, 'Test notification', '[Tracing] Test notification'],
+    ]);
+});

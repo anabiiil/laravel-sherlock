@@ -72,9 +72,15 @@ interface TraceContext
 
     /**
      * Whether a source location was already captured for this query fingerprint key
-     * in this trace (first-occurrence backtrace rule). Marks it as seen.
+     * in this trace (full capture: first-occurrence backtrace rule). Marks it as seen.
      */
     public function firstOccurrence(string $key): bool;
+
+    /**
+     * True exactly once per key: on its second occurrence in this trace (lightweight
+     * backtrace rule: a repeated query is the one worth locating). Marks it as seen.
+     */
+    public function secondOccurrence(string $key): bool;
 
     /** Freeze into an immutable snapshot (duration / memory measured now). */
     public function toTraceData(): TraceData;

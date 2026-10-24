@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Anabil\Tracing\Issues;
 
+use Anabil\Tracing\Ai\AiEligibility;
 use Anabil\Tracing\Contracts\IssueRepository;
 use Anabil\Tracing\Contracts\IssueService;
 use Anabil\Tracing\Data\Finding;
 use Anabil\Tracing\Data\IssueOutcome;
 use Anabil\Tracing\Data\RecordedTrace;
+use Anabil\Tracing\Enums\AiStatus;
 use Anabil\Tracing\Enums\IssueStatus;
 use Anabil\Tracing\Enums\OccurrenceType;
 use Anabil\Tracing\Events\IssueDetected;
@@ -26,6 +28,11 @@ use Illuminate\Contracts\Events\Dispatcher;
  *  - Regressed -> IssueRegressed (+ the same chain: AI re-analyzes regressions)
  *  - Recurring -> IssueRecurred  (throttled re-notification hook)
  * Ignored issues only count occurrences: no link, no events, no jobs.
+ *
+ * The ai_status stored for a new / regressed issue reflects what will happen: skipped_disabled
+ * or skipped_severity (AiEligibility, config only), pending only when an analysis job is
+ * actually dispatched, null ("not analyzed") when AI is on but no job runs here (sync queue
+ * inside an HTTP request; tracing:analyze / Re-analyze still work).
  */
 final class DefaultIssueService implements IssueService
 {
@@ -33,6 +40,7 @@ final class DefaultIssueService implements IssueService
      * @param  bool  $dispatchJobs  dispatch the AI/notification chain (false when both features are off: no wasted jobs)
      * @param  bool  $analyze  include the AI job; false dispatches the notification job alone (e.g. a sync
      *                         queue inside an HTTP request, where the AI call would hold the PHP worker)
+     * @param  AiEligibility|null  $ai  AI config rules for the initial ai_status; null = AI disabled
      */
     public function __construct(
         private readonly IssueRepository $issues,
@@ -43,6 +51,7 @@ final class DefaultIssueService implements IssueService
         private readonly bool $dispatchJobs = false,
         private readonly bool $analyze = true,
         private readonly bool $notify = true,
+        private readonly ?AiEligibility $ai = null,
     ) {}
 
     public function recordFindings(string $traceId, RecordedTrace $trace): array
@@ -56,6 +65,7 @@ final class DefaultIssueService implements IssueService
                 $this->contexts->build($finding, $trace, $traceId),
                 $seenAt,
                 $traceId,
+                $this->initialAiStatus($finding),
             );
 
             $outcomes[] = $outcome;
@@ -77,6 +87,16 @@ final class DefaultIssueService implements IssueService
     public function changeStatus(int|string $issueId, IssueStatus $status): void
     {
         $this->issues->updateStatus($issueId, $status);
+    }
+
+    private function initialAiStatus(Finding $finding): ?AiStatus
+    {
+        $skip = $this->ai === null ? AiStatus::SkippedDisabled : $this->ai->skipReason($finding->type, $finding->severity);
+        if ($skip !== null) {
+            return $skip;
+        }
+
+        return $this->dispatchJobs && $this->analyze && $this->bus !== null ? AiStatus::Pending : null;
     }
 
     private function announce(IssueOutcome $outcome): void

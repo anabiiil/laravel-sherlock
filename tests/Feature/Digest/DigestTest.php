@@ -9,6 +9,7 @@ use Anabil\Tracing\Contracts\IssueRepository;
 use Anabil\Tracing\Contracts\NotificationDispatcher;
 use Anabil\Tracing\Contracts\TraceRepository;
 use Anabil\Tracing\Data\AiAnalysisResult;
+use Anabil\Tracing\Data\NotificationMessage;
 use Anabil\Tracing\Digest\DefaultDigestService;
 use Anabil\Tracing\Digest\DigestBuilder;
 use Anabil\Tracing\Enums\Bottleneck;
@@ -115,7 +116,8 @@ it('builds the digest from stored traces and issues', function (): void {
 
     $message = $builder->message($report);
 
-    expect($message->title)->toContain('Tracing digest')
+    expect($message->title)->toStartWith('Digest: ')
+        ->and($message->kind)->toBe(NotificationMessage::KIND_DIGEST)
         ->and($message->severity)->toBe(Severity::Critical)
         ->and($message->fingerprint)->toBe(DigestBuilder::FINGERPRINT)
         ->and($message->issueId)->toBeNull()

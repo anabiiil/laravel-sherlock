@@ -10,6 +10,7 @@ use Anabil\Tracing\Analysis\TraceAnalysisPipeline;
 use Anabil\Tracing\Contracts\Analyzer;
 use Anabil\Tracing\Contracts\BottleneckClassifier;
 use Anabil\Tracing\Contracts\QueryNormalizer;
+use Anabil\Tracing\Data\QueryRecord;
 use Anabil\Tracing\Data\TraceData;
 use Anabil\Tracing\Data\Verdict;
 use Anabil\Tracing\Enums\Bottleneck;
@@ -135,4 +136,28 @@ it('hands explain plans only to plan-aware analyzers', function (): void {
     (new TraceAnalysisPipeline(new SqlQueryNormalizer, F::fingerprinter(), [$aware], new DefaultBottleneckClassifier))->analyze(F::trace());
 
     expect($aware->plans)->toBe([]);
+});
+
+it('drops the transient EXPLAIN-only bindings before analyzers run', function (): void {
+    $seen = new class implements Analyzer
+    {
+        /** @var list<mixed> */
+        public array $explainBindings = [];
+
+        public function analyze(TraceData $trace): array
+        {
+            foreach ($trace->queries as $query) {
+                $this->explainBindings[] = $query->explainBindings;
+            }
+
+            return [];
+        }
+    };
+    $query = new QueryRecord('select * from t where id = ?', null, 500.0, 'mysql', 'mysql', explainBindings: [7]);
+
+    $result = (new TraceAnalysisPipeline(new SqlQueryNormalizer, F::fingerprinter(), [$seen], new DefaultBottleneckClassifier))->analyze(F::trace([$query]));
+
+    expect($seen->explainBindings)->toBe([null])
+        ->and($result->trace?->queries[0]->explainBindings)->toBeNull()
+        ->and($result->trace?->queries[0]->fingerprint)->not->toBeNull();
 });

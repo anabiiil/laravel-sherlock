@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Anabil\Tracing\Data\IssueRecord;
+use Anabil\Tracing\Data\NotificationMessage;
 use Anabil\Tracing\Enums\AiStatus;
 use Anabil\Tracing\Enums\IssueStatus;
 use Anabil\Tracing\Enums\IssueType;
@@ -130,5 +131,6 @@ it('provides a critical sample message', function (): void {
     $sample = notifFactory()->sample();
 
     expect($sample->severity)->toBe(Severity::Critical)
-        ->and($sample->title)->toBe('Test notification from Tracing');
+        ->and($sample->title)->toBe('Test notification')
+        ->and($sample->kind)->toBe(NotificationMessage::KIND_TEST);
 });

@@ -60,7 +60,7 @@ final class DatabaseIssueRepository implements IssueRepository
         return $row === null ? null : $this->hydrate($row);
     }
 
-    public function recordOccurrence(Finding $finding, array $context, DateTimeImmutable $seenAt, ?string $traceId = null): IssueOutcome
+    public function recordOccurrence(Finding $finding, array $context, DateTimeImmutable $seenAt, ?string $traceId = null, ?AiStatus $aiStatus = AiStatus::Pending): IssueOutcome
     {
         $now = Values::date($seenAt);
         $current = $this->currentState($finding->fingerprint);
@@ -77,7 +77,7 @@ final class DatabaseIssueRepository implements IssueRepository
                 'first_seen_at' => $now,
                 'last_seen_at' => $now,
                 'pending_notify_count' => 0,
-                'ai_status' => AiStatus::Pending->value,
+                'ai_status' => $aiStatus?->value,
             ]);
 
             $current = $this->currentState($finding->fingerprint);
@@ -94,7 +94,7 @@ final class DatabaseIssueRepository implements IssueRepository
             // Another worker created it first: fall through and count this one as a repeat.
         }
 
-        if ($current['status'] === IssueStatus::Resolved && $this->regress($current['id'], $finding, $context, $now)) {
+        if ($current['status'] === IssueStatus::Resolved && $this->regress($current['id'], $finding, $context, $now, $aiStatus)) {
             return $this->outcome($this->currentState($finding->fingerprint) ?? $current, $finding, OccurrenceType::Regressed, $traceId);
         }
 
@@ -345,8 +345,15 @@ final class DatabaseIssueRepository implements IssueRepository
      *
      * @param  array<string, mixed>  $context
      */
-    private function regress(int|string $id, Finding $finding, array $context, string $now): bool
+    private function regress(int|string $id, Finding $finding, array $context, string $now, ?AiStatus $aiStatus): bool
     {
+        // Re-analyze on regression (PLAN §12) when an analysis will run; otherwise keep a stored
+        // analysis visible and record why none will be made.
+        $ai = $aiStatus === AiStatus::Pending
+            ? AiStatus::Pending->value
+            : $this->raw("CASE WHEN ai_status = '".AiStatus::Done->value."' THEN ai_status ELSE "
+                .($aiStatus === null ? 'NULL' : "'".$aiStatus->value."'").' END');
+
         $affected = $this->issues()
             ->where('id', $id)
             ->where('status', IssueStatus::Resolved->value)
@@ -354,8 +361,7 @@ final class DatabaseIssueRepository implements IssueRepository
                 'status' => IssueStatus::Open->value,
                 'regressed_at' => $now,
                 'resolved_at' => null,
-                // Re-analyze on regression (PLAN §12).
-                'ai_status' => AiStatus::Pending->value,
+                'ai_status' => $ai,
                 ...$this->repeatValues($finding, $context, $now),
             ]);
 

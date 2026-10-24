@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Anabil\Tracing\Tests\Feature\Integration\Support;
 
+use Anabil\Tracing\Collectors\QueryCollector;
 use Anabil\Tracing\Storage\Support\QuietReporter;
 use Anabil\Tracing\Tests\Feature\Integration\Fixtures\IntegrationController;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
@@ -72,6 +75,16 @@ final class Integration
         self::createSchema();
         self::truncateStorage();
         self::routes();
+    }
+
+    /**
+     * Rebuild the query collector from the current config (collectors are wired at boot).
+     */
+    public static function rebuildQueryCollector(): void
+    {
+        Event::forget(QueryExecuted::class);
+        app()->forgetInstance(QueryCollector::class);
+        app(QueryCollector::class)->register();
     }
 
     public static function tearDown(): void

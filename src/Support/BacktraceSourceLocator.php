@@ -10,6 +10,12 @@ use Anabil\Tracing\Data\SourceLocation;
 /**
  * First stack frame inside the application base path that is not in vendor/,
  * not in this package and not an entry script. Paths are returned relative.
+ *
+ * Names never carry an absolute path either: PHP 8.4 names closures after where they are
+ * defined ("{closure:/var/www/app/routes/web.php:21}", "{closure:App\Foo::bar():12}") and
+ * anonymous classes embed their file ("class@anonymous\0/var/www/app/...:3$0"). Paths in
+ * closure names are made relative (basename when outside the application), anonymous
+ * class names are cut at the NUL byte.
  */
 final class BacktraceSourceLocator implements SourceLocator
 {
@@ -71,8 +77,8 @@ final class BacktraceSourceLocator implements SourceLocator
             return new SourceLocation(
                 $relative,
                 is_int($line) ? $line : 0,
-                is_string($class) ? $class : null,
-                is_string($function) ? $function : null,
+                is_string($class) ? $this->cleanName($class) : null,
+                is_string($function) ? $this->cleanName($function) : null,
             );
         }
 
@@ -107,12 +113,40 @@ final class BacktraceSourceLocator implements SourceLocator
             $result[] = [
                 'file' => $this->relativePath($file),
                 'line' => is_int($line) ? $line : 0,
-                'class' => is_string($class) ? $class : null,
-                'function' => is_string($function) ? $function : null,
+                'class' => is_string($class) ? $this->cleanName($class) : null,
+                'function' => is_string($function) ? $this->cleanName($function) : null,
             ];
         }
 
         return $result;
+    }
+
+    /**
+     * Class / function name without absolute paths (see class doc). Plain names are
+     * returned as is after two substring checks.
+     */
+    public function cleanName(string $name): string
+    {
+        if (str_contains($name, '@anonymous')) {
+            $nul = strpos($name, "\0");
+            if ($nul !== false) {
+                $name = substr($name, 0, $nul);
+            }
+        }
+
+        if (! str_contains($name, '{closure:')) {
+            return $name;
+        }
+
+        return (string) preg_replace_callback(
+            '#(?<=\{closure:)((?:[A-Za-z]:)?[\\\\/][^{}]*?)(?=:\d+\})#',
+            function (array $match): string {
+                $path = self::normalize($match[1]);
+
+                return str_starts_with($path, $this->basePath) ? substr($path, strlen($this->basePath)) : basename($path);
+            },
+            $name,
+        );
     }
 
     private function isApplicationFile(string $file): bool

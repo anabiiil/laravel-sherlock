@@ -14,7 +14,8 @@ use Anabil\Tracing\Data\QueryRecord;
  *  - only SELECT (or a WITH ... SELECT without data-modifying statements)
  *  - no ";" anywhere (no multiple statements), no INTO, no locking clauses
  *  - no side-effect / sleep / lock / file functions
- *  - bindings captured for every "?", or no placeholder at all: values are never invented
+ *  - bindings captured for every "?" (stored ones, or the transient EXPLAIN-only ones of
+ *    lightweight capture), or no placeholder at all: values are never invented
  */
 final class ExplainGuard
 {
@@ -54,13 +55,14 @@ final class ExplainGuard
      */
     public static function hasUsableBindings(QueryRecord $query): bool
     {
-        if ($query->bindings === null) {
+        $bindings = $query->bindingsForExplain();
+        if ($bindings === null) {
             return ! Sql::hasPlaceholders($query->sql);
         }
 
         $positional = Sql::positionalPlaceholders($query->sql);
         if ($positional > 0) {
-            return array_is_list($query->bindings) && count($query->bindings) >= $positional;
+            return array_is_list($bindings) && count($bindings) >= $positional;
         }
 
         return true;

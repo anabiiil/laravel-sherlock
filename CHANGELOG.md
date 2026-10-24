@@ -8,11 +8,30 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `benchmarks/capture-overhead.php`: a "100 distinct SQL" scenario and measured backtrace counts.
 - `watch.enabled` (`TRACING_WATCH_ENABLED`) to never read the cache in the request path, and
   `watch.shared_memo`: on PHP-FPM the watch-window read is shared between workers through APCu.
 
+### Changed
+
+- Lightweight (production) capture takes a query backtrace on the **second** occurrence of a SQL string
+  (and for slow / EXPLAIN-eligible queries) instead of the first: a query that runs once costs no backtrace.
+  Full capture keeps the first occurrence. N+1 detection counts the unlocated first execution.
+- `ai_status` of new / regressed issues reflects what will happen (`skipped_disabled`, `skipped_severity`,
+  `pending` only when an analysis job is dispatched, empty when no job runs); a regression that will not be
+  re-analyzed keeps its stored analysis.
+- Digest and test notifications carry no severity label (`[Tracing] Digest: Shop`, `[Tracing] Test notification`).
+
 ### Fixed
 
+- EXPLAIN (missing-index detection) never ran in production for parameterized queries. Queries slow enough
+  to be explained now keep their redacted bindings in memory for EXPLAIN only; they are dropped before
+  analysis, persistence and queued payloads. Literal values are scrubbed from raw plans before they are
+  cached or stored. Bindings that must not be stored are also stripped from queued `PersistTraceJob`
+  payloads (`privacy.store_bindings`).
+- PHP 8.4 closure names (`{closure:/abs/path/routes/web.php:21}`) leaked absolute paths into issue titles,
+  locations and exception frames; they are made relative and titles read `routes/web.php:21 (closure)`.
+- `tracing:test-notification <channel>` names the missing setting when that channel is not configured.
 - The package's own throttled-summary job (`Anabil\Tracing\Notifications\Jobs`) was traced as a unit;
   logs, HTTP calls and reported failures of package jobs could become orphan traces and issues about the
   package itself. Package jobs and `tracing:*` commands are now always ignored and capture is paused while

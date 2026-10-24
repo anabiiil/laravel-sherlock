@@ -6,6 +6,7 @@ use Anabil\Tracing\Analysis\Explain\ExplainGuard;
 use Anabil\Tracing\Analysis\Explain\MySqlExplainer;
 use Anabil\Tracing\Analysis\Explain\PostgresExplainer;
 use Anabil\Tracing\Analysis\Explain\SqliteExplainer;
+use Anabil\Tracing\Data\QueryRecord;
 use Anabil\Tracing\Tests\Unit\Analysis\AnalysisFactory as F;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\ConnectionResolverInterface;
@@ -76,6 +77,20 @@ it('requires bindings for placeholders and never invents values', function (): v
         ->and(ExplainGuard::hasUsableBindings(F::query('select * from t where id = ?', bindings: [1])))->toBeTrue()
         ->and(ExplainGuard::hasUsableBindings(F::query("select * from t where note = 'why?'")))->toBeTrue()
         ->and(ExplainGuard::hasUsableBindings(F::query('select * from t where id = 5')))->toBeTrue();
+});
+
+it('accepts the transient EXPLAIN-only bindings of lightweight capture', function (): void {
+    $query = new QueryRecord('select * from t where id = ? and b = ?', null, 500.0, 'mysql', 'mysql', explainBindings: [1, 'x']);
+
+    expect(ExplainGuard::hasUsableBindings($query))->toBeTrue()
+        ->and(ExplainGuard::isEligible($query))->toBeTrue()
+        ->and(ExplainGuard::hasUsableBindings(new QueryRecord('select * from t where id = ? and b = ?', null, 500.0, 'mysql', 'mysql', explainBindings: [1])))->toBeFalse()
+        ->and($query->toArray())->not->toHaveKey('explainBindings')
+        ->and($query->toArray()['bindings'])->toBeNull()
+        ->and($query->withoutExplainBindings()->explainBindings)->toBeNull()
+        ->and($query->withoutBindings()->explainBindings)->toBeNull()
+        ->and($query->withLocation(null)->explainBindings)->toBe([1, 'x'])
+        ->and($query->withNormalization('n', 'f')->explainBindings)->toBe([1, 'x']);
 });
 
 it('explainers reject unsafe or unbound queries before touching the database', function (string $sql, ?array $bindings): void {

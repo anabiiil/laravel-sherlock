@@ -24,8 +24,9 @@ use Throwable;
  * fingerprints per trace, slowest first.
  *
  * The interpreted plan (or a "none" marker when the query could not be explained) is
- * cached under the fingerprint, so a hot slow query is explained once and later traces
- * reuse the cached plan with no database round trip. An atomic add() lock prevents
+ * cached under the fingerprint, with literal values scrubbed from the raw plan
+ * (PlanScrubber: the cache never holds a binding value), so a hot slow query is
+ * explained once and later traces reuse the cached plan with no database round trip. An atomic add() lock prevents
  * concurrent workers from explaining the same fingerprint simultaneously.
  * Without a cache store nothing is ever explained (no way to bound the frequency).
  */
@@ -127,7 +128,8 @@ final class ExplainService
                     ? $this->interpreter->interpretFor($plan->driver, $plan->raw, $query->normalizedSql ?? $plan->sql)
                     : $this->interpreter->interpret($plan->driver, $plan->raw);
 
-                $plan = new ExplainPlan($plan->connection, $plan->driver, $plan->sql, $plan->raw, $insights);
+                // Insights come from the real plan; the raw plan kept (cache, issue context) has no literals.
+                $plan = new ExplainPlan($plan->connection, $plan->driver, $plan->sql, PlanScrubber::scrub($plan->raw), $insights);
             }
         } catch (Throwable) {
             $plan = null;
@@ -205,7 +207,7 @@ final class ExplainService
             $data['connection'],
             $data['driver'],
             $data['sql'],
-            is_array($data['raw'] ?? null) ? $data['raw'] : [],
+            is_array($data['raw'] ?? null) ? PlanScrubber::scrub($data['raw']) : [],
             $insights,
         );
     }

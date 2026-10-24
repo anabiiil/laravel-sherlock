@@ -6,6 +6,7 @@ use Anabil\Tracing\Contracts\PersistenceStrategy;
 use Anabil\Tracing\Contracts\TraceAnalyzer;
 use Anabil\Tracing\Data\AnalysisResult;
 use Anabil\Tracing\Data\Finding;
+use Anabil\Tracing\Data\QueryRecord;
 use Anabil\Tracing\Data\RecordedTrace;
 use Anabil\Tracing\Data\TraceData;
 use Anabil\Tracing\Data\Verdict;
@@ -27,7 +28,7 @@ function recorderWith(array $findings, ?Throwable $throw = null, string $binding
                 throw $this->throw;
             }
 
-            return new AnalysisResult($this->findings, Verdict::unknown());
+            return new AnalysisResult($this->findings, Verdict::unknown(), [], $trace);
         }
     };
 
@@ -107,4 +108,31 @@ it('never throws into the application', function (): void {
     $recorder->record(trace([RecordReason::Local]));
 
     expect($persistence->persisted)->toBe([]);
+});
+
+it('never hands persistence more bindings than may be stored', function (): void {
+    $queries = [
+        new QueryRecord('select * from t where id = ?', [5], 1.0, 'mysql', 'mysql'),
+        new QueryRecord('select * from t where ref = ?', null, 500.0, 'mysql', 'mysql', explainBindings: ['secret-ref']),
+    ];
+    $make = static fn (bool $full): TraceData => new TraceData('01J', EntryType::Request, 'GET /', new DateTimeImmutable, 10.0, queries: $queries, recordReasons: [RecordReason::Sample], full: $full);
+
+    [$auto, $p1] = recorderWith([]);
+    [$never, $p2] = recorderWith([], null, 'never');
+    $auto->record($make(true));
+    $never->record($make(true));
+    $auto->record($make(false));
+
+    // Full + auto: stored bindings kept, EXPLAIN-only bindings dropped.
+    expect($p1->persisted[0]->trace->queries[0]->bindings)->toBe([5])
+        ->and($p1->persisted[0]->trace->queries[1]->explainBindings)->toBeNull()
+        ->and($p1->persisted[0]->analysis->trace?->queries[1]->explainBindings)->toBeNull();
+
+    // store_bindings=never, and lightweight traces: nothing at all, in the trace or the analysis.
+    foreach ([$p2->persisted[0], $p1->persisted[1]] as $recorded) {
+        foreach ([...$recorded->trace->queries, ...($recorded->analysis->trace->queries ?? [])] as $query) {
+            expect($query->bindings)->toBeNull()->and($query->explainBindings)->toBeNull();
+        }
+        expect(serialize($recorded))->not->toContain('secret-ref');
+    }
 });

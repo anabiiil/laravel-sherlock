@@ -67,7 +67,7 @@ it('queues a PersistTraceJob after the response instead of writing inline', func
     expect(Integration::count('tracing_traces'))->toBe(0);
 });
 
-it('reopens a resolved issue as regressed, fires IssueRegressed and resets the AI status', function (): void {
+it('reopens a resolved issue as regressed, fires IssueRegressed and records the AI status honestly', function (): void {
     $events = [];
     Event::listen([IssueDetected::class, IssueRecurred::class, IssueRegressed::class], function (object $event) use (&$events): void {
         $events[] = $event::class;
@@ -86,7 +86,8 @@ it('reopens a resolved issue as regressed, fires IssueRegressed and resets the A
     $after = DB::table('tracing_issues')->where('id', $issue['id'])->first();
     expect(Integration::count('tracing_issues'))->toBe(1)
         ->and($after->status)->toBe('open')
-        ->and($after->ai_status)->toBe('pending')
+        // AI is disabled: no analysis will run, so not "pending".
+        ->and($after->ai_status)->toBe('skipped_disabled')
         ->and($after->regressed_at)->not->toBeNull()
         ->and($after->resolved_at)->toBeNull()
         ->and((int) $after->occurrences)->toBe(3)
@@ -95,17 +96,52 @@ it('reopens a resolved issue as regressed, fires IssueRegressed and resets the A
 
 it('dispatches a fresh AI analysis chain for a regression when AI is enabled', function (): void {
     config()->set('tracing.ai.enabled', true);
+    config()->set('tracing.ai.min_severity', 'warning');
     Bus::fake([AnalyzeIssueJob::class]);
 
     $this->get('/integration/n-plus-one')->assertOk();
     $id = Integration::rows('tracing_issues')[0]['id'];
     Bus::assertDispatched(AnalyzeIssueJob::class, static fn (AnalyzeIssueJob $job): bool => $job->issueId == $id && ! $job->fresh);
+    expect(DB::table('tracing_issues')->where('id', $id)->value('ai_status'))->toBe('pending');
 
     app(IssueService::class)->changeStatus($id, IssueStatus::Resolved);
+    DB::table('tracing_issues')->where('id', $id)->update(['ai_status' => 'done', 'ai_analysis' => 'old analysis']);
     $this->get('/integration/n-plus-one')->assertOk();
 
     Bus::assertDispatched(AnalyzeIssueJob::class, static fn (AnalyzeIssueJob $job): bool => $job->issueId == $id && $job->fresh);
     Bus::assertDispatchedTimes(AnalyzeIssueJob::class, 2);
+    // Re-analyzed on regression.
+    expect(DB::table('tracing_issues')->where('id', $id)->value('ai_status'))->toBe('pending');
+});
+
+it('stores the initial AI status an issue will really get', function (string $severity, ?bool $enabled, ?string $expected): void {
+    if ($enabled !== null) {
+        config()->set('tracing.ai.enabled', $enabled);
+        config()->set('tracing.ai.min_severity', $severity);
+    }
+    Bus::fake([AnalyzeIssueJob::class]);
+
+    $this->get('/integration/n-plus-one')->assertOk(); // a warning-level N+1
+
+    expect(Integration::rows('tracing_issues')[0]['ai_status'])->toBe($expected);
+})->with([
+    'ai disabled (default)' => ['critical', null, 'skipped_disabled'],
+    'below ai.min_severity' => ['critical', true, 'skipped_severity'],
+    'analysis job dispatched' => ['warning', true, 'pending'],
+]);
+
+it('keeps a stored analysis when a regression will not be re-analyzed', function (): void {
+    $this->get('/integration/n-plus-one')->assertOk();
+    $id = Integration::rows('tracing_issues')[0]['id'];
+    app(IssueService::class)->changeStatus($id, IssueStatus::Resolved);
+    DB::table('tracing_issues')->where('id', $id)->update(['ai_status' => 'done', 'ai_analysis' => 'old analysis']);
+
+    $this->get('/integration/n-plus-one')->assertOk(); // AI is disabled
+
+    $after = DB::table('tracing_issues')->where('id', $id)->first();
+    expect($after->status)->toBe('open')
+        ->and($after->ai_status)->toBe('done')
+        ->and($after->ai_analysis)->toBe('old analysis');
 });
 
 it('never records its own persistence queries (tracing connection = app connection)', function (): void {

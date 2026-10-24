@@ -76,3 +76,31 @@ it('captures a real backtrace when no frames are given', function (): void {
     expect($location)->not->toBeNull()
         ->and($location->file)->toBe('tests/Unit/Support/BacktraceSourceLocatorTest.php');
 });
+
+it('never keeps an absolute path in PHP 8.4 closure names or anonymous class names', function (): void {
+    $frames = [
+        ['file' => '/var/www/app/routes/web.php', 'line' => 23, 'function' => 'first', 'class' => 'Illuminate\Database\Query\Builder'],
+        ['file' => '/var/www/app/vendor/laravel/framework/src/Illuminate/Routing/Route.php', 'line' => 205, 'function' => '{closure:/var/www/app/routes/web.php:21}', 'class' => 'Illuminate\Routing\RouteFileRegistrar'],
+    ];
+
+    $location = $this->locator->locate($frames);
+
+    expect($location?->function)->toBe('{closure:routes/web.php:21}')
+        ->and($location?->file)->toBe('routes/web.php');
+
+    expect($this->locator->cleanName('{closure:App\Http\Controllers\SmokeController::closureNplusone():100}'))
+        ->toBe('{closure:App\Http\Controllers\SmokeController::closureNplusone():100}')
+        ->and($this->locator->cleanName('{closure:{closure:/var/www/app/app/Jobs/Sync.php:10}:12}'))->toBe('{closure:{closure:app/Jobs/Sync.php:10}:12}')
+        ->and($this->locator->cleanName('{closure:/somewhere/else/helpers.php:5}'))->toBe('{closure:helpers.php:5}')
+        ->and($this->locator->cleanName('{closure}'))->toBe('{closure}')
+        ->and($this->locator->cleanName('index'))->toBe('index')
+        ->and($this->locator->cleanName("class@anonymous\0/var/www/app/app/Foo.php:3$0"))->toBe('class@anonymous');
+
+    $windows = new BacktraceSourceLocator('C:\\www\\app', 30, [], 'C:\\www\\app\\vendor\\pkg\\src');
+    expect($windows->cleanName('{closure:C:\\www\\app\\routes\\web.php:9}'))->toBe('{closure:routes/web.php:9}');
+
+    $frames = $this->locator->frames([
+        ['file' => '/var/www/app/routes/web.php', 'line' => 30, 'function' => '{closure:/var/www/app/routes/web.php:28}'],
+    ]);
+    expect($frames[0]['function'])->toBe('{closure:routes/web.php:28}');
+});

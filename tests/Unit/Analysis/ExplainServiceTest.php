@@ -69,6 +69,53 @@ it('explains a slow bound select once per fingerprint and reuses the cached plan
         ->and($cache->has(ExplainService::CACHE_PREFIX.$fingerprint))->toBeTrue();
 });
 
+it('explains a lightweight query through its EXPLAIN-only bindings, keeping no literal in the plan or the cache', function (): void {
+    $explainer = new class implements Explainer
+    {
+        /** @var list<array<int|string, scalar|null>|null> */
+        public array $bindings = [];
+
+        public function supports(string $driver): bool
+        {
+            return true;
+        }
+
+        public function explain(QueryRecord $query): ?ExplainPlan
+        {
+            $this->bindings[] = $query->bindingsForExplain();
+            $plan = F::fixture('mysql-full-scan')['plan'];
+            $plan['query_block']['table']['attached_condition'] = "((`orders`.`user_id` = 4242) and (`orders`.`ref` = _utf8mb4'secret-ref'))";
+
+            return new ExplainPlan($query->connection, 'mysql', (string) $query->normalizedSql, $plan);
+        }
+    };
+    $cache = new Repository(new ArrayStore);
+    $service = explainService($explainer, $cache);
+    $query = new QueryRecord('select * from `orders` where `user_id` = ? and `ref` = ?', null, 300.0, 'mysql', 'mysql', explainBindings: [4242, 'secret-ref']);
+
+    $trace = F::enrich(F::trace([$query]));
+    $plans = $service->explainTrace($trace);
+    $fingerprint = (string) $trace->queries[0]->fingerprint;
+    $cached = serialize($cache->get(ExplainService::CACHE_PREFIX.$fingerprint));
+
+    expect($explainer->bindings)->toBe([[4242, 'secret-ref']])
+        ->and($plans[$fingerprint]->insights[0]->type)->toBe(ExplainInsightType::FullTableScan)
+        ->and($plans[$fingerprint]->raw['query_block']['table']['attached_condition'])->toBe('((`orders`.`user_id` = ?) and (`orders`.`ref` = ?))')
+        ->and(serialize($plans))->not->toContain('4242')->not->toContain('secret-ref')
+        ->and($cached)->not->toContain('4242')->not->toContain('secret-ref')
+        ->and($cached)->toContain('attached_condition');
+});
+
+it('scrubs literals from plans cached before scrubbing existed', function (): void {
+    $plan = ExplainService::hydrate([
+        'connection' => 'mysql', 'driver' => 'mysql', 'sql' => 'select ?',
+        'raw' => ['query_block' => ['table' => ['attached_condition' => "(`t`.`email` = 'ann@example.com')"]]],
+        'insights' => [],
+    ]);
+
+    expect($plan?->raw['query_block']['table']['attached_condition'])->toBe('(`t`.`email` = ?)');
+});
+
 it('explains again once the TTL expired', function (): void {
     $explainer = countingExplainer();
     $cache = new Repository(new ArrayStore);

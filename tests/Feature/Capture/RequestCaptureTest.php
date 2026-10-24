@@ -69,7 +69,26 @@ it('captures a request end to end after the response, from events only', functio
         ->and(captureRecorder()->json())->not->toContain('abcdef');
 });
 
-it('takes one backtrace per distinct SQL string, not per query', function (): void {
+it('takes one backtrace per repeated SQL string in light capture: on its second occurrence', function (): void {
+    $spy = Capture::spyLocator();
+
+    $this->get('/items/1')->assertOk();
+
+    $queries = captureRecorder()->last()->queries;
+    $located = array_values(array_filter($queries, static fn ($q): bool => $q->location !== null));
+
+    // The 5x loop gets one backtrace (2nd execution); the query that runs once gets none.
+    expect($spy->calls)->toBe(1)
+        ->and($queries)->toHaveCount(6)
+        ->and($located)->toHaveCount(1)
+        ->and($queries[0]->location)->toBeNull()
+        ->and($queries[1]->location)->not->toBeNull()
+        ->and($queries[2]->location)->toBeNull()
+        ->and($queries[5]->location)->toBeNull();
+});
+
+it('takes one backtrace per distinct SQL string in full capture: on its first occurrence', function (): void {
+    config()->set('tracing.mode', 'local');
     $spy = Capture::spyLocator();
 
     $this->get('/items/1')->assertOk();

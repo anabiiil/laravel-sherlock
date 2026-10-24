@@ -8,12 +8,19 @@ namespace Anabil\Tracing\Data;
  * One executed query, captured cheaply. Bindings are already redacted (or null when
  * not captured, e.g. production lightweight mode). Normalized SQL and fingerprint are
  * filled during analysis (at terminate) via withNormalization().
+ *
+ * $explainBindings: lightweight capture keeps the (redacted) bindings of the rare query
+ * slow enough to be EXPLAINed, for EXPLAIN only. They are in-memory only: the analysis
+ * pipeline drops them right after EXPLAIN and the recorder drops them again before a
+ * RecordedTrace is built, so they never reach analyzers, storage, queued job payloads,
+ * notifications or AI. They are never part of toArray().
  */
 final readonly class QueryRecord
 {
     /**
      * @param  array<int|string, scalar|null>|null  $bindings  redacted bindings; null = not captured
      * @param  float  $offsetMs  start time relative to the trace start
+     * @param  array<int|string, scalar|null>|null  $explainBindings  transient, EXPLAIN only (see class doc)
      */
     public function __construct(
         public string $sql,
@@ -25,13 +32,14 @@ final readonly class QueryRecord
         public float $offsetMs = 0.0,
         public ?string $normalizedSql = null,
         public ?string $fingerprint = null,
+        public ?array $explainBindings = null,
     ) {}
 
     public function withNormalization(string $normalizedSql, string $fingerprint): self
     {
         return new self(
             $this->sql, $this->bindings, $this->timeMs, $this->connection, $this->driver,
-            $this->location, $this->offsetMs, $normalizedSql, $fingerprint,
+            $this->location, $this->offsetMs, $normalizedSql, $fingerprint, $this->explainBindings,
         );
     }
 
@@ -39,16 +47,37 @@ final readonly class QueryRecord
     {
         return new self(
             $this->sql, $this->bindings, $this->timeMs, $this->connection, $this->driver,
-            $location, $this->offsetMs, $this->normalizedSql, $this->fingerprint,
+            $location, $this->offsetMs, $this->normalizedSql, $this->fingerprint, $this->explainBindings,
         );
     }
 
+    /**
+     * Drops the stored bindings and the transient EXPLAIN bindings.
+     */
     public function withoutBindings(): self
     {
         return new self(
             $this->sql, null, $this->timeMs, $this->connection, $this->driver,
             $this->location, $this->offsetMs, $this->normalizedSql, $this->fingerprint,
         );
+    }
+
+    public function withoutExplainBindings(): self
+    {
+        return new self(
+            $this->sql, $this->bindings, $this->timeMs, $this->connection, $this->driver,
+            $this->location, $this->offsetMs, $this->normalizedSql, $this->fingerprint,
+        );
+    }
+
+    /**
+     * Bindings EXPLAIN may use: the captured ones, else the transient EXPLAIN-only ones.
+     *
+     * @return array<int|string, scalar|null>|null
+     */
+    public function bindingsForExplain(): ?array
+    {
+        return $this->bindings ?? $this->explainBindings;
     }
 
     public function isNormalized(): bool

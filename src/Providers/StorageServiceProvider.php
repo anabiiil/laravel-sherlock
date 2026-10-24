@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Anabil\Tracing\Providers;
 
+use Anabil\Tracing\Ai\AiEligibility;
 use Anabil\Tracing\Console\ClearCommand;
 use Anabil\Tracing\Console\PruneCommand;
 use Anabil\Tracing\Contracts\Fingerprinter;
@@ -81,6 +82,7 @@ final class StorageServiceProvider extends ServiceProvider
                 // and commands keep it.
                 ! (self::servesHttp($app) && self::queueIsSync($config)),
                 $notify,
+                new AiEligibility($config),
             );
         });
 

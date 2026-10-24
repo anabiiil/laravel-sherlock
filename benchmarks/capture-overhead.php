@@ -16,15 +16,20 @@ declare(strict_types=1);
 |   full        - mode=local, full capture (redacted bindings)
 |
 | Queries: 20 distinct SQL strings repeated, in units of 500 queries, so each unit takes
-| 20 first-occurrence backtraces (the realistic case). Reported per event: the median of
+| 20 backtraces (the realistic case). A second scenario ("100 distinct SQL") runs units of
+| 100 queries that are all different (e.g. a page made of many unrelated lookups): in
+| lightweight capture no backtrace is taken for them (only repeats and slow queries get a
+| location), in full capture every one gets a backtrace. Reported per event: the median of
 | --runs runs, as total dispatch time and as overhead over "off".
 |
 */
 
 use Anabil\Tracing\Collectors\QueryCollector;
 use Anabil\Tracing\Context\UnitLifecycle;
+use Anabil\Tracing\Contracts\SourceLocator;
 use Anabil\Tracing\Contracts\TraceRecorder;
 use Anabil\Tracing\Data\EntryCandidate;
+use Anabil\Tracing\Data\SourceLocation;
 use Anabil\Tracing\Data\TraceData;
 use Anabil\Tracing\Enums\EntryType;
 use Anabil\Tracing\TracingServiceProvider;
@@ -67,6 +72,7 @@ if (! isset($options['mode'])) {
     $rows = [
         'query' => 'QueryExecuted',
         'query_direct' => 'QueryCollector::handle() only',
+        'query_distinct' => 'QueryExecuted, 100 distinct SQL',
         'cache' => 'Cache hit (Retrieving+Hit)',
         'cache_miss' => 'Cache miss (Retrieving+Miss)',
         'log_below' => 'MessageLogged below level',
@@ -95,8 +101,10 @@ if (! isset($options['mode'])) {
         $results['production']['query'] * $queries / 1000,
         $results['full']['query'] * $queries / 1000,
     );
-    printf("Backtraces taken per run: production %d, full %d (first occurrence of each distinct SQL per unit)\n",
+    printf("Backtraces per unit of 500 (20 distinct SQL): production %s, full %s\n",
         $results['production']['backtraces'], $results['full']['backtraces']);
+    printf("Backtraces per unit of 100 distinct SQL: production %s, full %s\n",
+        $results['production']['backtraces_distinct'], $results['full']['backtraces_distinct']);
 
     exit(0);
 }
@@ -115,6 +123,38 @@ $app->instance(TraceRecorder::class, new class implements TraceRecorder
     public function record(TraceData $trace): void {}
 });
 
+// Counts backtraces (locate() calls) so the reported numbers are measured, not assumed.
+// The extra method call costs a few ns per backtrace, nothing per query.
+$locator = new class($app->make(SourceLocator::class)) implements SourceLocator
+{
+    public int $calls = 0;
+
+    public function __construct(private readonly SourceLocator $inner) {}
+
+    public function locate(?array $frames = null): ?SourceLocation
+    {
+        $this->calls++;
+
+        return $this->inner->locate($frames);
+    }
+
+    public function relativePath(string $file): string
+    {
+        return $this->inner->relativePath($file);
+    }
+
+    public function frames(array $frames, int $limit = 30): array
+    {
+        return $this->inner->frames($frames, $limit);
+    }
+};
+$app->instance(SourceLocator::class, $locator);
+if ($mode !== 'off' && $app->bound(QueryCollector::class)) {
+    $app->forgetInstance(QueryCollector::class);
+    $app->make('events')->forget(QueryExecuted::class);
+    $app->make(QueryCollector::class)->register();
+}
+
 $dispatcher = $app->make('events');
 $connection = new MySqlConnection(static fn () => null, 'bench', '', ['driver' => 'mysql', 'name' => 'mysql']);
 
@@ -125,6 +165,17 @@ for ($i = 0; $i < 20; $i++) {
         "select * from `orders` where `user_id` = ? and `status` = ? and `email` = ? /* variant {$i} */",
         [42, 'paid', 'ann@example.com'],
         1.25,
+        $connection,
+    );
+}
+
+/** @var list<QueryExecuted> $distinctEvents */
+$distinctEvents = [];
+for ($i = 0; $i < 100; $i++) {
+    $distinctEvents[] = new QueryExecuted(
+        "select * from `table_{$i}` where `user_id` = ? and `status` = ? limit 1",
+        [42, 'paid'],
+        0.4,
         $connection,
     );
 }
@@ -146,12 +197,12 @@ $median = static function (array $values): float {
 /**
  * @param  Closure(int): void  $body
  */
-$measure = static function (int $count, Closure $body, bool $units = true) use ($runs, $begin, $end, $median): float {
+$measure = static function (int $count, Closure $body, bool $units = true, int $unit = 500) use ($runs, $begin, $end, $median): float {
     $samples = [];
     for ($run = 0; $run <= $runs; $run++) { // run 0 = warm-up
         $elapsed = 0;
-        for ($offset = 0; $offset < $count; $offset += 500) {
-            $chunk = min(500, $count - $offset);
+        for ($offset = 0; $offset < $count; $offset += $unit) {
+            $chunk = min($unit, $count - $offset);
             if ($units) {
                 $begin();
             }
@@ -177,7 +228,15 @@ $loop = $measure($queries, static function (int $i): void {}, false);
 
 $result = ['laravel' => $app->version()];
 
+$locator->calls = 0;
 $result['query'] = $measure($queries, static fn (int $i) => $dispatcher->dispatch($queryEvents[$i % 20])) - $loop;
+// Per unit: ($runs + 1) passes of ceil($queries / 500) units.
+$result['backtraces'] = $locator->calls / (($runs + 1) * (int) ceil($queries / 500));
+
+// Units of 100 queries, all distinct SQL strings.
+$locator->calls = 0;
+$result['query_distinct'] = $measure($queries, static fn (int $i) => $dispatcher->dispatch($distinctEvents[$i % 100]), true, 100) - $loop;
+$result['backtraces_distinct'] = $locator->calls / (($runs + 1) * (int) ceil($queries / 100));
 
 if ($app->bound(QueryCollector::class)) {
     $collector = $app->make(QueryCollector::class);
@@ -213,8 +272,5 @@ $result['log_error'] = $median(array_map(static function () use ($dispatcher, $e
 
     return $elapsed;
 }, range(0, $runs))) - $loop;
-
-// Backtraces taken: 20 distinct SQL per unit of 500.
-$result['backtraces'] = $mode === 'off' ? 0 : (int) (ceil($queries / 500) * 20);
 
 echo json_encode($result);

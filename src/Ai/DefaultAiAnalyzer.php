@@ -11,7 +11,6 @@ use Anabil\Tracing\Contracts\IssueRepository;
 use Anabil\Tracing\Data\AiAnalysisResult;
 use Anabil\Tracing\Data\IssueRecord;
 use Anabil\Tracing\Enums\AiStatus;
-use Anabil\Tracing\Enums\Severity;
 use Anabil\Tracing\Tracing;
 use DateTimeImmutable;
 use Illuminate\Contracts\Cache\Lock;
@@ -137,18 +136,7 @@ final class DefaultAiAnalyzer implements AiAnalyzer
     /** Disabled / type not allowed -> skipped_disabled; below min_severity -> skipped_severity. */
     private function skipReason(IssueRecord $issue): ?AiStatus
     {
-        if (! $this->config->get('tracing.ai.enabled', false)) {
-            return AiStatus::SkippedDisabled;
-        }
-
-        $toggle = $issue->type->isError() ? 'exceptions' : 'performance';
-        if (! $this->config->get("tracing.ai.analyze.{$toggle}", $toggle === 'performance')) {
-            return AiStatus::SkippedDisabled;
-        }
-
-        $min = Severity::fromConfig($this->config->get('tracing.ai.min_severity'), Severity::Critical);
-
-        return $issue->severity->isAtLeast($min) ? null : AiStatus::SkippedSeverity;
+        return (new AiEligibility($this->config))->skipReason($issue->type, $issue->severity);
     }
 
     private function skip(IssueRecord $issue, AiStatus $status): AiAnalysisResult

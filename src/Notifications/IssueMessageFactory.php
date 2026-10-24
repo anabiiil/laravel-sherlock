@@ -344,11 +344,11 @@ final class IssueMessageFactory
         return is_string($value) && trim($value) !== '' ? trim($value) : null;
     }
 
-    /** Sample message for tracing:test-notification (critical, so every channel accepts it). */
+    /** Sample message for tracing:test-notification (critical, so every channel accepts it; never labeled as such). */
     public function sample(): NotificationMessage
     {
         return new NotificationMessage(
-            title: 'Test notification from Tracing',
+            title: 'Test notification',
             severity: Severity::Critical,
             summary: 'If you can read this, the channel is configured correctly.',
             fields: [
@@ -363,6 +363,7 @@ final class IssueMessageFactory
             url: null,
             occurrences: 1,
             footer: $this->footer(),
+            kind: NotificationMessage::KIND_TEST,
         );
     }
 }

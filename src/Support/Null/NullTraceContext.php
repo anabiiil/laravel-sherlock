@@ -84,6 +84,11 @@ final class NullTraceContext implements TraceContext
         return false;
     }
 
+    public function secondOccurrence(string $key): bool
+    {
+        return false;
+    }
+
     public function toTraceData(): TraceData
     {
         return new TraceData('', EntryType::Request, '', new DateTimeImmutable, 0.0);

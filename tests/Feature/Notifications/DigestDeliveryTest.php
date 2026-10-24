@@ -16,13 +16,14 @@ use Illuminate\Support\Facades\Mail;
 function notifDigest(Severity $severity = Severity::Info, array $fields = ['Top issues' => '1. Slow query on orders']): NotificationMessage
 {
     return new NotificationMessage(
-        title: 'Tracing digest: Shop',
+        title: 'Digest: Shop',
         severity: $severity,
         summary: 'Weekly summary for ops@example.com',
         fields: $fields,
         url: 'https://example.test/tracing',
         footer: 'Periodic digest from stored data. No new AI calls were made.',
         fingerprint: DigestBuilder::FINGERPRINT,
+        kind: NotificationMessage::KIND_DIGEST,
     );
 }
 
@@ -61,7 +62,7 @@ it('honours explicit digest channels even when not listed in notifications.chann
 
     expect(notifDigestHosts())->toBe(['api.telegram.org']);
     Mail::assertSent(IssueNotificationMail::class, fn (IssueNotificationMail $mail): bool => $mail->hasTo('ops@example.test')
-        && str_contains($mail->subjectLine, 'Tracing digest: Shop'));
+        && $mail->subjectLine === '[Tracing] Digest: Shop');
 });
 
 it('still requires the global switch, credentials and redaction for digests', function (): void {

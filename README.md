@@ -70,7 +70,9 @@ php artisan tracing:install
 
 `tracing:install` publishes `config/tracing.php` and the migration, asks whether to run the migrations
 (use `--migrate` to skip the question, `--force` to overwrite an already published config) and prints
-the next steps. Re-running it never publishes the migration twice.
+the next steps. Re-running it never publishes the migration twice. Non-interactively (`--no-interaction`,
+CI, deploy scripts) nothing is asked and the migrations are **not** run: pass `--migrate`
+(`php artisan tracing:install --no-interaction --migrate`) or run `php artisan migrate` yourself.
 
 Manual equivalent:
 
@@ -95,7 +97,7 @@ TRACING_MODE=production   # off | local | production (default: production)
 
 | Mode | What happens |
 |---|---|
-| `off` | Nothing is captured: no capture listeners, no middleware, no terminating callback, no cache reads. Zero overhead (only the dashboard routes, when enabled, and a few lazy container bindings). |
+| `off` | Capture is off: no capture listeners, no middleware, no terminating callback, no cache reads in the request path. Zero capture overhead. Everything else stays registered: the dashboard routes (when enabled), the `tracing:*` commands and the scheduled prune / digest, so stored data can still be browsed, reported on and pruned. |
 | `local` | Every request, job and command is fully recorded (queries with redacted bindings, source locations). For dev machines. |
 | `production` | Lightweight in-memory metrics for every unit. A trace is **persisted only** when a finding reaches `persist_min_severity`, an exception / error log happens, or the trace is **sampled**. |
 
@@ -107,7 +109,8 @@ TRACING_PERSIST_MIN_SEVERITY=warning  # info | warning | critical
 ```
 
 In production, query bindings are not stored for lightweight traces (see `privacy.store_bindings`), only
-normalized SQL and fingerprints.
+normalized SQL and fingerprints. The one exception is in memory only: a query slow enough to be `EXPLAIN`ed
+keeps its redacted bindings until `EXPLAIN` ran (see [EXPLAIN](#explain-and-its-safety-rules)).
 
 ### What is captured
 
@@ -198,11 +201,13 @@ Each analyzer is one class (configured in `config('tracing.analyzers')`; remove 
 | `HighMemoryAnalyzer` | High peak memory |
 | `SlowExternalCallAnalyzer` | Slow outgoing HTTP calls (Laravel HTTP client) |
 | `CacheMissRateAnalyzer` | A high cache miss ratio |
-| `ExceptionAnalyzer` | Exceptions and `Log::error()` (and above), reported immediately |
+| `ExceptionAnalyzer` | Exceptions and `Log::error()` (and above); the first occurrence is notified immediately, repeats are throttled |
 | `MissingIndexAnalyzer` | Full scans, filesort, temporary tables or no usable key in the `EXPLAIN` plan of slow queries |
 
 Every finding has a severity (`info`, `warning`, `critical`), the first application source location
-(`app/Http/...:42`, relative paths only), normalized SQL when relevant and a recommendation.
+(`app/Http/...:42`, relative paths only), normalized SQL when relevant and a recommendation. Code in a
+closure is named after where the closure is defined: `routes/web.php:21 (closure)`,
+`OrderController::index (closure)` (PHP 8.4 closure names are made relative: never an absolute path).
 
 ---
 
@@ -234,13 +239,25 @@ SQLite `EXPLAIN QUERY PLAN`). It is designed so that a plan may be skipped, but 
 - only a single read-only `SELECT` (or `WITH ... SELECT`); anything with `;`, `INTO`, locking clauses,
   data-modifying statements or side-effect / sleep / lock / file functions is rejected;
 - PostgreSQL never uses `ANALYZE` (the query is never executed);
-- only for slow-query fingerprints, at most once per fingerprint per `explain.cache_minutes` (1440) and at
-  most `explain.max_per_trace` (3) per trace;
+- only for slow-query fingerprints (`explain.min_query_ms`, default: the slow-query warning threshold), at
+  most once per fingerprint per `explain.cache_minutes` (1440) and at most `explain.max_per_trace` (3) per
+  trace;
 - a statement timeout (`explain.timeout_ms`, 1000) where the driver supports it;
 - runs after the response, never while the user waits;
 - bindings must exist for every placeholder: values are never invented;
 - can be limited to some environments (`TRACING_EXPLAIN_ENVIRONMENTS=staging,production`) or disabled
   (`TRACING_EXPLAIN=false`).
+
+**In production** (lightweight capture, no bindings stored) parameterized queries are explained too: a
+query at least as slow as `explain.min_query_ms` (rare by definition) keeps its **redacted bindings in
+memory only**, they are used for `EXPLAIN` and dropped right after it, before the analyzers run and before
+anything is persisted or queued. They never reach `tracing_queries.bindings`, a queued `PersistTraceJob`
+payload, notifications or the AI prompt. Such a query also always gets a source location.
+
+Drivers echo literal values back inside the plan (MySQL `attached_condition`, PostgreSQL `Filter` /
+`Index Cond`, ...). Every string of the raw plan has its literals replaced with `?` before the plan is
+cached or stored on the issue, in every mode; insights and the suggested index are computed from the
+unscrubbed plan first, so nothing is lost. The cache only holds the scrubbed plan and its insights.
 
 ---
 
@@ -371,7 +388,10 @@ TRACING_MAILER=                      # mailer name; empty = default mailer
 
 The first occurrence of an issue is sent **immediately**. Repeats are counted silently, then summarized
 once per `throttle_minutes` window (*"occurred 340 times in the last hour"*). Exceptions and error logs
-are sent immediately as well.
+follow the same rule: the first occurrence is sent immediately, repeats are throttled.
+
+Digests and `tracing:test-notification` messages carry no severity label (`[Tracing] Digest: Shop`,
+`[Tracing] Test notification`); their severity is only used to route them to channels.
 
 ---
 
@@ -384,8 +404,13 @@ as `failed` and the notification is sent anyway.
 
 With a `sync` queue, an HTTP process (PHP-FPM, Octane) **skips the AI job** and sends the notification
 alone: the provider call (up to `ai.timeout`) would otherwise hold the PHP worker after the response. The
-issue keeps `ai_status = pending`; use a real queue, `tracing:analyze {issue}` or the dashboard *Re-analyze*
-button. Queue workers and artisan commands analyze normally.
+issue is then left *not analyzed* (`ai_status` empty); use a real queue, `tracing:analyze {issue}` or the
+dashboard *Re-analyze* button. Queue workers and artisan commands analyze normally.
+
+The stored `ai_status` always says what will happen: `pending` only when an analysis job is dispatched,
+`skipped_disabled` when AI (or `ai.analyze.*` for that kind of issue) is off, `skipped_severity` below
+`ai.min_severity`; then `done`, `failed` or `skipped_budget`. A regression is re-analyzed (`pending`) when
+an analysis will run; otherwise an existing analysis is kept.
 
 ```dotenv
 TRACING_AI_ENABLED=true
@@ -513,7 +538,8 @@ Redaction happens **at capture time, before anything is stored, in every mode, i
 - **Query bindings** bound to a sensitive column become `[REDACTED]`. **Password hashes** (bcrypt, argon,
   ...) are detected by shape and removed whatever the column name.
 - **In production, bindings are not stored** for lightweight traces (`privacy.store_bindings`: `auto`
-  (default), `always` or `never`).
+  (default), `always` or `never`). A query slow enough to be `EXPLAIN`ed keeps its redacted bindings in
+  memory until `EXPLAIN` ran, never longer; raw `EXPLAIN` plans have their literal values replaced with `?`.
 - **Exception messages and log context** (recursively): emails, phone numbers, JWT / bearer tokens, card
   numbers (Luhn-checked), IP addresses and long secrets are masked; sensitive keys removed.
 - **URLs**: only the path of incoming requests (never the query string); outgoing call URLs keep their query
@@ -590,7 +616,8 @@ Gate::define('viewTracing', function ($user = null) {
 ### Overhead and server model
 
 What runs while the user waits, in `production` mode: one array push per query / cache / log event, a
-backtrace for the first occurrence of each distinct SQL (and for slow queries), the recording decision when
+backtrace for the **second** occurrence of each distinct SQL (an N+1 loop repeats the same line; a query
+that runs once gets no backtrace) and for slow queries, the recording decision when
 the unit starts (config only, plus the watch-window read described in
 [`tracing:watch`](#temporary-full-tracing-tracingwatch)). No network I/O of the package's own.
 

@@ -180,6 +180,7 @@ function issueServiceInHttpWorker(bool $http): void
 
 it('skips the AI job on a sync queue inside an HTTP request (it would hold the PHP worker)', function (): void {
     config()->set('tracing.ai.enabled', true);
+    config()->set('tracing.ai.min_severity', 'info');
     config()->set('tracing.notifications.enabled', true);
     config()->set('tracing.queue.connection', 'sync');
     issueServiceInHttpWorker(true);
@@ -193,10 +194,13 @@ it('skips the AI job on a sync queue inside an HTTP request (it would hold the P
 
     Bus::assertNotDispatched(AnalyzeIssueJob::class);
     Bus::assertDispatched(NotifyIssueJob::class, 1);
+    // No analysis is scheduled: "not analyzed" (null), not "pending".
+    expect(DB::table('tracing_issues')->value('ai_status'))->toBeNull();
 });
 
 it('keeps the AI chain on a real queue, or on a sync queue outside HTTP requests', function (bool $http, string $connection): void {
     config()->set('tracing.ai.enabled', true);
+    config()->set('tracing.ai.min_severity', 'info');
     config()->set('tracing.notifications.enabled', true);
     config()->set('queue.connections.redis-like', ['driver' => 'database']);
     config()->set('tracing.queue.connection', $connection);
@@ -210,6 +214,7 @@ it('keeps the AI chain on a real queue, or on a sync queue outside HTTP requests
     }
 
     Bus::assertChained([AnalyzeIssueJob::class, NotifyIssueJob::class]);
+    expect(DB::table('tracing_issues')->value('ai_status'))->toBe('pending');
 })->with([
     'http request, real queue' => [true, 'redis-like'],
     'queue worker / command, sync queue' => [false, 'sync'],

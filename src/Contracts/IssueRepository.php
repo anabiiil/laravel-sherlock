@@ -29,8 +29,10 @@ interface IssueRepository
      * count occurrences. Severity only escalates.
      *
      * @param  array<string, mixed>  $context  merged into the issue context (entry, verdict, explain...)
+     * @param  AiStatus|null  $aiStatus  ai_status of a new issue and of a regression (null = not analyzed);
+     *                                   a regression keeps a stored analysis unless it is set to pending
      */
-    public function recordOccurrence(Finding $finding, array $context, DateTimeImmutable $seenAt, ?string $traceId = null): IssueOutcome;
+    public function recordOccurrence(Finding $finding, array $context, DateTimeImmutable $seenAt, ?string $traceId = null, ?AiStatus $aiStatus = AiStatus::Pending): IssueOutcome;
 
     /** Link an example trace, keeping at most $cap most recent links. */
     public function attachTrace(int|string $issueId, string $traceId, int $cap = 10): void;

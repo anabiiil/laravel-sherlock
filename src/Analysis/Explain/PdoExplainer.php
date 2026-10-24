@@ -65,7 +65,7 @@ abstract class PdoExplainer implements Explainer
                 return null;
             }
 
-            $raw = $this->run($connection, $pdo, trim($query->sql), $query->bindings ?? []);
+            $raw = $this->run($connection, $pdo, trim($query->sql), $query->bindingsForExplain() ?? []);
         } catch (Throwable) {
             return null;
         }

@@ -21,9 +21,11 @@ use Illuminate\Support\Str;
  * Same query fingerprint + same source location repeated >= warningCount times in
  * one trace (critical >= criticalCount).
  *
- * Capture only takes a backtrace for the first occurrence of a fingerprint (and for
- * slow queries), so a query without a location inherits the last location seen for
- * its fingerprint. Without any location (capture disabled) the fingerprint alone groups.
+ * Capture only takes a backtrace for one occurrence of a SQL string (the first in full
+ * capture, the second in lightweight capture) and for slow queries, so a query without a
+ * location inherits the last location seen for its fingerprint, or, before any was seen
+ * (the first execution in lightweight capture), the first one seen later. Without any
+ * location (capture disabled) the fingerprint alone groups.
  */
 final class NPlusOneAnalyzer implements Analyzer
 {
@@ -41,6 +43,14 @@ final class NPlusOneAnalyzer implements Analyzer
             return [];
         }
 
+        /** @var array<string, SourceLocation> $firstLocation */
+        $firstLocation = [];
+        foreach ($trace->queries as $query) {
+            if ($query->location !== null) {
+                $firstLocation[$this->fingerprintOf($query)] ??= $query->location;
+            }
+        }
+
         /** @var array<string, SourceLocation> $lastLocation */
         $lastLocation = [];
         /** @var array<string, array{query: QueryRecord, fingerprint: string, location: SourceLocation|null, count: int, total: float}> $groups */
@@ -52,7 +62,7 @@ final class NPlusOneAnalyzer implements Analyzer
             if ($query->location !== null) {
                 $location = $lastLocation[$fingerprint] = $query->location;
             } else {
-                $location = $lastLocation[$fingerprint] ?? null;
+                $location = $lastLocation[$fingerprint] ?? $firstLocation[$fingerprint] ?? null;
             }
 
             $key = $location === null ? $fingerprint : $fingerprint."\0".$location->file."\0".$location->line;

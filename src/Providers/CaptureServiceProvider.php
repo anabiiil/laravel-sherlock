@@ -243,6 +243,7 @@ final class CaptureServiceProvider extends ServiceProvider
                 (float) $this->int('tracing.thresholds.slow_query.warning_ms', 100),
                 (bool) $this->config()->get('tracing.capture.source_location', true),
                 is_array($ignored) ? $ignored : [],
+                AnalysisServiceProvider::explainEnabled($app) ? AnalysisServiceProvider::explainMinQueryMs($app) : null,
             );
         });
 

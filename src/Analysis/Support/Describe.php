@@ -57,12 +57,18 @@ final class Describe
     }
 
     /**
-     * "OrderController@index", or "OrderController.php:42", or null.
+     * "OrderController@index", or "OrderController.php:42", or null. Closures:
+     * "OrderController::index (closure)" / "routes/web.php:21 (closure)" (PHP 8.4 names),
+     * "OrderController (closure)" / "routes/web.php:21 (closure)" (older PHP). Never an absolute path.
      */
     public static function location(?SourceLocation $location): ?string
     {
         if ($location === null) {
             return null;
+        }
+
+        if ($location->function !== null && str_starts_with($location->function, '{closure')) {
+            return self::closure($location, $location->function);
         }
 
         if ($location->class !== null && $location->function !== null && ! str_contains($location->class, '@anonymous')) {
@@ -72,6 +78,41 @@ final class Describe
         }
 
         return basename($location->file).':'.$location->line;
+    }
+
+    private static function closure(SourceLocation $location, string $function): string
+    {
+        // PHP 8.4: "{closure:<scope>:<line>}", scope = "Class::method()", a file path, or a nested closure name.
+        if (preg_match('/^\{closure:(.+):(\d+)\}$/s', $function, $m) === 1) {
+            $scope = $m[1];
+            if (str_starts_with($scope, '{closure')) {
+                return self::closure($location, $scope);
+            }
+
+            if (preg_match('/^(.+)::([^:()]+)\(\)$/', $scope, $method) === 1) {
+                return self::shortClass($method[1]).'::'.$method[2].' (closure)';
+            }
+
+            $path = str_replace('\\', '/', $scope);
+            if (str_starts_with($path, '/') || preg_match('/^[A-Za-z]:\//', $path) === 1) {
+                $path = basename($path); // never an absolute path, whatever the capture did
+            }
+
+            return $path.':'.$m[2].' (closure)';
+        }
+
+        if ($location->class !== null && ! str_starts_with($location->class, 'Illuminate\\') && ! str_contains($location->class, '@anonymous')) {
+            return self::shortClass($location->class).' (closure)';
+        }
+
+        return $location->file.':'.$location->line.' (closure)';
+    }
+
+    private static function shortClass(string $class): string
+    {
+        $short = strrchr($class, '\\');
+
+        return $short === false ? $class : substr($short, 1);
     }
 
     /** " in OrderController@index" (falls back to the entry name). */

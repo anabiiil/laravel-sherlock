@@ -8,6 +8,7 @@ use Anabil\Tracing\Contracts\PersistenceStrategy;
 use Anabil\Tracing\Contracts\TraceAnalyzer;
 use Anabil\Tracing\Contracts\TraceRecorder;
 use Anabil\Tracing\Data\AnalysisResult;
+use Anabil\Tracing\Data\QueryRecord;
 use Anabil\Tracing\Data\RecordedTrace;
 use Anabil\Tracing\Data\TraceData;
 use Anabil\Tracing\Enums\RecordReason;
@@ -45,11 +46,14 @@ final class DefaultTraceRecorder implements TraceRecorder
                 return;
             }
 
+            $storeBindings = $this->shouldStoreBindings($trace);
+            $trace = self::stripBindings($trace, $storeBindings);
+
             $this->persistence->persist(new RecordedTrace(
                 $trace->withRecordReason($reason),
-                $analysis,
+                $analysis->trace !== null ? new AnalysisResult($analysis->findings, $analysis->verdict, $analysis->explainPlans, $trace) : $analysis,
                 $reason,
-                $this->shouldStoreBindings($trace),
+                $storeBindings,
             ));
         } catch (Throwable $e) {
             // Warning level: below the captured log level, so it never feeds back into tracing.
@@ -76,6 +80,31 @@ final class DefaultTraceRecorder implements TraceRecorder
         }
 
         return $analysis->crosses($this->persistMinSeverity) ? RecordReason::Threshold : null;
+    }
+
+    /**
+     * What reaches persistence (and so a queued PersistTraceJob payload) never carries more
+     * than may be stored: the transient EXPLAIN-only bindings are always dropped, the
+     * captured bindings too when they must not be stored.
+     */
+    public static function stripBindings(TraceData $trace, bool $storeBindings): TraceData
+    {
+        $strip = static fn (QueryRecord $query): bool => $query->explainBindings !== null || (! $storeBindings && $query->bindings !== null);
+
+        foreach ($trace->queries as $query) {
+            if ($strip($query)) {
+                return $trace->withQueries(array_map(
+                    static fn (QueryRecord $query): QueryRecord => match (true) {
+                        ! $strip($query) => $query,
+                        $storeBindings => $query->withoutExplainBindings(),
+                        default => $query->withoutBindings(),
+                    },
+                    $trace->queries,
+                ));
+            }
+        }
+
+        return $trace;
     }
 
     private function shouldStoreBindings(TraceData $trace): bool

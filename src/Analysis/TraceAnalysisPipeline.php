@@ -12,6 +12,7 @@ use Anabil\Tracing\Contracts\QueryNormalizer;
 use Anabil\Tracing\Contracts\TraceAnalyzer;
 use Anabil\Tracing\Data\AnalysisResult;
 use Anabil\Tracing\Data\Finding;
+use Anabil\Tracing\Data\QueryRecord;
 use Anabil\Tracing\Data\TraceData;
 use Anabil\Tracing\Data\Verdict;
 use Psr\Log\LoggerInterface;
@@ -21,7 +22,8 @@ use Throwable;
  * Whole analysis stage (Pipeline + Strategy), run at terminate:
  *
  *  1. enrich: normalize + fingerprint every query, memoized per distinct raw SQL
- *  2. EXPLAIN eligible slow SELECTs (cached once per fingerprint, see ExplainService)
+ *  2. EXPLAIN eligible slow SELECTs (cached once per fingerprint, see ExplainService), then
+ *     drop the transient EXPLAIN-only bindings so nothing downstream ever sees them
  *  3. run every configured Analyzer; one throwing analyzer never stops the others
  *  4. classify the bottleneck
  *
@@ -61,6 +63,8 @@ final class TraceAnalysisPipeline implements TraceAnalyzer
                 $this->report(ExplainService::class, $e);
             }
         }
+
+        $trace = self::withoutExplainBindings($trace);
 
         /** @var list<Finding> $findings */
         $findings = [];
@@ -115,6 +119,23 @@ final class TraceAnalysisPipeline implements TraceAnalyzer
         }
 
         return $changed ? $trace->withQueries($queries) : $trace;
+    }
+
+    /**
+     * Drops QueryRecord::$explainBindings (lightweight capture keeps them for EXPLAIN only).
+     */
+    public static function withoutExplainBindings(TraceData $trace): TraceData
+    {
+        foreach ($trace->queries as $query) {
+            if ($query->explainBindings !== null) {
+                return $trace->withQueries(array_map(
+                    static fn (QueryRecord $query): QueryRecord => $query->explainBindings === null ? $query : $query->withoutExplainBindings(),
+                    $trace->queries,
+                ));
+            }
+        }
+
+        return $trace;
     }
 
     /**

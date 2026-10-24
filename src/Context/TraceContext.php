@@ -24,7 +24,7 @@ use DateTimeImmutable;
  */
 final class TraceContext implements TraceContextContract
 {
-    /** Distinct SQL strings remembered for the first-occurrence backtrace rule. */
+    /** Distinct SQL strings remembered for the first / second-occurrence backtrace rules. */
     public const MAX_SEEN_KEYS = 2000;
 
     /** @var list<QueryRecord> */
@@ -72,7 +72,7 @@ final class TraceContext implements TraceContextContract
     /** @var array<string, scalar|null> */
     private array $metadata = [];
 
-    /** @var array<string, true> */
+    /** @var array<string, int> key => occurrences seen (capped at 2) */
     private array $seen = [];
 
     private int $seenCount = 0;
@@ -268,10 +268,29 @@ final class TraceContext implements TraceContextContract
             return false;
         }
 
-        $this->seen[$key] = true;
+        $this->seen[$key] = 1;
         $this->seenCount++;
 
         return true;
+    }
+
+    public function secondOccurrence(string $key): bool
+    {
+        $seen = $this->seen[$key] ?? 0;
+        if ($seen >= 2) {
+            return false;
+        }
+
+        if ($seen === 0) {
+            if ($this->seenCount >= self::MAX_SEEN_KEYS) {
+                return false;
+            }
+            $this->seenCount++;
+        }
+
+        $this->seen[$key] = $seen + 1;
+
+        return $seen === 1;
     }
 
     /**

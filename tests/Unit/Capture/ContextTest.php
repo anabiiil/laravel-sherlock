@@ -100,6 +100,25 @@ describe('TraceContext', function (): void {
         expect($context->firstOccurrence('one more distinct query'))->toBeFalse();
     });
 
+    it('reports the second occurrence of a key exactly once, with a bounded memory', function (): void {
+        $context = captureContext();
+
+        expect($context->secondOccurrence('select 1'))->toBeFalse()
+            ->and($context->secondOccurrence('select 1'))->toBeTrue()
+            ->and($context->secondOccurrence('select 1'))->toBeFalse()
+            ->and($context->secondOccurrence('select 1'))->toBeFalse()
+            ->and($context->secondOccurrence('select 2'))->toBeFalse();
+
+        for ($i = 0; $i < TraceContext::MAX_SEEN_KEYS; $i++) {
+            $context->secondOccurrence('q'.$i);
+        }
+
+        // Already-tracked keys still count; new keys are no longer tracked.
+        expect($context->secondOccurrence('select 2'))->toBeTrue()
+            ->and($context->secondOccurrence('new key'))->toBeFalse()
+            ->and($context->secondOccurrence('new key'))->toBeFalse();
+    });
+
     it('ignores timing signals once frozen but still accepts logs', function (): void {
         $context = captureContext();
         $context->addQuery(captureQuery());

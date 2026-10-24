@@ -6,6 +6,8 @@ use Anabil\Tracing\Analysis\Analyzers\DuplicateQueryAnalyzer;
 use Anabil\Tracing\Analysis\Analyzers\ExcessiveQueriesAnalyzer;
 use Anabil\Tracing\Analysis\Analyzers\NPlusOneAnalyzer;
 use Anabil\Tracing\Analysis\Analyzers\SlowQueryAnalyzer;
+use Anabil\Tracing\Analysis\Support\Describe;
+use Anabil\Tracing\Data\SourceLocation;
 use Anabil\Tracing\Enums\IssueType;
 use Anabil\Tracing\Enums\Severity;
 use Anabil\Tracing\Tests\Unit\Analysis\AnalysisFactory as F;
@@ -93,6 +95,20 @@ describe('NPlusOneAnalyzer', function (): void {
             ->and($findings[0]->metrics['relation'])->toBe('posts')
             ->and($findings[0]->recommendation)->toContain("User::with('posts')")->toContain('with()')
             ->and($findings[0]->location?->line)->toBe(42);
+    });
+
+    it('counts the unlocated first execution of a light-capture loop (located on its second)', function (): void {
+        $queries = [];
+        for ($i = 0; $i < 5; $i++) {
+            $queries[] = F::query('select * from `posts` where `posts`.`user_id` = ?', 2.0, location: $i === 1 ? F::location(42) : null);
+        }
+
+        $findings = $this->analyzer->analyze(F::enrich(F::trace($queries)));
+
+        expect($findings)->toHaveCount(1)
+            ->and($findings[0]->metrics['count'])->toBe(5)
+            ->and($findings[0]->location?->line)->toBe(42)
+            ->and($findings[0]->title)->toBe('N+1 query on `posts` (5×) in OrderController@index');
     });
 
     it('stays silent below the threshold', function () use ($loop): void {
@@ -204,5 +220,33 @@ describe('ExcessiveQueriesAnalyzer', function (): void {
         $critical = $this->analyzer->analyze(F::enrich(F::trace($queries, totalQueryCount: 250)));
         expect($critical[0]->severity)->toBe(Severity::Critical)
             ->and($critical[0]->fingerprint)->toBe($warning[0]->fingerprint);
+    });
+});
+
+// ---------------------------------------------------------------- Describe::location
+
+describe('Describe::location', function (): void {
+    it('renders closures without absolute paths, keeping fingerprints on file:line', function (?string $class, string $function, string $expected): void {
+        $location = new SourceLocation('routes/web.php', 23, $class, $function);
+
+        expect(Describe::location($location))->toBe($expected)
+            ->and(Describe::location($location))->not->toContain('/var/www');
+    })->with([
+        'php 8.4 file closure' => ['Illuminate\Routing\RouteFileRegistrar', '{closure:routes/web.php:21}', 'routes/web.php:21 (closure)'],
+        'php 8.4 method closure' => ['App\Http\Controllers\SmokeController', '{closure:App\Http\Controllers\SmokeController::closureNplusone():100}', 'SmokeController::closureNplusone (closure)'],
+        'php 8.4 nested closure' => [null, '{closure:{closure:routes/web.php:21}:22}', 'routes/web.php:21 (closure)'],
+        'absolute path left in the name' => ['Illuminate\Routing\RouteFileRegistrar', '{closure:/var/www/app/routes/web.php:21}', 'web.php:21 (closure)'],
+        'pre-8.4 closure in a class' => ['App\Http\Controllers\SmokeController', '{closure}', 'SmokeController (closure)'],
+        'pre-8.4 route file closure' => ['Illuminate\Routing\RouteFileRegistrar', '{closure}', 'routes/web.php:23 (closure)'],
+        'method' => ['App\Http\Controllers\OrderController', 'index', 'OrderController@index'],
+    ]);
+
+    it('gives the same issue fingerprint whatever the closure name looks like', function (): void {
+        $fingerprinter = F::fingerprinter();
+        $a = $fingerprinter->issue(IssueType::NPlusOne, 'q', new SourceLocation('routes/web.php', 23, null, '{closure:/var/www/app/routes/web.php:21}'), 'GET /x');
+        $b = $fingerprinter->issue(IssueType::NPlusOne, 'q', new SourceLocation('routes/web.php', 23, null, '{closure:routes/web.php:21}'), 'GET /x');
+        $c = $fingerprinter->issue(IssueType::NPlusOne, 'q', new SourceLocation('routes/web.php', 23, 'X', '{closure}'), 'GET /x');
+
+        expect($a)->toBe($b)->toBe($c);
     });
 });

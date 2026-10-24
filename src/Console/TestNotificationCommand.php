@@ -15,6 +15,13 @@ use Illuminate\Console\Command;
  */
 final class TestNotificationCommand extends Command
 {
+    /** What each built-in channel needs, for "not configured" messages. */
+    private const HINTS = [
+        'slack' => 'set TRACING_SLACK_WEBHOOK_URL (tracing.notifications.slack.webhook_url)',
+        'telegram' => 'set TRACING_TELEGRAM_BOT_TOKEN and TRACING_TELEGRAM_CHAT_ID (tracing.notifications.telegram)',
+        'mail' => 'set TRACING_MAIL_TO (tracing.notifications.mail.to)',
+    ];
+
     /** @var string */
     protected $signature = 'tracing:test-notification {channel? : slack, telegram or mail (default: every configured channel)}';
 
@@ -56,8 +63,16 @@ final class TestNotificationCommand extends Command
             $this->components->twoColumnDetail($name, '<fg=red;options=bold>failed</> '.$error->getMessage());
         }
 
+        if ($requested !== null && ! array_key_exists($requested, $results)) {
+            $hint = self::HINTS[$requested] ?? "set its credentials under tracing.notifications.{$requested}";
+            $this->components->warn("Channel [{$requested}] is not configured: {$hint}.");
+
+            return self::FAILURE;
+        }
+
         if ($results === []) {
-            $this->components->warn('No channel is configured. Set the credentials under tracing.notifications.');
+            $this->components->warn('No channel is configured. Set the credentials under tracing.notifications ('
+                .implode(', ', array_values(self::HINTS)).').');
 
             return self::FAILURE;
         }

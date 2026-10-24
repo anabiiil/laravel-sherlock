@@ -1,5 +1,5 @@
 {{-- Plain-text part: not HTML, so values are printed unescaped. --}}
-{!! $emoji !!} [{!! $severity !!}] {!! $title !!}
+{!! $emoji !!} @if ($severity !== '')[{!! $severity !!}] @endif{!! $title !!}
 
 {!! $summary !!}
 

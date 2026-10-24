@@ -29,7 +29,7 @@ final class NullIssueRepository implements IssueRepository
         return null;
     }
 
-    public function recordOccurrence(Finding $finding, array $context, DateTimeImmutable $seenAt, ?string $traceId = null): IssueOutcome
+    public function recordOccurrence(Finding $finding, array $context, DateTimeImmutable $seenAt, ?string $traceId = null, ?AiStatus $aiStatus = AiStatus::Pending): IssueOutcome
     {
         return new IssueOutcome(0, $finding->fingerprint, $finding->type, $finding->severity, OccurrenceType::New, 1, $traceId);
     }

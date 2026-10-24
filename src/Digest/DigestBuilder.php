@@ -100,13 +100,14 @@ final class DigestBuilder
         }
 
         return new NotificationMessage(
-            title: sprintf('Tracing digest: %s', $this->appName),
+            title: sprintf('Digest: %s', $this->appName),
             severity: $report->severity(),
             summary: $this->summary($report),
             fields: $fields,
             url: $this->dashboardUrl,
             footer: 'Periodic digest from stored data. No new AI calls were made.',
             fingerprint: self::FINGERPRINT,
+            kind: NotificationMessage::KIND_DIGEST,
         );
     }
 

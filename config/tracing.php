@@ -52,8 +52,9 @@ return [
         // Minimum log level captured (PSR-3 name). "error" covers error, critical, alert, emergency.
         'log_level' => env('TRACING_LOG_LEVEL', 'error'),
 
-        // Source location (backtrace) capture: only for the first occurrence of a query
-        // fingerprint per trace and for slow queries, with DEBUG_BACKTRACE_IGNORE_ARGS.
+        // Source location (backtrace) capture, with DEBUG_BACKTRACE_IGNORE_ARGS: once per SQL
+        // string per trace (first occurrence in full capture, second in production lightweight
+        // capture: a query that runs once is not located) and for every slow query.
         'source_location' => true,
         'backtrace_limit' => 50,
 
@@ -191,7 +192,8 @@ return [
     'explain' => [
         'enabled' => env('TRACING_EXPLAIN', true),
         'only_select' => true,
-        // Minimum query time to explain; null = thresholds.slow_query.warning_ms.
+        // Minimum query time to explain; null = thresholds.slow_query.warning_ms. In production,
+        // such queries keep their redacted bindings in memory until EXPLAIN ran (never stored).
         'min_query_ms' => null,
         'cache_minutes' => 1440,
         // Cache store for the "already explained" markers; null = default store.

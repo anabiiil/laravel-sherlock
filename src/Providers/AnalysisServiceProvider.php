@@ -145,8 +145,6 @@ final class AnalysisServiceProvider extends ServiceProvider
         $this->app->tag([MySqlExplainer::class, PostgresExplainer::class, SqliteExplainer::class], self::EXPLAINER_TAG);
 
         $this->app->singleton(ExplainService::class, static function (Application $app): ExplainService {
-            $minMs = $app->make(Config::class)->get('tracing.explain.min_query_ms');
-
             /** @var iterable<Explainer> $explainers */
             $explainers = $app->tagged(self::EXPLAINER_TAG);
 
@@ -155,7 +153,7 @@ final class AnalysisServiceProvider extends ServiceProvider
                 $app->make(PlanInterpreter::class),
                 self::cacheStore($app),
                 self::explainEnabled($app),
-                is_numeric($minMs) ? (float) $minMs : self::float($app, 'tracing.thresholds.slow_query.warning_ms', 100),
+                self::explainMinQueryMs($app),
                 self::int($app, 'tracing.explain.cache_minutes', 1440) * 60,
                 self::int($app, 'tracing.explain.max_per_trace', 3),
             );
@@ -195,7 +193,18 @@ final class AnalysisServiceProvider extends ServiceProvider
         return $analyzers;
     }
 
-    private static function explainEnabled(Application $app): bool
+    /**
+     * Minimum query time for EXPLAIN: explain.min_query_ms, else the slow-query warning threshold.
+     * Also used by capture to decide which lightweight queries keep EXPLAIN-only bindings.
+     */
+    public static function explainMinQueryMs(Application $app): float
+    {
+        $minMs = $app->make(Config::class)->get('tracing.explain.min_query_ms');
+
+        return is_numeric($minMs) ? (float) $minMs : self::float($app, 'tracing.thresholds.slow_query.warning_ms', 100);
+    }
+
+    public static function explainEnabled(Application $app): bool
     {
         $config = $app->make(Config::class);
         if (! filter_var($config->get('tracing.explain.enabled', true), FILTER_VALIDATE_BOOL)) {

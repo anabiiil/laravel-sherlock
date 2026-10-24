@@ -50,6 +50,18 @@ it('reports channels that are not configured', function (): void {
     Http::assertNothingSent();
 });
 
+it('names the missing setting when the requested channel is not configured, even if another one is', function (): void {
+    N::configure(['slack' => ['webhook_url' => null], 'mail' => ['to' => ['ops@example.test']]]);
+    Http::fake();
+
+    $this->artisan('tracing:test-notification', ['channel' => 'slack'])
+        ->expectsOutputToContain('Channel [slack] is not configured: set TRACING_SLACK_WEBHOOK_URL')
+        ->doesntExpectOutputToContain('No channel is configured')
+        ->assertFailed();
+
+    Http::assertNothingSent();
+});
+
 it('rejects unknown channels', function (): void {
     $this->artisan('tracing:test-notification', ['channel' => 'pigeon'])
         ->expectsOutputToContain('Unknown channel [pigeon]')

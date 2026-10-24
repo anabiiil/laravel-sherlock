@@ -37,7 +37,7 @@ final class TelegramFormatter
     {
         // Each section: [opening markup, raw text, closing markup]. Markup is already safe HTML.
         $sections = [
-            [$message->severity->emoji().' <b>', $message->title, '</b>'."\n"],
+            [$message->emoji().' <b>', $message->title, '</b>'."\n"],
             ['', $message->summary, "\n"],
         ];
 

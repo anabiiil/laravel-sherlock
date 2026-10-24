@@ -12,10 +12,20 @@ use Anabil\Tracing\Enums\Severity;
  */
 final readonly class NotificationMessage
 {
+    public const KIND_DIGEST = 'digest';
+
+    public const KIND_TEST = 'test';
+
+    private const NEUTRAL_EMOJI = '🔔';
+
+    private const NEUTRAL_COLOR = '#57606A';
+
     /**
      * @param  array<string, string>  $fields  label => value (verdict, location, metrics...)
      * @param  string|null  $sql  normalized SQL only
      * @param  int  $occurrences  occurrences represented by this message (throttled summaries > 1)
+     * @param  string|null  $kind  non-issue message (self::KIND_DIGEST / self::KIND_TEST): its severity only
+     *                             routes it to channels and is never shown as a label (subjects, headers)
      */
     public function __construct(
         public string $title,
@@ -29,7 +39,34 @@ final readonly class NotificationMessage
         public ?string $footer = null,
         public int|string|null $issueId = null,
         public ?string $fingerprint = null,
+        public ?string $kind = null,
     ) {}
+
+    /** "Critical", or null for digests / test messages (no severity label). */
+    public function severityLabel(): ?string
+    {
+        return $this->kind === null ? $this->severity->label() : null;
+    }
+
+    public function emoji(): string
+    {
+        return $this->kind === null ? $this->severity->emoji() : self::NEUTRAL_EMOJI;
+    }
+
+    /** Accent color: the severity's, neutral for digests / test messages. */
+    public function color(): string
+    {
+        return $this->kind === null ? self::severityColor($this->severity) : self::NEUTRAL_COLOR;
+    }
+
+    public static function severityColor(Severity $severity): string
+    {
+        return match ($severity) {
+            Severity::Critical => '#E01E5A',
+            Severity::Warning => '#ECB22E',
+            Severity::Info => '#36C5F0',
+        };
+    }
 
     /**
      * @return array<string, mixed>
@@ -48,6 +85,7 @@ final readonly class NotificationMessage
             'footer' => $this->footer,
             'issue_id' => $this->issueId,
             'fingerprint' => $this->fingerprint,
+            'kind' => $this->kind,
         ];
     }
 }

@@ -23,11 +23,7 @@ final class SlackFormatter
 
     public static function color(Severity $severity): string
     {
-        return match ($severity) {
-            Severity::Critical => '#E01E5A',
-            Severity::Warning => '#ECB22E',
-            Severity::Info => '#36C5F0',
-        };
+        return NotificationMessage::severityColor($severity);
     }
 
     /**
@@ -41,7 +37,7 @@ final class SlackFormatter
                 'type' => 'header',
                 'text' => [
                     'type' => 'plain_text',
-                    'text' => self::limit($message->severity->emoji().' '.$message->title, self::HEADER_LIMIT),
+                    'text' => self::limit($message->emoji().' '.$message->title, self::HEADER_LIMIT),
                     'emoji' => true,
                 ],
             ],
@@ -105,9 +101,9 @@ final class SlackFormatter
 
         $payload = [
             // Fallback for push notifications / clients without Block Kit.
-            'text' => self::limit($message->severity->label().': '.$message->title, self::HEADER_LIMIT * 2),
+            'text' => self::limit(($message->severityLabel() !== null ? $message->severityLabel().': ' : '').$message->title, self::HEADER_LIMIT * 2),
             'attachments' => [[
-                'color' => self::color($message->severity),
+                'color' => $message->color(),
                 'blocks' => $blocks,
             ]],
         ];

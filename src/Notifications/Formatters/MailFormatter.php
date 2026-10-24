@@ -20,7 +20,9 @@ final class MailFormatter
 
     public function subject(NotificationMessage $message): string
     {
-        $subject = '[Tracing] '.$message->severity->label().': '.preg_replace('/\s+/', ' ', $message->title);
+        // Digests / test messages carry no severity label: "[Tracing] Digest: Shop".
+        $label = $message->severityLabel();
+        $subject = '[Tracing] '.($label !== null ? $label.': ' : '').preg_replace('/\s+/', ' ', $message->title);
 
         return mb_strlen($subject) <= self::SUBJECT_LIMIT ? $subject : mb_substr($subject, 0, self::SUBJECT_LIMIT - 1).'…';
     }
@@ -32,9 +34,9 @@ final class MailFormatter
     {
         return [
             'title' => $message->title,
-            'emoji' => $message->severity->emoji(),
-            'severity' => $message->severity->label(),
-            'color' => SlackFormatter::color($message->severity),
+            'emoji' => $message->emoji(),
+            'severity' => $message->severityLabel() ?? '',
+            'color' => $message->color(),
             'summary' => $message->summary,
             'fields' => $message->fields,
             'sql' => $message->sql !== '' ? $message->sql : null,
